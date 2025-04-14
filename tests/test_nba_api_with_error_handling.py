@@ -2,42 +2,16 @@
 Improved NBA API Testing Script with Enhanced Error Handling
 
 This script tests the NBA MCP API client with proper error handling
-for edge cases, API key requirements, and 404 responses.
+for edge cases and input validation.
 """
 
 import asyncio
-import os
 from datetime import datetime
+import pytest
 from nba_mcp.api.client import NBAApiClient
 
-
-async def test_teams_with_error_handling():
-    """Test getting teams list with proper error handling."""
-    client = NBAApiClient()
-    print("\n===== Testing Teams Endpoint =====")
-    
-    try:
-        result = await client.make_request("teams")
-        
-        if "error" in result:
-            print(f"Error: {result['error']}")
-            if "status_code" in result and result["status_code"] == 404:
-                print("This is likely because the endpoint doesn't exist or requires an API key.")
-            elif "status_code" in result:
-                print(f"Status code: {result['status_code']}")
-            return
-            
-        teams_count = len(result.get("data", []))
-        print(f"Success! Found {teams_count} teams")
-        
-        # Print a few teams as example
-        if teams_count > 0:
-            print("\nExample teams:")
-            for i, team in enumerate(result.get("data", [])[:3], 1):
-                print(f"  {i}. {team.get('full_name', 'Unknown')} ({team.get('abbreviation', '??')})")
-    
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+# Mark all tests in this module as asyncio tests
+pytestmark = pytest.mark.asyncio
 
 
 async def test_games_with_error_handling():
@@ -103,36 +77,87 @@ async def test_player_with_error_handling():
             
         print(f"Success! Found stats for {player} in season {season}")
         print("\nKey Statistics:")
-        print(f"  Games Played: {stats.get('games_played', 'N/A')}")
-        print(f"  Points Per Game: {stats.get('pts', 'N/A')}")
-        print(f"  Rebounds Per Game: {stats.get('reb', 'N/A')}")
-        print(f"  Assists Per Game: {stats.get('ast', 'N/A')}")
-        print(f"  Field Goal %: {stats.get('fg_pct', 'N/A')}")
-        print(f"  3-Point %: {stats.get('fg3_pct', 'N/A')}")
+        
+        # Print the available stats
+        stats_fields = {
+            "games_played": "Games Played",
+            "pts": "Points Per Game",
+            "reb": "Rebounds Per Game",
+            "ast": "Assists Per Game",
+            "stl": "Steals Per Game",
+            "blk": "Blocks Per Game",
+            "fg_pct": "Field Goal %",
+            "fg3_pct": "3-Point %",
+            "ft_pct": "Free Throw %"
+        }
+        
+        for field_key, field_name in stats_fields.items():
+            field_key_lower = field_key.lower()
+            if field_key_lower in stats:
+                print(f"  {field_name}: {stats.get(field_key_lower, 'N/A')}")
     
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
 
 
-async def test_invalid_endpoint():
-    """Test handling of an invalid endpoint."""
+async def test_invalid_date():
+    """Test handling of an invalid date."""
     client = NBAApiClient()
-    print("\n===== Testing Invalid Endpoint =====")
+    print("\n===== Testing Invalid Date Format =====")
     
     try:
-        # Intentionally use a non-existent endpoint
-        result = await client.make_request("non_existent_endpoint")
+        # Intentionally use an invalid date format
+        result = await client.get_games_by_date("12/25/2022")  # Not YYYY-MM-DD
         
         if "error" in result:
             print(f"Successfully caught error: {result['error']}")
-            if "status_code" in result:
-                print(f"Status code: {result['status_code']}")
         else:
-            print("Unexpected success response for invalid endpoint!")
+            print("Unexpected success response for invalid date format!")
             print(result)
     
     except Exception as e:
         print(f"Exception not properly caught: {str(e)}")
+
+
+async def test_league_leaders():
+    """Test getting league leaders."""
+    client = NBAApiClient()
+    stat_category = "PTS"
+    print(f"\n===== Testing League Leaders for {stat_category} =====")
+    
+    try:
+        result = await client.get_league_leaders(stat_category=stat_category)
+        
+        if "error" in result:
+            print(f"Error: {result['error']}")
+            return
+            
+        if "resultSet" not in result or "rowSet" not in result["resultSet"]:
+            print(f"No league leaders data found for {stat_category}")
+            return
+            
+        leaders = result["resultSet"]["rowSet"]
+        headers = result["resultSet"]["headers"]
+        
+        # Find indices for player name, team, and stat
+        player_idx = headers.index("PLAYER") if "PLAYER" in headers else -1
+        team_idx = headers.index("TEAM") if "TEAM" in headers else -1
+        stat_idx = headers.index(stat_category) if stat_category in headers else -1
+        
+        if player_idx < 0 or stat_idx < 0:
+            print(f"Could not find {stat_category} data in the response")
+            return
+            
+        print(f"Success! Found league leaders for {stat_category}")
+        print("\nTop 5 Leaders:")
+        for i, leader in enumerate(leaders[:5], 1):
+            player_name = leader[player_idx]
+            team = leader[team_idx] if team_idx >= 0 else ""
+            stat_value = leader[stat_idx]
+            print(f"  {i}. {player_name} ({team}): {stat_value}")
+    
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
 
 
 async def main():
@@ -141,25 +166,15 @@ async def main():
     print("NBA API CLIENT TEST WITH IMPROVED ERROR HANDLING")
     print("="*50)
     
-    # Check for API key
-    api_key = os.environ.get("NBA_API_KEY", "")
-    if api_key:
-        print("\nAPI Key: Found in environment variables")
-    else:
-        print("\nAPI Key: Not found in environment variables")
-        print("Some endpoints may return error responses without an API key.")
-        print("To get an API key, sign up at https://app.balldontlie.io")
-        print("Then set it as an environment variable: NBA_API_KEY=your_key_here")
-    
     # Get current time
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"\nTest started at: {current_time}")
     
     # Run tests
-    await test_teams_with_error_handling()
     await test_games_with_error_handling()
     await test_player_with_error_handling()
-    await test_invalid_endpoint()
+    await test_invalid_date()
+    await test_league_leaders()
     
     print("\n" + "="*50)
     print("TEST COMPLETE")

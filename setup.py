@@ -5,9 +5,9 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "httpx>=0.24.0",
         "fastmcp>=0.1.0",
         "pandas",
+        "nba_api>=1.2.1",
     ],
     entry_points={
         "console_scripts": [

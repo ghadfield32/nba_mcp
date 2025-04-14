@@ -1,79 +1,48 @@
 # NBA MCP Server
 
-An NBA statistics API server using MCP (Message Control Protocol) for enhanced interaction with basketball data. This server provides access to NBA game scores, player statistics, and other basketball-related data.
+A Media Control Protocol (MCP) server for retrieving NBA data.
 
-## Requirements
+## Features
 
-- Python 3.10 or higher
-- Dependencies as listed in `pyproject.toml` and `setup.py`
+- Retrieve NBA game scores by date
+- Get player season statistics by player name
+- View top league leaders in various statistical categories
+- Access live scoreboard data for current games
 
-## Installation
-
-### Setup with uv (recommended)
-
-Run the provided setup script to create a virtual environment:
-
-```powershell
-.\setup_uvenv.ps1
-```
-
-### Manual Installation
+## Setup
 
 1. Create a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+   ```
+   .\setup_uvenv.ps1
+   ```
 
-2. Install the package:
-```bash
-pip install -e .
-```
-
-## API Key
-
-Some endpoints require an API key from the balldontlie API:
-
-1. Sign up at https://app.balldontlie.io to get your API key
-2. Set it as an environment variable:
-   ```bash
-   # On Linux/macOS
-   export NBA_API_KEY=your_key_here
-   
-   # On Windows PowerShell
-   $env:NBA_API_KEY = "your_key_here"
+2. Install the package in development mode:
+   ```
+   pip install -e .
    ```
 
 ## Usage
 
-### Running the Server
+The server runs as an MCP server with the following available tools:
 
-Run the MCP server:
+- `get_game_scores(date: str)`: Retrieve NBA game scores for a specific date in YYYY-MM-DD format
+- `get_player_stats(player: str)`: Get season statistics for a specific NBA player by name
+- `get_league_leaders(stat_category: str)`: View top 5 league leaders for a specific statistical category (PTS, AST, REB, etc.)
 
-```bash
-nba-mcp
+## Testing
+
+Run the test scripts to verify the API functionality:
+
 ```
-
-### MCP Tools
-
-The server exposes the following MCP tools:
-
-- `get_game_scores`: Get NBA game scores for a specific date (YYYY-MM-DD format)
-- `get_player_stats`: Get season averages for a player by name
-
-### Testing
-
-Run the API client tests:
-
-```bash
-python test_api_client.py
-```
-
-For improved error handling examples:
-
-```bash
+python tests/test_api_client.py
 python tests/test_nba_api_with_error_handling.py
 ```
+
+## Dependencies
+
+- Python ≥ 3.10
+- nba_api ≥ 1.2.1
+- fastmcp
 
 ## Error Handling
 

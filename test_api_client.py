@@ -21,6 +21,7 @@ async def test_teams():
         print(f"Error: {str(e)}")
 
 async def test_games():
+    """Test getting games data for a specific date"""
     client = NBAApiClient()
     # Test with a date that should have games - NBA Christmas games are usually guaranteed
     date = "2022-12-25"
@@ -45,6 +46,7 @@ async def test_games():
         print(f"Error: {str(e)}")
 
 async def test_player():
+    """Test getting player stats"""
     client = NBAApiClient()
     # Test with a well-known player name
     player_name = "LeBron James"
@@ -71,6 +73,68 @@ async def test_player():
     except Exception as e:
         print(f"Error: {str(e)}")
 
+async def test_league_leaders():
+    """Test getting league leaders for points"""
+    client = NBAApiClient()
+    stat_category = "PTS"
+    print(f"\nTesting league leaders for {stat_category}...")
+    try:
+        result = await client.get_league_leaders(stat_category=stat_category)
+        
+        if "error" in result:
+            print(f"Error: {result['error']}")
+        else:
+            if "resultSet" in result and "rowSet" in result["resultSet"]:
+                leaders = result["resultSet"]["rowSet"]
+                headers = result["resultSet"]["headers"]
+                
+                # Find indices for player name, team, and stat
+                player_idx = headers.index("PLAYER") if "PLAYER" in headers else -1
+                team_idx = headers.index("TEAM") if "TEAM" in headers else -1
+                stat_idx = headers.index(stat_category) if stat_category in headers else -1
+                
+                if leaders and player_idx >= 0 and stat_idx >= 0:
+                    print(f"Top 5 {stat_category} Leaders:")
+                    for i, leader in enumerate(leaders[:5], 1):
+                        player_name = leader[player_idx]
+                        team = leader[team_idx] if team_idx >= 0 else ""
+                        stat_value = leader[stat_idx]
+                        print(f"{i}. {player_name} ({team}): {stat_value}")
+                else:
+                    print("Could not parse leaders data")
+            else:
+                print("No leader data found in response")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+async def test_live_scoreboard():
+    """Test getting live scoreboard data"""
+    client = NBAApiClient()
+    print("\nTesting live scoreboard...")
+    try:
+        result = await client.get_live_scoreboard()
+        
+        if "error" in result:
+            print(f"Error: {result['error']}")
+        else:
+            if "scoreboard" in result and "games" in result["scoreboard"]:
+                games = result["scoreboard"]["games"]
+                print(f"Found {len(games)} games on scoreboard")
+                
+                # Display first few games
+                for i, game in enumerate(games[:3], 1):
+                    home_team = game.get("homeTeam", {}).get("teamName", "Unknown")
+                    away_team = game.get("awayTeam", {}).get("teamName", "Unknown")
+                    home_score = game.get("homeTeam", {}).get("score", 0)
+                    away_score = game.get("awayTeam", {}).get("score", 0)
+                    status = game.get("gameStatusText", "")
+                    
+                    print(f"Game {i}: {away_team} {away_score} @ {home_team} {home_score} ({status})")
+            else:
+                print("No games data found in live scoreboard")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
 async def main():
     print("Testing NBA API Client...")
     print("=========================")
@@ -87,6 +151,10 @@ async def main():
     await test_teams()
     await test_games()
     await test_player()
+    await test_league_leaders()
+    await test_live_scoreboard()
+    
+    print("\nAll tests completed!")
 
 if __name__ == "__main__":
     asyncio.run(main())

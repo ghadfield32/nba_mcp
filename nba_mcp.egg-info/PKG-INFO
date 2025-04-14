@@ -3,7 +3,7 @@ Name: nba-mcp
 Version: 0.1.0
 Summary: NBA MCP Server
 Requires-Python: >=3.10
-Requires-Dist: httpx>=0.24.0
 Requires-Dist: fastmcp>=0.1.0
 Requires-Dist: pandas
+Requires-Dist: nba_api>=1.2.1
 Dynamic: requires-python
