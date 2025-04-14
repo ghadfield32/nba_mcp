@@ -71,7 +71,9 @@ try {
     
     # Make sure ipykernel is installed
     Invoke-Expression "& '$envPath\Scripts\activate'; uv pip install ipykernel"
-    
+    # Install uvicorn
+    Invoke-Expression "& '$envPath\Scripts\activate'; uv pip install uvicorn"
+
     Write-Host "Packages installed successfully" -ForegroundColor Green
 }
 catch {

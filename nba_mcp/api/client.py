@@ -1,6 +1,8 @@
 from datetime import datetime, date
 from typing import Optional, Dict, Any, List, Union
 import logging
+import sys
+import traceback
 
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
@@ -103,17 +105,35 @@ class NBAApiClient:
             Player dictionary or None if not found
         """
         try:
+            print(f"DEBUG: Searching for player: '{player_name}'", file=sys.stderr)
+            
+            if not player_name or not player_name.strip():
+                print(f"ERROR: Empty player name provided", file=sys.stderr)
+                return None
+                
             # Get all players
+            print(f"DEBUG: Loading player roster data...", file=sys.stderr)
             all_players = players.get_players()
+            print(f"DEBUG: Loaded {len(all_players)} players from roster data", file=sys.stderr)
             
             # Try exact match first (case insensitive)
-            player_name_lower = player_name.lower()
+            player_name_lower = player_name.lower().strip()
+            print(f"DEBUG: Attempting exact match for: '{player_name_lower}'", file=sys.stderr)
+            
             for player in all_players:
                 full_name = f"{player['first_name']} {player['last_name']}".lower()
                 if player_name_lower == full_name:
+                    print(f"DEBUG: Found exact match for player: {player['first_name']} {player['last_name']} (ID: {player['id']})", file=sys.stderr)
+                    return player
+            
+            # Try matching last name only if no full name match
+            for player in all_players:
+                if player_name_lower == player['last_name'].lower():
+                    print(f"DEBUG: Found match by last name: {player['first_name']} {player['last_name']} (ID: {player['id']})", file=sys.stderr)
                     return player
             
             # If no exact match, try partial match
+            print(f"DEBUG: No exact match found, trying partial match...", file=sys.stderr)
             matched_players = []
             for player in all_players:
                 full_name = f"{player['first_name']} {player['last_name']}".lower()
@@ -124,11 +144,16 @@ class NBAApiClient:
             if matched_players:
                 # Sort by name length (shorter names are more likely to be exact matches)
                 matched_players.sort(key=lambda p: len(f"{p['first_name']} {p['last_name']}"))
-                return matched_players[0]
+                best_match = matched_players[0]
+                print(f"DEBUG: Found best partial match: {best_match['first_name']} {best_match['last_name']} (ID: {best_match['id']})", file=sys.stderr)
+                return best_match
             
+            print(f"DEBUG: No player match found for '{player_name}'", file=sys.stderr)
             return None
             
         except Exception as e:
+            print(f"ERROR: Exception while finding player: {str(e)}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
             logger.error(f"Error finding player: {str(e)}")
             return None
 
@@ -160,35 +185,59 @@ class NBAApiClient:
         """
         try:
             # Find the player
+            print(f"DEBUG: Starting player stats lookup for '{player_name}'", file=sys.stderr)
             player = self.find_player_by_name(player_name)
             
             if not player:
-                return {"error": f"No player found matching '{player_name}'"}
+                error_msg = f"No player found matching '{player_name}'"
+                print(f"ERROR: {error_msg}", file=sys.stderr)
+                return {"error": error_msg}
             
             # Get season string
             if season is None:
                 season_string = self.get_season_string()
                 season_year = int(season_string.split('-')[0])
+                print(f"DEBUG: Using current season: {season_string}", file=sys.stderr)
             else:
                 season_string = self.get_season_string(season)
                 season_year = season
+                print(f"DEBUG: Using specified season: {season_string}", file=sys.stderr)
             
             # Get player game averages
             try:
+                player_id = player["id"]
+                print(f"DEBUG: Fetching stats for player ID {player_id} ({player['first_name']} {player['last_name']})", file=sys.stderr)
+                
                 # Use PlayerProfileV2 to get season averages
-                profile = PlayerProfileV2(player_id=player["id"], per_mode36="PerGame")
+                print(f"DEBUG: Calling PlayerProfileV2 API...", file=sys.stderr)
+                profile = PlayerProfileV2(player_id=player_id, per_mode36="PerGame")
                 
                 # Extract season averages from the response
+                print(f"DEBUG: Getting response data from API...", file=sys.stderr)
                 profile_data = profile.get_dict()
                 
                 # Find the season stats from the profile data
                 season_stats = None
+                
+                print(f"DEBUG: Searching for season {season_string} in profile data...", file=sys.stderr)
+                
+                # Check if we have valid result sets
+                if not profile_data.get("resultSets") or len(profile_data.get("resultSets", [])) == 0:
+                    error_msg = "No data returned from player profile API"
+                    print(f"ERROR: {error_msg}", file=sys.stderr)
+                    return {"error": error_msg}
+                
                 if "seasonTotalsRegularSeason" in profile_data.get("resultSets", [{}])[0]:
                     headers = profile_data["resultSets"][0]["headers"]
                     rows = profile_data["resultSets"][0]["rowSet"]
                     
+                    print(f"DEBUG: Found {len(rows)} season records in profile data", file=sys.stderr)
+                    
                     # Find index of SEASON_ID column
                     season_id_index = headers.index("SEASON_ID") if "SEASON_ID" in headers else -1
+                    
+                    if season_id_index == -1:
+                        print(f"WARNING: Could not find SEASON_ID column in headers: {headers}", file=sys.stderr)
                     
                     # Convert season string to NBA API format (e.g., "2023-24" -> "2023-24")
                     target_season_id = season_string
@@ -197,11 +246,13 @@ class NBAApiClient:
                     for row in rows:
                         if season_id_index >= 0 and row[season_id_index] == target_season_id:
                             # Create a dictionary with stats
+                            print(f"DEBUG: Found matching season: {target_season_id}", file=sys.stderr)
                             season_stats = {header.lower(): value for header, value in zip(headers, row)}
                             break
-                
+                 
                 # If we couldn't find stats in the profile, try PlayerGameLog
                 if not season_stats:
+                    print(f"DEBUG: No season stats found in profile data, trying PlayerGameLog...", file=sys.stderr)
                     game_log = PlayerGameLog(player_id=player["id"], season=season_string)
                     games_data = game_log.get_dict()
                     
@@ -212,6 +263,7 @@ class NBAApiClient:
                         
                         # Create stats from game logs
                         games_played = len(rows)
+                        print(f"DEBUG: Found {games_played} games in player game log", file=sys.stderr)
                         
                         if games_played > 0:
                             # Get indices for the stats we care about
@@ -220,6 +272,7 @@ class NBAApiClient:
                             ast_index = headers.index("AST") if "AST" in headers else -1
                             min_index = headers.index("MIN") if "MIN" in headers else -1
                             
+                            print(f"DEBUG: Calculating averages from game logs", file=sys.stderr)
                             # Calculate averages
                             pts_sum = sum(row[pts_index] for row in rows if pts_index >= 0)
                             reb_sum = sum(row[reb_index] for row in rows if reb_index >= 0)
