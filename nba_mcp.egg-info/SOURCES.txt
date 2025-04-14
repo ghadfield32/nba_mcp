@@ -9,3 +9,4 @@ nba_mcp.egg-info/dependency_links.txt
 nba_mcp.egg-info/entry_points.txt
 nba_mcp.egg-info/requires.txt
 nba_mcp.egg-info/top_level.txt
+tests/test_nba_api_with_error_handling.py

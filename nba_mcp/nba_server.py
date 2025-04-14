@@ -33,13 +33,13 @@ async def get_game_scores(date: str) -> str:
     client = NBAApiClient()
     data = await client.get_games_by_date(date)
 
-    if not data or "error" in data or not data.get("data"):
-        return "Unable to fetch game data for that date."
+    if "error" in data:
+        return f"Error: {data['error']}"
+
+    if not data.get("data"):
+        return f"No games found for {date}."
 
     games = data["data"]
-    if not games:
-        return "No games found for this date."
-
     formatted_games = [format_game(game) for game in games]
     return "\n---\n".join(formatted_games)
 
@@ -55,7 +55,7 @@ async def get_player_stats(player: str) -> str:
     result = await client.get_player_stats(player)
 
     if "error" in result:
-        return result["error"]
+        return f"Error: {result['error']}"
 
     player_name = result["player"]
     season = result["season"]
