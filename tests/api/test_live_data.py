@@ -9,8 +9,8 @@ async def test_live_game_data():
     client = NBAApiClient()
     
     # Use dates from the past where we know games were played
-    # Using March 2024 as an example
-    start_date = datetime(2024, 3, 1)  # March 1, 2024
+    # Using a fixed period from the 2023-2024 season
+    start_date = datetime(2023, 11, 1)  # November 1, 2023
     results = []
     api_responses = []
     
@@ -146,9 +146,8 @@ async def test_league_leaders():
     """Test fetching league leaders."""
     client = NBAApiClient()
     
-    # Get current season in format "2024-25"
-    current_year = datetime.now().year
-    season = f"{current_year}-{str(current_year + 1)[-2:]}"
+    # Use a completed season (2022-23) for reliable data
+    season = "2022-23"
     
     print(f"\nFetching league leaders for season {season}:")
     
@@ -188,9 +187,8 @@ async def test_league_game_log():
     """Test fetching league game log."""
     client = NBAApiClient()
     
-    # Get current season in format "2024-25"
-    current_year = datetime.now().year
-    season = f"{current_year}-{str(current_year + 1)[-2:]}"
+    # Use a completed season (2022-23) for reliable data
+    season = "2022-23"
     
     print(f"\nFetching league game log for season {season}:")
     

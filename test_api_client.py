@@ -1,22 +1,22 @@
 import asyncio
 import os
 from nba_mcp.api.client import NBAApiClient
+from nba_api.stats.static import teams
 
 async def test_teams():
-    """Test getting teams list (should be available in free tier)"""
-    client = NBAApiClient()
+    """Test getting teams list from NBA API"""
     print("Testing teams endpoint...")
     try:
-        # Try to get teams (should be available in free tier)
-        result = await client.make_request("teams")
+        # Get all teams using the static teams data
+        nba_teams = teams.get_teams()
         
-        if "error" in result:
-            print(f"Error: {result['error']}")
+        if not nba_teams:
+            print("Error: No teams data returned")
         else:
-            print(f"Teams result: Found {len(result.get('data', []))} teams")
+            print(f"Teams result: Found {len(nba_teams)} teams")
             # Print the first team as an example
-            if result.get('data') and len(result['data']) > 0:
-                print(f"Example team: {result['data'][0]['full_name']}")
+            if nba_teams and len(nba_teams) > 0:
+                print(f"Example team: {nba_teams[0]['full_name']}")
     except Exception as e:
         print(f"Error: {str(e)}")
 
@@ -138,15 +138,6 @@ async def test_live_scoreboard():
 async def main():
     print("Testing NBA API Client...")
     print("=========================")
-    
-    # Try to get API key from environment
-    api_key = os.environ.get("NBA_API_KEY", "")
-    if api_key:
-        print("API key found in environment variable.")
-    else:
-        print("No API key found. Some endpoints may return error responses.")
-        print("To get an API key, sign up at https://app.balldontlie.io")
-        print("Then set it as an environment variable: NBA_API_KEY=your_key_here\n")
     
     await test_teams()
     await test_games()
