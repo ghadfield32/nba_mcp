@@ -1,0 +1,34 @@
+{
+  "generated_date": "2025-04-15T12:31:48.965765",
+  "endpoints": {
+    "PlayerCareerStats": {
+      "name": "PlayerCareerStats",
+      "class_name": "PlayerCareerStats",
+      "module": "nba_api.stats.endpoints.playercareerstats",
+      "parameters": {},
+      "required_parameters": [
+        "player_id"
+      ],
+      "endpoint": "",
+      "example_code": "\n# Get career stats for Nikola Joki\u0107 (ID: 203999)\nfrom nba_api.stats.endpoints import playercareerstats\ncareer = playercareerstats.PlayerCareerStats(player_id='203999')\ncareer_df = career.get_data_frames()[0]\n"
+    },
+    "LeagueLeaders": {
+      "name": "LeagueLeaders",
+      "class_name": "LeagueLeaders",
+      "module": "nba_api.stats.endpoints.leagueleaders",
+      "parameters": {},
+      "required_parameters": [],
+      "endpoint": "",
+      "example_code": "\n# Get current season's league leaders\nfrom nba_api.stats.endpoints import leagueleaders\nleaders = leagueleaders.LeagueLeaders()\nleaders_df = leaders.get_data_frames()[0]\n"
+    },
+    "LeagueGameLog": {
+      "name": "LeagueGameLog",
+      "class_name": "LeagueGameLog",
+      "module": "nba_api.stats.endpoints.leaguegamelog",
+      "parameters": {},
+      "required_parameters": [],
+      "endpoint": "",
+      "example_code": "\n# Get game logs for the current season\nfrom nba_api.stats.endpoints import leaguegamelog\ngame_log = leaguegamelog.LeagueGameLog()\ngames_df = game_log.get_data_frames()[0]\n"
+    }
+  }
+}

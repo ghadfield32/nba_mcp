@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Any, Union
 import pandas as pd
 from datetime import date
+import logging
 
 # nba_api imports
 from nba_api.live.nba.endpoints import scoreboard
@@ -11,6 +12,28 @@ from nba_api.stats.endpoints import (
 )
 from nba_api.stats.static import players, teams  # <-- import both static lookups
 
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Cache static data at module load to avoid repeated API calls
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Cache player and team data at module load
+try:
+    logger.info("Caching NBA players and teams data...")
+    _ALL_PLAYERS = players.get_players()
+    _ALL_TEAMS = teams.get_teams()
+    logger.info(f"Cached {len(_ALL_PLAYERS)} players and {len(_ALL_TEAMS)} teams")
+except Exception as e:
+    logger.error(f"Error caching NBA data: {str(e)}")
+    # Fallback to empty lists so the module still works
+    _ALL_PLAYERS = []
+    _ALL_TEAMS = []
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Internal helpers
@@ -21,7 +44,13 @@ def _get_player_id_from_name(player_name: str) -> Optional[str]:
     if not player_name.strip():
         return None
 
-    all_players = players.get_players()
+    # Use cached player data instead of making API call
+    all_players = _ALL_PLAYERS
+    if not all_players:
+        # Fallback to API call if cache failed
+        logger.warning("Player cache empty, falling back to API call")
+        all_players = players.get_players()
+        
     name_lower = player_name.lower().strip()
 
     # exact match
@@ -45,7 +74,13 @@ def _get_team_id_from_name(team_name: str) -> Optional[str]:
     if not team_name.strip():
         return None
 
-    all_teams = teams.get_teams()
+    # Use cached team data instead of making API call
+    all_teams = _ALL_TEAMS
+    if not all_teams:
+        # Fallback to API call if cache failed
+        logger.warning("Team cache empty, falling back to API call")
+        all_teams = teams.get_teams()
+        
     name_lower = team_name.lower().strip()
 
     # try exact full_name
@@ -73,16 +108,52 @@ def get_live_scoreboard(
 ) -> Union[Dict[str, Any], pd.DataFrame]:
     """
     Retrieve live scoreboard data for the given date (defaults to today).
+    
+    The returned raw data has the following structure:
+    {
+        "meta": {
+            "version": 1,
+            "request": "https://nba-prod-us-east-1-mediaops-stats.s3.amazonaws.com/...",
+            "time": "2025-04-14 01:23:32.2332",
+            "code": 200
+        },
+        "scoreboard": {
+            "gameDate": "2025-04-14",
+            "leagueId": "00",
+            "leagueName": "National Basketball Association",
+            "games": []
+        }
+    }
+    
+    Args:
+        target_date: Optional specific date to fetch, defaults to today
+        as_dataframe: If True, returns games as a DataFrame, otherwise returns raw API data
+    
+    Returns:
+        If as_dataframe is True, returns pandas DataFrame of games
+        If as_dataframe is False, returns full raw API response dict
     """
     if target_date is None:
         target_date = date.today()
-    sb = scoreboard.ScoreBoard()  # defaults to today
+        
+    # Create scoreboard instance for the target date
+    sb = scoreboard.ScoreBoard()
+    
+    # If date is not today, set the date property
+    if target_date != date.today():
+        sb.game_date = target_date
+        
+    # Get the raw dictionary data
     data = sb.get_dict()
-
+    
+    # If not requesting DataFrame, return the complete raw data
     if not as_dataframe:
         return data
-
+    
+    # Extract games for DataFrame conversion
     games = data.get("scoreboard", {}).get("games", [])
+    
+    # Return as DataFrame
     return pd.DataFrame(games)
 
 

@@ -1,0 +1,21 @@
+{
+  "generated_date": "2025-04-15T12:25:49.298261",
+  "players_count": 5024,
+  "teams_count": 30,
+  "player_fields": [
+    "id",
+    "full_name",
+    "first_name",
+    "last_name",
+    "is_active"
+  ],
+  "team_fields": [
+    "id",
+    "full_name",
+    "abbreviation",
+    "nickname",
+    "city",
+    "state",
+    "year_founded"
+  ]
+}

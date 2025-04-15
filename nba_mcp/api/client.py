@@ -1,8 +1,11 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional, Dict, Any, List, Union
 import logging
 import sys
 import traceback
+import re
+import asyncio
+
 
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
@@ -50,19 +53,32 @@ class NBAApiClient:
             try:
                 game_date = datetime.strptime(date_str, "%Y-%m-%d").date()
             except ValueError:
-                return {"error": f"Invalid date format: {date_str}. Please use YYYY-MM-DD format.", "data": None}
+                return {"error": f"Invalid date format: {date_str}. Please use YYYY-MM-DD format.", "data": None, "query_date": date_str}
             
-            # Get scoreboard data for the date
-            sb = scoreboard.ScoreBoard(game_date=game_date)
-            data = sb.get_dict()
+            # Get scoreboard data for the date - ScoreBoard doesn't accept game_date but uses date as a property
+            try:
+                # First create the scoreboard without parameters, then set date if needed
+                sb = scoreboard.ScoreBoard()
+                if game_date != date.today():
+                    # Update the internal date property - this is what the API actually uses
+                    sb.game_date = game_date
+                data = sb.get_dict()
+            except Exception as e:
+                return {"error": f"Failed to retrieve scoreboard: {str(e)}", "data": None, "query_date": date_str}
             
             # Check if data exists and has the expected structure
             if not data or "scoreboard" not in data or "games" not in data["scoreboard"]:
-                return {"error": "No games data available for this date", "data": None}
+                return {"error": "No games data available for this date", "data": None, "query_date": date_str}
                 
             # Format the data to match the expected structure
             formatted_games = []
-            for game in data["scoreboard"]["games"]:
+            games_list = data["scoreboard"]["games"]
+            
+            if not games_list:
+                # Return empty array but with clear indication there were no games scheduled
+                return {"data": [], "message": f"No games scheduled on {game_date.strftime('%B %d, %Y')}.", "query_date": date_str}
+                
+            for game in games_list:
                 try:
                     home_team = {
                         "full_name": game["homeTeam"]["teamName"],
@@ -89,7 +105,7 @@ class NBAApiClient:
                     logger.warning(f"Error formatting game data: {str(e)}")
                     continue
             
-            return {"data": formatted_games}
+            return {"data": formatted_games, "query_date": date_str}
             
         except Exception as e:
             return self._handle_response_error(e, "get_games_by_date")
@@ -319,20 +335,34 @@ class NBAApiClient:
         Get live scoreboard data from the NBA API.
 
         Returns:
-            Dictionary containing live scoreboard data with game details
+            Dictionary containing live scoreboard data with game details including:
+            - meta: API metadata including version, request URL, timestamp, and status code
+            - scoreboard: Game data including gameDate, leagueId, leagueName, and games array
         """
+        
         try:
+            # Create scoreboard instance
             sb = scoreboard.ScoreBoard()
+            
+            # Get raw data dictionary
             data = sb.get_dict()
             
-            # Check if data exists and has the expected structure
-            if not data or "scoreboard" not in data:
-                return {"error": "Invalid response format from live scoreboard API"}
+            # Validate response structure
+            if not data:
+                return {"error": "Empty response from live scoreboard API"}
                 
-            # Check for expected data structure
-            if "games" not in data["scoreboard"]:
-                return {"error": "No games data found in live scoreboard response"}
+            # The response should contain both meta and scoreboard sections
+            if "meta" not in data:
+                return {"error": "Missing meta section in scoreboard response"}
                 
+            if "scoreboard" not in data:
+                return {"error": "Missing scoreboard section in response"}
+                
+            # Check for expected data structure in scoreboard section
+            if "gameDate" not in data["scoreboard"] or "games" not in data["scoreboard"]:
+                return {"error": "Invalid scoreboard data structure"}
+                
+            # Return the complete data structure (includes meta and scoreboard)
             return data
             
         except Exception as e:
@@ -441,5 +471,157 @@ class NBAApiClient:
             
         except Exception as e:
             return self._handle_response_error(e, "get_league_game_log")
+        
+    async def get_most_recent_game_date(self, lookback_days: int = 7) -> Dict[str, Any]:
+        """
+        Find the most recent date that had NBA games, looking back up to lookback_days.
+
+        Args:
+            lookback_days: Maximum number of days to look back (default: 7)
+
+        Returns:
+            Dictionary containing either:
+              - date:        "YYYY-MM-DD"
+              - formatted_date: "Month DD, YYYY"
+              - games:       [ ... list of game dicts ... ]
+            or, on failure:
+              - error:       error message
+        """
+        print(f"DEBUG: Looking for most recent games (up to {lookback_days} days back)", file=sys.stderr)
+
+        today = date.today()
+
+        for days_back in range(lookback_days):
+            check_date = today - timedelta(days=days_back)
+            date_str = check_date.strftime("%Y-%m-%d")
+
+            print(f"DEBUG: Checking for games on {date_str}", file=sys.stderr)
+            result = await self.get_games_by_date(date_str)
+
+            # If the API returned an error, skip this date
+            if "error" in result:
+                print(f"DEBUG: Error checking {date_str}: {result['error']}", file=sys.stderr)
+                continue
+
+            # If we found non-empty data, return it immediately
+            if result.get("data"):
+                print(f"DEBUG: Found games on {date_str}", file=sys.stderr)
+                return {
+                    "date": date_str,
+                    "formatted_date": check_date.strftime("%B %d, %Y"),
+                    "games": result["data"]
+                }
+
+        # No games found in the lookback window
+        return {
+            "error": f"No games found in the last {lookback_days} days"
+        }
+
+    async def get_player_stats_bulk(self, player_name: str, seasons: Optional[List[int]] = None) -> Dict[str, Any]:
+        """
+        Get player stats for multiple seasons efficiently.
+        
+        Args:
+            player_name: Name of the player
+            seasons: List of season years (e.g., [2023, 2022, 2021] for recent seasons)
+                    If None, returns the last 5 seasons
+                    
+        Returns:
+            Dictionary with player stats for multiple seasons
+        """
+        try:
+            # Find the player once for all seasons
+            print(f"DEBUG: Starting bulk player stats lookup for '{player_name}'", file=sys.stderr)
+            player = self.find_player_by_name(player_name)
+            
+            if not player:
+                error_msg = f"No player found matching '{player_name}'"
+                print(f"ERROR: {error_msg}", file=sys.stderr)
+                return {"error": error_msg}
+            
+            # If no seasons provided, use the last 5 seasons
+            current_season_year = int(self.get_season_string().split('-')[0])
+            
+            if not seasons:
+                # Default to the last 5 seasons
+                seasons = list(range(current_season_year, current_season_year - 5, -1))
+                print(f"DEBUG: No seasons specified, using last 5 seasons: {seasons}", file=sys.stderr)
+            
+            # Get player career stats - this gives us all seasons in one request
+            player_id = player["id"]
+            print(f"DEBUG: Fetching career stats for player ID {player_id} ({player['first_name']} {player['last_name']})", file=sys.stderr)
+            
+            try:
+                # Use PlayerCareerStats to get stats for all seasons at once
+                career = playercareerstats.PlayerCareerStats(player_id=player_id, per_mode36="PerGame")
+                
+                # Extract the stats from the response
+                career_data = career.get_dict()
+                
+                if "resultSets" not in career_data or len(career_data["resultSets"]) == 0:
+                    return {
+                        "error": "No career data available for this player",
+                        "player": f"{player['first_name']} {player['last_name']}",
+                        "seasons": seasons
+                    }
+                
+                # Find regular season totals in the result sets
+                season_stats_list = []
+                
+                # Look for the season totals in the result sets
+                for result_set in career_data["resultSets"]:
+                    if result_set.get("name") == "SeasonTotalsRegularSeason":
+                        headers = result_set["headers"]
+                        rows = result_set["rowSet"]
+                        
+                        # Find index of SEASON_ID column
+                        season_id_index = headers.index("SEASON_ID") if "SEASON_ID" in headers else -1
+                        
+                        if season_id_index == -1:
+                            print(f"WARNING: Could not find SEASON_ID column in headers", file=sys.stderr)
+                            continue
+                        
+                        # Process all rows in the result set
+                        for row in rows:
+                            # Convert season_id to year (e.g., "2023-24" -> 2023)
+                            season_id = row[season_id_index]
+                            try:
+                                season_year = int(season_id.split('-')[0])
+                                
+                                # Skip seasons we don't want
+                                if seasons and season_year not in seasons:
+                                    continue
+                                    
+                                # Create a dictionary with stats for this season
+                                season_stats = {
+                                    "season_id": season_id,
+                                    "season_year": season_year,
+                                    "stats": {header.lower(): value for header, value in zip(headers, row)}
+                                }
+                                season_stats_list.append(season_stats)
+                            except (ValueError, IndexError, AttributeError) as e:
+                                print(f"WARNING: Error processing season {season_id}: {str(e)}", file=sys.stderr)
+                                continue
+                
+                # Sort seasons by year (newest first)
+                season_stats_list.sort(key=lambda x: x["season_year"], reverse=True)
+                
+                # Return the stats
+                return {
+                    "player": f"{player['first_name']} {player['last_name']}",
+                    "seasons_requested": seasons,
+                    "seasons_found": [s["season_year"] for s in season_stats_list],
+                    "season_stats": season_stats_list
+                }
+                
+            except Exception as e:
+                return {
+                    "error": f"Error fetching stats for {player['first_name']} {player['last_name']}: {str(e)}",
+                    "player": f"{player['first_name']} {player['last_name']}",
+                    "seasons": seasons
+                }
+                
+        except Exception as e:
+            return self._handle_response_error(e, "get_player_stats_bulk")
 
 

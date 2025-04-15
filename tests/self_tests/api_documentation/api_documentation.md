@@ -1,0 +1,6414 @@
+# NBA API Documentation
+Generated on: 2025-04-15 12:48:32
+
+## Available Endpoints
+
+The following endpoints are available in the NBA API:
+
+
+### AllTimeLeadersGrids
+Endpoint URL: `alltimeleadersgrids`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### GPLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "GP",
+  "GP_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "GP": "int64",
+  "GP_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 305,
+    "PLAYER_NAME": "Robert Parish",
+    "GP": 1611,
+    "GP_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "GP": 1562,
+    "GP_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### PTSLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "PTS",
+  "PTS_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "PTS": "int64",
+  "PTS_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "PTS": 42184,
+    "PTS_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 76003,
+    "PLAYER_NAME": "Kareem Abdul-Jabbar",
+    "PTS": 38387,
+    "PTS_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### ASTLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "AST",
+  "AST_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "AST": "int64",
+  "AST_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 304,
+    "PLAYER_NAME": "John Stockton",
+    "AST": 15806,
+    "AST_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 101108,
+    "PLAYER_NAME": "Chris Paul",
+    "AST": 12499,
+    "AST_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### STLLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "STL",
+  "STL_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "STL": "int64",
+  "STL_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 304,
+    "PLAYER_NAME": "John Stockton",
+    "STL": 3265,
+    "STL_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 101108,
+    "PLAYER_NAME": "Chris Paul",
+    "STL": 2717,
+    "STL_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### OREBLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "OREB",
+  "OREB_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "OREB": "int64",
+  "OREB_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 77449,
+    "PLAYER_NAME": "Moses Malone",
+    "OREB": 6731,
+    "OREB_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 305,
+    "PLAYER_NAME": "Robert Parish",
+    "OREB": 4598,
+    "OREB_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### DREBLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "DREB",
+  "DREB_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "DREB": "int64",
+  "DREB_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 708,
+    "PLAYER_NAME": "Kevin Garnett",
+    "DREB": 11453,
+    "DREB_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 252,
+    "PLAYER_NAME": "Karl Malone",
+    "DREB": 11406,
+    "DREB_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### REBLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "REB",
+  "REB_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "REB": "int64",
+  "REB_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 76375,
+    "PLAYER_NAME": "Wilt Chamberlain",
+    "REB": 23924,
+    "REB_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 78049,
+    "PLAYER_NAME": "Bill Russell",
+    "REB": 21620,
+    "REB_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### BLKLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "BLK",
+  "BLK_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "BLK": "int64",
+  "BLK_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 165,
+    "PLAYER_NAME": "Hakeem Olajuwon",
+    "BLK": 3830,
+    "BLK_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 87,
+    "PLAYER_NAME": "Dikembe Mutombo",
+    "BLK": 3289,
+    "BLK_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### FGMLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FGM",
+  "FGM_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FGM": "int64",
+  "FGM_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 76003,
+    "PLAYER_NAME": "Kareem Abdul-Jabbar",
+    "FGM": 15837,
+    "FGM_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "FGM": 15488,
+    "FGM_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### FGALeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FGA",
+  "FGA_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FGA": "int64",
+  "FGA_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "FGA": 30583,
+    "FGA_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 76003,
+    "PLAYER_NAME": "Kareem Abdul-Jabbar",
+    "FGA": 28307,
+    "FGA_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### FG_PCTLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FG_PCT",
+  "FG_PCT_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FG_PCT": "float64",
+  "FG_PCT_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 1629655,
+    "PLAYER_NAME": "Daniel Gafford",
+    "FG_PCT": 0.709,
+    "FG_PCT_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 201599,
+    "PLAYER_NAME": "DeAndre Jordan",
+    "FG_PCT": 0.674,
+    "FG_PCT_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### TOVLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "TOV",
+  "TOV_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "TOV": "int64",
+  "TOV_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "TOV": 5471,
+    "TOV_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 201566,
+    "PLAYER_NAME": "Russell Westbrook",
+    "TOV": 4829,
+    "TOV_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### FG3MLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FG3M",
+  "FG3M_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FG3M": "int64",
+  "FG3M_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 201939,
+    "PLAYER_NAME": "Stephen Curry",
+    "FG3M": 4058,
+    "FG3M_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 201935,
+    "PLAYER_NAME": "James Harden",
+    "FG3M": 3175,
+    "FG3M_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### FG3ALeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FG3A",
+  "FG3A_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FG3A": "int64",
+  "FG3A_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 201939,
+    "PLAYER_NAME": "Stephen Curry",
+    "FG3A": 9589,
+    "FG3A_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 201935,
+    "PLAYER_NAME": "James Harden",
+    "FG3A": 8750,
+    "FG3A_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### FG3_PCTLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FG3_PCT",
+  "FG3_PCT_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FG3_PCT": "float64",
+  "FG3_PCT_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 70,
+    "PLAYER_NAME": "Steve Kerr",
+    "FG3_PCT": 0.454,
+    "FG3_PCT_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 93,
+    "PLAYER_NAME": "Hubert Davis",
+    "FG3_PCT": 0.441,
+    "FG3_PCT_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### PFLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "PF",
+  "PF_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "PF": "int64",
+  "PF_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 76003,
+    "PLAYER_NAME": "Kareem Abdul-Jabbar",
+    "PF": 4657,
+    "PF_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 252,
+    "PLAYER_NAME": "Karl Malone",
+    "PF": 4578,
+    "PF_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### FTMLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FTM",
+  "FTM_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FTM": "int64",
+  "FTM_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 252,
+    "PLAYER_NAME": "Karl Malone",
+    "FTM": 9787,
+    "FTM_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 2544,
+    "PLAYER_NAME": "LeBron James",
+    "FTM": 8649,
+    "FTM_RANK": 2,
+    "IS_ACTIVE_FLAG": "Y"
+  }
+]
+```
+
+#### FTALeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FTA",
+  "FTA_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FTA": "int64",
+  "FTA_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 252,
+    "PLAYER_NAME": "Karl Malone",
+    "FTA": 13188,
+    "FTA_RANK": 1,
+    "IS_ACTIVE_FLAG": "N"
+  },
+  {
+    "PLAYER_ID": 76375,
+    "PLAYER_NAME": "Wilt Chamberlain",
+    "FTA": 11862,
+    "FTA_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+#### FT_PCTLeaders
+Row Count: 10
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "FT_PCT",
+  "FT_PCT_RANK",
+  "IS_ACTIVE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "FT_PCT": "float64",
+  "FT_PCT_RANK": "int64",
+  "IS_ACTIVE_FLAG": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 201939,
+    "PLAYER_NAME": "Stephen Curry",
+    "FT_PCT": 0.911,
+    "FT_PCT_RANK": 1,
+    "IS_ACTIVE_FLAG": "Y"
+  },
+  {
+    "PLAYER_ID": 899,
+    "PLAYER_NAME": "Mark Price",
+    "FT_PCT": 0.904,
+    "FT_PCT_RANK": 2,
+    "IS_ACTIVE_FLAG": "N"
+  }
+]
+```
+
+### AssistLeaders
+Endpoint URL: `assistleaders`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### AssistLeaders
+Row Count: 5
+
+Headers:
+```python
+[
+  "RANK",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_NAME",
+  "AST"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "RANK": "int64",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_NAME": "object",
+  "AST": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "RANK": 1,
+    "TEAM_ID": 1610612743,
+    "TEAM_ABBREVIATION": "DEN",
+    "TEAM_NAME": "Denver Nuggets",
+    "AST": 2542
+  },
+  {
+    "RANK": 2,
+    "TEAM_ID": 1610612737,
+    "TEAM_ABBREVIATION": "ATL",
+    "TEAM_NAME": "Atlanta Hawks",
+    "AST": 2426
+  }
+]
+```
+
+### AssistTracker
+Endpoint URL: `assisttracker`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### AssistTracker
+Row Count: 1
+
+Headers:
+```python
+[
+  "ASSISTS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "ASSISTS": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "ASSISTS": 57727
+  }
+]
+```
+
+### BoxScoreAdvancedV2
+Endpoint URL: `boxscoreadvancedv2`
+
+
+### BoxScoreAdvancedV3
+Endpoint URL: `boxscoreadvancedv3`
+
+
+### BoxScoreDefensiveV2
+Endpoint URL: `boxscoredefensivev2`
+
+
+### BoxScoreFourFactorsV2
+Endpoint URL: `boxscorefourfactorsv2`
+
+
+### BoxScoreFourFactorsV3
+Endpoint URL: `boxscorefourfactorsv3`
+
+
+### BoxScoreHustleV2
+Endpoint URL: `boxscorehustlev2`
+
+
+### BoxScoreMatchupsV3
+Endpoint URL: `boxscorematchupsv3`
+
+
+### BoxScoreMiscV2
+Endpoint URL: `boxscoremiscv2`
+
+
+### BoxScoreMiscV3
+Endpoint URL: `boxscoremiscv3`
+
+
+### BoxScorePlayerTrackV2
+Endpoint URL: `boxscoreplayertrackv2`
+
+
+### BoxScorePlayerTrackV3
+Endpoint URL: `boxscoreplayertrackv3`
+
+
+### BoxScoreScoringV2
+Endpoint URL: `boxscorescoringv2`
+
+
+### BoxScoreScoringV3
+Endpoint URL: `boxscorescoringv3`
+
+
+### BoxScoreSummaryV2
+Endpoint URL: `boxscoresummaryv2`
+
+
+### BoxScoreTraditionalV2
+Endpoint URL: `boxscoretraditionalv2`
+
+
+### BoxScoreTraditionalV3
+Endpoint URL: `boxscoretraditionalv3`
+
+
+### BoxScoreUsageV2
+Endpoint URL: `boxscoreusagev2`
+
+
+### BoxScoreUsageV3
+Endpoint URL: `boxscoreusagev3`
+
+
+### CommonAllPlayers
+Endpoint URL: `commonallplayers`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### CommonAllPlayers
+Row Count: 5025
+
+Headers:
+```python
+[
+  "PERSON_ID",
+  "DISPLAY_LAST_COMMA_FIRST",
+  "DISPLAY_FIRST_LAST",
+  "ROSTERSTATUS",
+  "FROM_YEAR",
+  "TO_YEAR",
+  "PLAYERCODE",
+  "PLAYER_SLUG",
+  "TEAM_ID",
+  "TEAM_CITY",
+  "TEAM_NAME",
+  "TEAM_ABBREVIATION",
+  "TEAM_CODE",
+  "TEAM_SLUG",
+  "GAMES_PLAYED_FLAG",
+  "OTHERLEAGUE_EXPERIENCE_CH"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PERSON_ID": "int64",
+  "DISPLAY_LAST_COMMA_FIRST": "object",
+  "DISPLAY_FIRST_LAST": "object",
+  "ROSTERSTATUS": "int64",
+  "FROM_YEAR": "object",
+  "TO_YEAR": "object",
+  "PLAYERCODE": "object",
+  "PLAYER_SLUG": "object",
+  "TEAM_ID": "int64",
+  "TEAM_CITY": "object",
+  "TEAM_NAME": "object",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_CODE": "object",
+  "TEAM_SLUG": "object",
+  "GAMES_PLAYED_FLAG": "object",
+  "OTHERLEAGUE_EXPERIENCE_CH": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PERSON_ID": 76001,
+    "DISPLAY_LAST_COMMA_FIRST": "Abdelnaby, Alaa",
+    "DISPLAY_FIRST_LAST": "Alaa Abdelnaby",
+    "ROSTERSTATUS": 0,
+    "FROM_YEAR": "1990",
+    "TO_YEAR": "1994",
+    "PLAYERCODE": "HISTADD_alaa_abdelnaby",
+    "PLAYER_SLUG": "alaa_abdelnaby",
+    "TEAM_ID": 0,
+    "TEAM_CITY": "",
+    "TEAM_NAME": "",
+    "TEAM_ABBREVIATION": "",
+    "TEAM_CODE": "",
+    "TEAM_SLUG": null,
+    "GAMES_PLAYED_FLAG": "Y",
+    "OTHERLEAGUE_EXPERIENCE_CH": "00"
+  },
+  {
+    "PERSON_ID": 76002,
+    "DISPLAY_LAST_COMMA_FIRST": "Abdul-Aziz, Zaid",
+    "DISPLAY_FIRST_LAST": "Zaid Abdul-Aziz",
+    "ROSTERSTATUS": 0,
+    "FROM_YEAR": "1968",
+    "TO_YEAR": "1977",
+    "PLAYERCODE": "HISTADD_zaid_abdul-aziz",
+    "PLAYER_SLUG": "zaid_abdul-aziz",
+    "TEAM_ID": 0,
+    "TEAM_CITY": "",
+    "TEAM_NAME": "",
+    "TEAM_ABBREVIATION": "",
+    "TEAM_CODE": "",
+    "TEAM_SLUG": null,
+    "GAMES_PLAYED_FLAG": "Y",
+    "OTHERLEAGUE_EXPERIENCE_CH": "00"
+  }
+]
+```
+
+### CommonPlayerInfo
+Endpoint URL: `commonplayerinfo`
+
+
+### CommonPlayoffSeries
+Endpoint URL: `commonplayoffseries`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### PlayoffSeries
+Row Count: 4
+
+Headers:
+```python
+[
+  "GAME_ID",
+  "HOME_TEAM_ID",
+  "VISITOR_TEAM_ID",
+  "SERIES_ID",
+  "GAME_NUM"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_ID": "object",
+  "HOME_TEAM_ID": "int64",
+  "VISITOR_TEAM_ID": "int64",
+  "SERIES_ID": "object",
+  "GAME_NUM": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_ID": "0042400121",
+    "HOME_TEAM_ID": 1610612752,
+    "VISITOR_TEAM_ID": 1610612765,
+    "SERIES_ID": "004240012",
+    "GAME_NUM": 1
+  },
+  {
+    "GAME_ID": "0042400131",
+    "HOME_TEAM_ID": 1610612754,
+    "VISITOR_TEAM_ID": 1610612749,
+    "SERIES_ID": "004240013",
+    "GAME_NUM": 1
+  }
+]
+```
+
+### CommonTeamRoster
+Endpoint URL: `commonteamroster`
+
+
+### CommonTeamYears
+Endpoint URL: `commonteamyears`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### TeamYears
+Row Count: 45
+
+Headers:
+```python
+[
+  "LEAGUE_ID",
+  "TEAM_ID",
+  "MIN_YEAR",
+  "MAX_YEAR",
+  "ABBREVIATION"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "LEAGUE_ID": "object",
+  "TEAM_ID": "int64",
+  "MIN_YEAR": "object",
+  "MAX_YEAR": "object",
+  "ABBREVIATION": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "LEAGUE_ID": "00",
+    "TEAM_ID": 1610610023,
+    "MIN_YEAR": "1949",
+    "MAX_YEAR": "1949",
+    "ABBREVIATION": null
+  },
+  {
+    "LEAGUE_ID": "00",
+    "TEAM_ID": 1610610024,
+    "MIN_YEAR": "1947",
+    "MAX_YEAR": "1954",
+    "ABBREVIATION": null
+  }
+]
+```
+
+### CumeStatsPlayer
+Endpoint URL: `cumestatsplayer`
+
+
+### CumeStatsPlayerGames
+Endpoint URL: `cumestatsplayergames`
+
+
+### CumeStatsTeam
+Endpoint URL: `cumestatsteam`
+
+
+### CumeStatsTeamGames
+Endpoint URL: `cumestatsteamgames`
+
+
+### DefenseHub
+Endpoint URL: `defensehub`
+
+
+### DraftBoard
+Endpoint URL: `draftboard`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+### DraftCombineDrillResults
+Endpoint URL: `draftcombinedrillresults`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### Results
+Row Count: 83
+
+Headers:
+```python
+[
+  "TEMP_PLAYER_ID",
+  "PLAYER_ID",
+  "FIRST_NAME",
+  "LAST_NAME",
+  "PLAYER_NAME",
+  "POSITION",
+  "STANDING_VERTICAL_LEAP",
+  "MAX_VERTICAL_LEAP",
+  "LANE_AGILITY_TIME",
+  "MODIFIED_LANE_AGILITY_TIME",
+  "THREE_QUARTER_SPRINT",
+  "BENCH_PRESS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEMP_PLAYER_ID": "int64",
+  "PLAYER_ID": "int64",
+  "FIRST_NAME": "object",
+  "LAST_NAME": "object",
+  "PLAYER_NAME": "object",
+  "POSITION": "object",
+  "STANDING_VERTICAL_LEAP": "float64",
+  "MAX_VERTICAL_LEAP": "float64",
+  "LANE_AGILITY_TIME": "float64",
+  "MODIFIED_LANE_AGILITY_TIME": "float64",
+  "THREE_QUARTER_SPRINT": "float64",
+  "BENCH_PRESS": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEMP_PLAYER_ID": 1642369,
+    "PLAYER_ID": 1642369,
+    "FIRST_NAME": "Michael",
+    "LAST_NAME": "Ajayi",
+    "PLAYER_NAME": "Michael Ajayi",
+    "POSITION": "SF",
+    "STANDING_VERTICAL_LEAP": 27.0,
+    "MAX_VERTICAL_LEAP": 34.5,
+    "LANE_AGILITY_TIME": 11.77,
+    "MODIFIED_LANE_AGILITY_TIME": 3.17,
+    "THREE_QUARTER_SPRINT": 3.21,
+    "BENCH_PRESS": null
+  },
+  {
+    "TEMP_PLAYER_ID": 1642351,
+    "PLAYER_ID": 1642351,
+    "FIRST_NAME": "Melvin",
+    "LAST_NAME": "Ajinca",
+    "PLAYER_NAME": "Melvin Ajinca",
+    "POSITION": "SF",
+    "STANDING_VERTICAL_LEAP": 26.5,
+    "MAX_VERTICAL_LEAP": 31.0,
+    "LANE_AGILITY_TIME": 11.78,
+    "MODIFIED_LANE_AGILITY_TIME": 3.0,
+    "THREE_QUARTER_SPRINT": 3.38,
+    "BENCH_PRESS": null
+  }
+]
+```
+
+### DraftCombineNonStationaryShooting
+Endpoint URL: `draftcombinenonstationaryshooting`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### Results
+Row Count: 83
+
+Headers:
+```python
+[
+  "TEMP_PLAYER_ID",
+  "PLAYER_ID",
+  "FIRST_NAME",
+  "LAST_NAME",
+  "PLAYER_NAME",
+  "POSITION",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_MADE",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_ATTEMPT",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_PCT",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_MADE",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_ATTEMPT",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_PCT",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_MADE",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_ATTEMPT",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_PCT",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_MADE",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_ATTEMPT",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_PCT",
+  "OFF_DRIB_COLLEGE_TOP_KEY_MADE",
+  "OFF_DRIB_COLLEGE_TOP_KEY_ATTEMPT",
+  "OFF_DRIB_COLLEGE_TOP_KEY_PCT",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_MADE",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_ATTEMPT",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_PCT",
+  "ON_MOVE_FIFTEEN_MADE",
+  "ON_MOVE_FIFTEEN_ATTEMPT",
+  "ON_MOVE_FIFTEEN_PCT",
+  "ON_MOVE_COLLEGE_MADE",
+  "ON_MOVE_COLLEGE_ATTEMPT",
+  "ON_MOVE_COLLEGE_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEMP_PLAYER_ID": "int64",
+  "PLAYER_ID": "int64",
+  "FIRST_NAME": "object",
+  "LAST_NAME": "object",
+  "PLAYER_NAME": "object",
+  "POSITION": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_MADE": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_ATTEMPT": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT_PCT": "object",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_MADE": "object",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_ATTEMPT": "object",
+  "OFF_DRIB_FIFTEEN_TOP_KEY_PCT": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_MADE": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_ATTEMPT": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT_PCT": "object",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_MADE": "float64",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_ATTEMPT": "float64",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT_PCT": "float64",
+  "OFF_DRIB_COLLEGE_TOP_KEY_MADE": "object",
+  "OFF_DRIB_COLLEGE_TOP_KEY_ATTEMPT": "object",
+  "OFF_DRIB_COLLEGE_TOP_KEY_PCT": "object",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_MADE": "object",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_ATTEMPT": "object",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT_PCT": "object",
+  "ON_MOVE_FIFTEEN_MADE": "object",
+  "ON_MOVE_FIFTEEN_ATTEMPT": "object",
+  "ON_MOVE_FIFTEEN_PCT": "object",
+  "ON_MOVE_COLLEGE_MADE": "float64",
+  "ON_MOVE_COLLEGE_ATTEMPT": "float64",
+  "ON_MOVE_COLLEGE_PCT": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEMP_PLAYER_ID": 1642369,
+    "PLAYER_ID": 1642369,
+    "FIRST_NAME": "Michael",
+    "LAST_NAME": "Ajayi",
+    "PLAYER_NAME": "Michael Ajayi",
+    "POSITION": "SF",
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_MADE": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_PCT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_MADE": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_PCT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_MADE": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_PCT": null,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_MADE": 15.0,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_ATTEMPT": 30.0,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_PCT": 0.5,
+    "OFF_DRIB_COLLEGE_TOP_KEY_MADE": null,
+    "OFF_DRIB_COLLEGE_TOP_KEY_ATTEMPT": null,
+    "OFF_DRIB_COLLEGE_TOP_KEY_PCT": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_MADE": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_ATTEMPT": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_PCT": null,
+    "ON_MOVE_FIFTEEN_MADE": null,
+    "ON_MOVE_FIFTEEN_ATTEMPT": null,
+    "ON_MOVE_FIFTEEN_PCT": null,
+    "ON_MOVE_COLLEGE_MADE": 13.0,
+    "ON_MOVE_COLLEGE_ATTEMPT": 25.0,
+    "ON_MOVE_COLLEGE_PCT": 0.52
+  },
+  {
+    "TEMP_PLAYER_ID": 1642351,
+    "PLAYER_ID": 1642351,
+    "FIRST_NAME": "Melvin",
+    "LAST_NAME": "Ajinca",
+    "PLAYER_NAME": "Melvin Ajinca",
+    "POSITION": "SF",
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_MADE": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT_PCT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_MADE": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY_PCT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_MADE": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_ATTEMPT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT_PCT": null,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_MADE": NaN,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_ATTEMPT": NaN,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT_PCT": NaN,
+    "OFF_DRIB_COLLEGE_TOP_KEY_MADE": null,
+    "OFF_DRIB_COLLEGE_TOP_KEY_ATTEMPT": null,
+    "OFF_DRIB_COLLEGE_TOP_KEY_PCT": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_MADE": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_ATTEMPT": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT_PCT": null,
+    "ON_MOVE_FIFTEEN_MADE": null,
+    "ON_MOVE_FIFTEEN_ATTEMPT": null,
+    "ON_MOVE_FIFTEEN_PCT": null,
+    "ON_MOVE_COLLEGE_MADE": NaN,
+    "ON_MOVE_COLLEGE_ATTEMPT": NaN,
+    "ON_MOVE_COLLEGE_PCT": NaN
+  }
+]
+```
+
+### DraftCombinePlayerAnthro
+Endpoint URL: `draftcombineplayeranthro`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### Results
+Row Count: 83
+
+Headers:
+```python
+[
+  "TEMP_PLAYER_ID",
+  "PLAYER_ID",
+  "FIRST_NAME",
+  "LAST_NAME",
+  "PLAYER_NAME",
+  "POSITION",
+  "HEIGHT_WO_SHOES",
+  "HEIGHT_WO_SHOES_FT_IN",
+  "HEIGHT_W_SHOES",
+  "HEIGHT_W_SHOES_FT_IN",
+  "WEIGHT",
+  "WINGSPAN",
+  "WINGSPAN_FT_IN",
+  "STANDING_REACH",
+  "STANDING_REACH_FT_IN",
+  "BODY_FAT_PCT",
+  "HAND_LENGTH",
+  "HAND_WIDTH"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEMP_PLAYER_ID": "int64",
+  "PLAYER_ID": "int64",
+  "FIRST_NAME": "object",
+  "LAST_NAME": "object",
+  "PLAYER_NAME": "object",
+  "POSITION": "object",
+  "HEIGHT_WO_SHOES": "float64",
+  "HEIGHT_WO_SHOES_FT_IN": "object",
+  "HEIGHT_W_SHOES": "object",
+  "HEIGHT_W_SHOES_FT_IN": "object",
+  "WEIGHT": "object",
+  "WINGSPAN": "float64",
+  "WINGSPAN_FT_IN": "object",
+  "STANDING_REACH": "float64",
+  "STANDING_REACH_FT_IN": "object",
+  "BODY_FAT_PCT": "object",
+  "HAND_LENGTH": "float64",
+  "HAND_WIDTH": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEMP_PLAYER_ID": 1642369,
+    "PLAYER_ID": 1642369,
+    "FIRST_NAME": "Michael",
+    "LAST_NAME": "Ajayi",
+    "PLAYER_NAME": "Michael Ajayi",
+    "POSITION": "SF",
+    "HEIGHT_WO_SHOES": 77.75,
+    "HEIGHT_WO_SHOES_FT_IN": "6' 5.75''",
+    "HEIGHT_W_SHOES": null,
+    "HEIGHT_W_SHOES_FT_IN": null,
+    "WEIGHT": "227.80",
+    "WINGSPAN": 84.75,
+    "WINGSPAN_FT_IN": "7' 0.75''",
+    "STANDING_REACH": 106.5,
+    "STANDING_REACH_FT_IN": "8' 10.50''",
+    "BODY_FAT_PCT": null,
+    "HAND_LENGTH": 9.5,
+    "HAND_WIDTH": 9.75
+  },
+  {
+    "TEMP_PLAYER_ID": 1642351,
+    "PLAYER_ID": 1642351,
+    "FIRST_NAME": "Melvin",
+    "LAST_NAME": "Ajinca",
+    "PLAYER_NAME": "Melvin Ajinca",
+    "POSITION": "SF",
+    "HEIGHT_WO_SHOES": 79.25,
+    "HEIGHT_WO_SHOES_FT_IN": "6' 7.25''",
+    "HEIGHT_W_SHOES": null,
+    "HEIGHT_W_SHOES_FT_IN": null,
+    "WEIGHT": "213.8",
+    "WINGSPAN": 79.5,
+    "WINGSPAN_FT_IN": "6' 7.5''",
+    "STANDING_REACH": 106.5,
+    "STANDING_REACH_FT_IN": "8' 10.5''",
+    "BODY_FAT_PCT": null,
+    "HAND_LENGTH": 8.5,
+    "HAND_WIDTH": 9.75
+  }
+]
+```
+
+### DraftCombineSpotShooting
+Endpoint URL: `draftcombinespotshooting`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### Results
+Row Count: 83
+
+Headers:
+```python
+[
+  "TEMP_PLAYER_ID",
+  "PLAYER_ID",
+  "FIRST_NAME",
+  "LAST_NAME",
+  "PLAYER_NAME",
+  "POSITION",
+  "FIFTEEN_CORNER_LEFT_MADE",
+  "FIFTEEN_CORNER_LEFT_ATTEMPT",
+  "FIFTEEN_CORNER_LEFT_PCT",
+  "FIFTEEN_BREAK_LEFT_MADE",
+  "FIFTEEN_BREAK_LEFT_ATTEMPT",
+  "FIFTEEN_BREAK_LEFT_PCT",
+  "FIFTEEN_TOP_KEY_MADE",
+  "FIFTEEN_TOP_KEY_ATTEMPT",
+  "FIFTEEN_TOP_KEY_PCT",
+  "FIFTEEN_BREAK_RIGHT_MADE",
+  "FIFTEEN_BREAK_RIGHT_ATTEMPT",
+  "FIFTEEN_BREAK_RIGHT_PCT",
+  "FIFTEEN_CORNER_RIGHT_MADE",
+  "FIFTEEN_CORNER_RIGHT_ATTEMPT",
+  "FIFTEEN_CORNER_RIGHT_PCT",
+  "COLLEGE_CORNER_LEFT_MADE",
+  "COLLEGE_CORNER_LEFT_ATTEMPT",
+  "COLLEGE_CORNER_LEFT_PCT",
+  "COLLEGE_BREAK_LEFT_MADE",
+  "COLLEGE_BREAK_LEFT_ATTEMPT",
+  "COLLEGE_BREAK_LEFT_PCT",
+  "COLLEGE_TOP_KEY_MADE",
+  "COLLEGE_TOP_KEY_ATTEMPT",
+  "COLLEGE_TOP_KEY_PCT",
+  "COLLEGE_BREAK_RIGHT_MADE",
+  "COLLEGE_BREAK_RIGHT_ATTEMPT",
+  "COLLEGE_BREAK_RIGHT_PCT",
+  "COLLEGE_CORNER_RIGHT_MADE",
+  "COLLEGE_CORNER_RIGHT_ATTEMPT",
+  "COLLEGE_CORNER_RIGHT_PCT",
+  "NBA_CORNER_LEFT_MADE",
+  "NBA_CORNER_LEFT_ATTEMPT",
+  "NBA_CORNER_LEFT_PCT",
+  "NBA_BREAK_LEFT_MADE",
+  "NBA_BREAK_LEFT_ATTEMPT",
+  "NBA_BREAK_LEFT_PCT",
+  "NBA_TOP_KEY_MADE",
+  "NBA_TOP_KEY_ATTEMPT",
+  "NBA_TOP_KEY_PCT",
+  "NBA_BREAK_RIGHT_MADE",
+  "NBA_BREAK_RIGHT_ATTEMPT",
+  "NBA_BREAK_RIGHT_PCT",
+  "NBA_CORNER_RIGHT_MADE",
+  "NBA_CORNER_RIGHT_ATTEMPT",
+  "NBA_CORNER_RIGHT_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEMP_PLAYER_ID": "int64",
+  "PLAYER_ID": "int64",
+  "FIRST_NAME": "object",
+  "LAST_NAME": "object",
+  "PLAYER_NAME": "object",
+  "POSITION": "object",
+  "FIFTEEN_CORNER_LEFT_MADE": "object",
+  "FIFTEEN_CORNER_LEFT_ATTEMPT": "object",
+  "FIFTEEN_CORNER_LEFT_PCT": "object",
+  "FIFTEEN_BREAK_LEFT_MADE": "object",
+  "FIFTEEN_BREAK_LEFT_ATTEMPT": "object",
+  "FIFTEEN_BREAK_LEFT_PCT": "object",
+  "FIFTEEN_TOP_KEY_MADE": "object",
+  "FIFTEEN_TOP_KEY_ATTEMPT": "object",
+  "FIFTEEN_TOP_KEY_PCT": "object",
+  "FIFTEEN_BREAK_RIGHT_MADE": "object",
+  "FIFTEEN_BREAK_RIGHT_ATTEMPT": "object",
+  "FIFTEEN_BREAK_RIGHT_PCT": "object",
+  "FIFTEEN_CORNER_RIGHT_MADE": "object",
+  "FIFTEEN_CORNER_RIGHT_ATTEMPT": "object",
+  "FIFTEEN_CORNER_RIGHT_PCT": "object",
+  "COLLEGE_CORNER_LEFT_MADE": "float64",
+  "COLLEGE_CORNER_LEFT_ATTEMPT": "float64",
+  "COLLEGE_CORNER_LEFT_PCT": "float64",
+  "COLLEGE_BREAK_LEFT_MADE": "object",
+  "COLLEGE_BREAK_LEFT_ATTEMPT": "object",
+  "COLLEGE_BREAK_LEFT_PCT": "object",
+  "COLLEGE_TOP_KEY_MADE": "object",
+  "COLLEGE_TOP_KEY_ATTEMPT": "object",
+  "COLLEGE_TOP_KEY_PCT": "object",
+  "COLLEGE_BREAK_RIGHT_MADE": "object",
+  "COLLEGE_BREAK_RIGHT_ATTEMPT": "object",
+  "COLLEGE_BREAK_RIGHT_PCT": "object",
+  "COLLEGE_CORNER_RIGHT_MADE": "object",
+  "COLLEGE_CORNER_RIGHT_ATTEMPT": "object",
+  "COLLEGE_CORNER_RIGHT_PCT": "object",
+  "NBA_CORNER_LEFT_MADE": "object",
+  "NBA_CORNER_LEFT_ATTEMPT": "object",
+  "NBA_CORNER_LEFT_PCT": "object",
+  "NBA_BREAK_LEFT_MADE": "object",
+  "NBA_BREAK_LEFT_ATTEMPT": "object",
+  "NBA_BREAK_LEFT_PCT": "object",
+  "NBA_TOP_KEY_MADE": "object",
+  "NBA_TOP_KEY_ATTEMPT": "object",
+  "NBA_TOP_KEY_PCT": "object",
+  "NBA_BREAK_RIGHT_MADE": "object",
+  "NBA_BREAK_RIGHT_ATTEMPT": "object",
+  "NBA_BREAK_RIGHT_PCT": "object",
+  "NBA_CORNER_RIGHT_MADE": "object",
+  "NBA_CORNER_RIGHT_ATTEMPT": "object",
+  "NBA_CORNER_RIGHT_PCT": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEMP_PLAYER_ID": 1642369,
+    "PLAYER_ID": 1642369,
+    "FIRST_NAME": "Michael",
+    "LAST_NAME": "Ajayi",
+    "PLAYER_NAME": "Michael Ajayi",
+    "POSITION": "SF",
+    "FIFTEEN_CORNER_LEFT_MADE": null,
+    "FIFTEEN_CORNER_LEFT_ATTEMPT": null,
+    "FIFTEEN_CORNER_LEFT_PCT": null,
+    "FIFTEEN_BREAK_LEFT_MADE": null,
+    "FIFTEEN_BREAK_LEFT_ATTEMPT": null,
+    "FIFTEEN_BREAK_LEFT_PCT": null,
+    "FIFTEEN_TOP_KEY_MADE": null,
+    "FIFTEEN_TOP_KEY_ATTEMPT": null,
+    "FIFTEEN_TOP_KEY_PCT": null,
+    "FIFTEEN_BREAK_RIGHT_MADE": null,
+    "FIFTEEN_BREAK_RIGHT_ATTEMPT": null,
+    "FIFTEEN_BREAK_RIGHT_PCT": null,
+    "FIFTEEN_CORNER_RIGHT_MADE": null,
+    "FIFTEEN_CORNER_RIGHT_ATTEMPT": null,
+    "FIFTEEN_CORNER_RIGHT_PCT": null,
+    "COLLEGE_CORNER_LEFT_MADE": 17.0,
+    "COLLEGE_CORNER_LEFT_ATTEMPT": 25.0,
+    "COLLEGE_CORNER_LEFT_PCT": 0.68,
+    "COLLEGE_BREAK_LEFT_MADE": null,
+    "COLLEGE_BREAK_LEFT_ATTEMPT": null,
+    "COLLEGE_BREAK_LEFT_PCT": null,
+    "COLLEGE_TOP_KEY_MADE": null,
+    "COLLEGE_TOP_KEY_ATTEMPT": null,
+    "COLLEGE_TOP_KEY_PCT": null,
+    "COLLEGE_BREAK_RIGHT_MADE": null,
+    "COLLEGE_BREAK_RIGHT_ATTEMPT": null,
+    "COLLEGE_BREAK_RIGHT_PCT": null,
+    "COLLEGE_CORNER_RIGHT_MADE": null,
+    "COLLEGE_CORNER_RIGHT_ATTEMPT": null,
+    "COLLEGE_CORNER_RIGHT_PCT": null,
+    "NBA_CORNER_LEFT_MADE": null,
+    "NBA_CORNER_LEFT_ATTEMPT": null,
+    "NBA_CORNER_LEFT_PCT": null,
+    "NBA_BREAK_LEFT_MADE": null,
+    "NBA_BREAK_LEFT_ATTEMPT": null,
+    "NBA_BREAK_LEFT_PCT": null,
+    "NBA_TOP_KEY_MADE": null,
+    "NBA_TOP_KEY_ATTEMPT": null,
+    "NBA_TOP_KEY_PCT": null,
+    "NBA_BREAK_RIGHT_MADE": null,
+    "NBA_BREAK_RIGHT_ATTEMPT": null,
+    "NBA_BREAK_RIGHT_PCT": null,
+    "NBA_CORNER_RIGHT_MADE": null,
+    "NBA_CORNER_RIGHT_ATTEMPT": null,
+    "NBA_CORNER_RIGHT_PCT": null
+  },
+  {
+    "TEMP_PLAYER_ID": 1642351,
+    "PLAYER_ID": 1642351,
+    "FIRST_NAME": "Melvin",
+    "LAST_NAME": "Ajinca",
+    "PLAYER_NAME": "Melvin Ajinca",
+    "POSITION": "SF",
+    "FIFTEEN_CORNER_LEFT_MADE": null,
+    "FIFTEEN_CORNER_LEFT_ATTEMPT": null,
+    "FIFTEEN_CORNER_LEFT_PCT": null,
+    "FIFTEEN_BREAK_LEFT_MADE": null,
+    "FIFTEEN_BREAK_LEFT_ATTEMPT": null,
+    "FIFTEEN_BREAK_LEFT_PCT": null,
+    "FIFTEEN_TOP_KEY_MADE": null,
+    "FIFTEEN_TOP_KEY_ATTEMPT": null,
+    "FIFTEEN_TOP_KEY_PCT": null,
+    "FIFTEEN_BREAK_RIGHT_MADE": null,
+    "FIFTEEN_BREAK_RIGHT_ATTEMPT": null,
+    "FIFTEEN_BREAK_RIGHT_PCT": null,
+    "FIFTEEN_CORNER_RIGHT_MADE": null,
+    "FIFTEEN_CORNER_RIGHT_ATTEMPT": null,
+    "FIFTEEN_CORNER_RIGHT_PCT": null,
+    "COLLEGE_CORNER_LEFT_MADE": NaN,
+    "COLLEGE_CORNER_LEFT_ATTEMPT": NaN,
+    "COLLEGE_CORNER_LEFT_PCT": NaN,
+    "COLLEGE_BREAK_LEFT_MADE": null,
+    "COLLEGE_BREAK_LEFT_ATTEMPT": null,
+    "COLLEGE_BREAK_LEFT_PCT": null,
+    "COLLEGE_TOP_KEY_MADE": null,
+    "COLLEGE_TOP_KEY_ATTEMPT": null,
+    "COLLEGE_TOP_KEY_PCT": null,
+    "COLLEGE_BREAK_RIGHT_MADE": null,
+    "COLLEGE_BREAK_RIGHT_ATTEMPT": null,
+    "COLLEGE_BREAK_RIGHT_PCT": null,
+    "COLLEGE_CORNER_RIGHT_MADE": null,
+    "COLLEGE_CORNER_RIGHT_ATTEMPT": null,
+    "COLLEGE_CORNER_RIGHT_PCT": null,
+    "NBA_CORNER_LEFT_MADE": null,
+    "NBA_CORNER_LEFT_ATTEMPT": null,
+    "NBA_CORNER_LEFT_PCT": null,
+    "NBA_BREAK_LEFT_MADE": null,
+    "NBA_BREAK_LEFT_ATTEMPT": null,
+    "NBA_BREAK_LEFT_PCT": null,
+    "NBA_TOP_KEY_MADE": null,
+    "NBA_TOP_KEY_ATTEMPT": null,
+    "NBA_TOP_KEY_PCT": null,
+    "NBA_BREAK_RIGHT_MADE": null,
+    "NBA_BREAK_RIGHT_ATTEMPT": null,
+    "NBA_BREAK_RIGHT_PCT": null,
+    "NBA_CORNER_RIGHT_MADE": null,
+    "NBA_CORNER_RIGHT_ATTEMPT": null,
+    "NBA_CORNER_RIGHT_PCT": null
+  }
+]
+```
+
+### DraftCombineStats
+Endpoint URL: `draftcombinestats`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### DraftCombineStats
+Row Count: 83
+
+Headers:
+```python
+[
+  "SEASON",
+  "PLAYER_ID",
+  "FIRST_NAME",
+  "LAST_NAME",
+  "PLAYER_NAME",
+  "POSITION",
+  "HEIGHT_WO_SHOES",
+  "HEIGHT_WO_SHOES_FT_IN",
+  "HEIGHT_W_SHOES",
+  "HEIGHT_W_SHOES_FT_IN",
+  "WEIGHT",
+  "WINGSPAN",
+  "WINGSPAN_FT_IN",
+  "STANDING_REACH",
+  "STANDING_REACH_FT_IN",
+  "BODY_FAT_PCT",
+  "HAND_LENGTH",
+  "HAND_WIDTH",
+  "STANDING_VERTICAL_LEAP",
+  "MAX_VERTICAL_LEAP",
+  "LANE_AGILITY_TIME",
+  "MODIFIED_LANE_AGILITY_TIME",
+  "THREE_QUARTER_SPRINT",
+  "BENCH_PRESS",
+  "SPOT_FIFTEEN_CORNER_LEFT",
+  "SPOT_FIFTEEN_BREAK_LEFT",
+  "SPOT_FIFTEEN_TOP_KEY",
+  "SPOT_FIFTEEN_BREAK_RIGHT",
+  "SPOT_FIFTEEN_CORNER_RIGHT",
+  "SPOT_COLLEGE_CORNER_LEFT",
+  "SPOT_COLLEGE_BREAK_LEFT",
+  "SPOT_COLLEGE_TOP_KEY",
+  "SPOT_COLLEGE_BREAK_RIGHT",
+  "SPOT_COLLEGE_CORNER_RIGHT",
+  "SPOT_NBA_CORNER_LEFT",
+  "SPOT_NBA_BREAK_LEFT",
+  "SPOT_NBA_TOP_KEY",
+  "SPOT_NBA_BREAK_RIGHT",
+  "SPOT_NBA_CORNER_RIGHT",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT",
+  "OFF_DRIB_FIFTEEN_TOP_KEY",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT",
+  "OFF_DRIB_COLLEGE_TOP_KEY",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT",
+  "ON_MOVE_FIFTEEN",
+  "ON_MOVE_COLLEGE"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "SEASON": "object",
+  "PLAYER_ID": "int64",
+  "FIRST_NAME": "object",
+  "LAST_NAME": "object",
+  "PLAYER_NAME": "object",
+  "POSITION": "object",
+  "HEIGHT_WO_SHOES": "float64",
+  "HEIGHT_WO_SHOES_FT_IN": "object",
+  "HEIGHT_W_SHOES": "object",
+  "HEIGHT_W_SHOES_FT_IN": "object",
+  "WEIGHT": "object",
+  "WINGSPAN": "float64",
+  "WINGSPAN_FT_IN": "object",
+  "STANDING_REACH": "float64",
+  "STANDING_REACH_FT_IN": "object",
+  "BODY_FAT_PCT": "object",
+  "HAND_LENGTH": "float64",
+  "HAND_WIDTH": "float64",
+  "STANDING_VERTICAL_LEAP": "float64",
+  "MAX_VERTICAL_LEAP": "float64",
+  "LANE_AGILITY_TIME": "float64",
+  "MODIFIED_LANE_AGILITY_TIME": "float64",
+  "THREE_QUARTER_SPRINT": "float64",
+  "BENCH_PRESS": "object",
+  "SPOT_FIFTEEN_CORNER_LEFT": "object",
+  "SPOT_FIFTEEN_BREAK_LEFT": "object",
+  "SPOT_FIFTEEN_TOP_KEY": "object",
+  "SPOT_FIFTEEN_BREAK_RIGHT": "object",
+  "SPOT_FIFTEEN_CORNER_RIGHT": "object",
+  "SPOT_COLLEGE_CORNER_LEFT": "object",
+  "SPOT_COLLEGE_BREAK_LEFT": "object",
+  "SPOT_COLLEGE_TOP_KEY": "object",
+  "SPOT_COLLEGE_BREAK_RIGHT": "object",
+  "SPOT_COLLEGE_CORNER_RIGHT": "object",
+  "SPOT_NBA_CORNER_LEFT": "object",
+  "SPOT_NBA_BREAK_LEFT": "object",
+  "SPOT_NBA_TOP_KEY": "object",
+  "SPOT_NBA_BREAK_RIGHT": "object",
+  "SPOT_NBA_CORNER_RIGHT": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_LEFT": "object",
+  "OFF_DRIB_FIFTEEN_TOP_KEY": "object",
+  "OFF_DRIB_FIFTEEN_BREAK_RIGHT": "object",
+  "OFF_DRIB_COLLEGE_BREAK_LEFT": "object",
+  "OFF_DRIB_COLLEGE_TOP_KEY": "object",
+  "OFF_DRIB_COLLEGE_BREAK_RIGHT": "object",
+  "ON_MOVE_FIFTEEN": "object",
+  "ON_MOVE_COLLEGE": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "SEASON": "2024",
+    "PLAYER_ID": 1642369,
+    "FIRST_NAME": "Michael",
+    "LAST_NAME": "Ajayi",
+    "PLAYER_NAME": "Michael Ajayi",
+    "POSITION": "SF",
+    "HEIGHT_WO_SHOES": 77.75,
+    "HEIGHT_WO_SHOES_FT_IN": "6' 5.75''",
+    "HEIGHT_W_SHOES": null,
+    "HEIGHT_W_SHOES_FT_IN": null,
+    "WEIGHT": "227.80",
+    "WINGSPAN": 84.75,
+    "WINGSPAN_FT_IN": "7' 0.75''",
+    "STANDING_REACH": 106.5,
+    "STANDING_REACH_FT_IN": "8' 10.50''",
+    "BODY_FAT_PCT": null,
+    "HAND_LENGTH": 9.5,
+    "HAND_WIDTH": 9.75,
+    "STANDING_VERTICAL_LEAP": 27.0,
+    "MAX_VERTICAL_LEAP": 34.5,
+    "LANE_AGILITY_TIME": 11.77,
+    "MODIFIED_LANE_AGILITY_TIME": 3.17,
+    "THREE_QUARTER_SPRINT": 3.21,
+    "BENCH_PRESS": null,
+    "SPOT_FIFTEEN_CORNER_LEFT": null,
+    "SPOT_FIFTEEN_BREAK_LEFT": null,
+    "SPOT_FIFTEEN_TOP_KEY": null,
+    "SPOT_FIFTEEN_BREAK_RIGHT": null,
+    "SPOT_FIFTEEN_CORNER_RIGHT": null,
+    "SPOT_COLLEGE_CORNER_LEFT": "17-25",
+    "SPOT_COLLEGE_BREAK_LEFT": null,
+    "SPOT_COLLEGE_TOP_KEY": null,
+    "SPOT_COLLEGE_BREAK_RIGHT": null,
+    "SPOT_COLLEGE_CORNER_RIGHT": null,
+    "SPOT_NBA_CORNER_LEFT": null,
+    "SPOT_NBA_BREAK_LEFT": null,
+    "SPOT_NBA_TOP_KEY": null,
+    "SPOT_NBA_BREAK_RIGHT": null,
+    "SPOT_NBA_CORNER_RIGHT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT": null,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT": "15-30",
+    "OFF_DRIB_COLLEGE_TOP_KEY": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT": null,
+    "ON_MOVE_FIFTEEN": null,
+    "ON_MOVE_COLLEGE": "13-25"
+  },
+  {
+    "SEASON": "2024",
+    "PLAYER_ID": 1642351,
+    "FIRST_NAME": "Melvin",
+    "LAST_NAME": "Ajinca",
+    "PLAYER_NAME": "Melvin Ajinca",
+    "POSITION": "SF",
+    "HEIGHT_WO_SHOES": 79.25,
+    "HEIGHT_WO_SHOES_FT_IN": "6' 7.25''",
+    "HEIGHT_W_SHOES": null,
+    "HEIGHT_W_SHOES_FT_IN": null,
+    "WEIGHT": "213.8",
+    "WINGSPAN": 79.5,
+    "WINGSPAN_FT_IN": "6' 7.5''",
+    "STANDING_REACH": 106.5,
+    "STANDING_REACH_FT_IN": "8' 10.5''",
+    "BODY_FAT_PCT": null,
+    "HAND_LENGTH": 8.5,
+    "HAND_WIDTH": 9.75,
+    "STANDING_VERTICAL_LEAP": 26.5,
+    "MAX_VERTICAL_LEAP": 31.0,
+    "LANE_AGILITY_TIME": 11.78,
+    "MODIFIED_LANE_AGILITY_TIME": 3.0,
+    "THREE_QUARTER_SPRINT": 3.38,
+    "BENCH_PRESS": null,
+    "SPOT_FIFTEEN_CORNER_LEFT": null,
+    "SPOT_FIFTEEN_BREAK_LEFT": null,
+    "SPOT_FIFTEEN_TOP_KEY": null,
+    "SPOT_FIFTEEN_BREAK_RIGHT": null,
+    "SPOT_FIFTEEN_CORNER_RIGHT": null,
+    "SPOT_COLLEGE_CORNER_LEFT": null,
+    "SPOT_COLLEGE_BREAK_LEFT": null,
+    "SPOT_COLLEGE_TOP_KEY": null,
+    "SPOT_COLLEGE_BREAK_RIGHT": null,
+    "SPOT_COLLEGE_CORNER_RIGHT": null,
+    "SPOT_NBA_CORNER_LEFT": null,
+    "SPOT_NBA_BREAK_LEFT": null,
+    "SPOT_NBA_TOP_KEY": null,
+    "SPOT_NBA_BREAK_RIGHT": null,
+    "SPOT_NBA_CORNER_RIGHT": null,
+    "OFF_DRIB_FIFTEEN_BREAK_LEFT": null,
+    "OFF_DRIB_FIFTEEN_TOP_KEY": null,
+    "OFF_DRIB_FIFTEEN_BREAK_RIGHT": null,
+    "OFF_DRIB_COLLEGE_BREAK_LEFT": null,
+    "OFF_DRIB_COLLEGE_TOP_KEY": null,
+    "OFF_DRIB_COLLEGE_BREAK_RIGHT": null,
+    "ON_MOVE_FIFTEEN": null,
+    "ON_MOVE_COLLEGE": null
+  }
+]
+```
+
+### DraftHistory
+Endpoint URL: `drafthistory`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### DraftHistory
+Row Count: 8315
+
+Headers:
+```python
+[
+  "PERSON_ID",
+  "PLAYER_NAME",
+  "SEASON",
+  "ROUND_NUMBER",
+  "ROUND_PICK",
+  "OVERALL_PICK",
+  "DRAFT_TYPE",
+  "TEAM_ID",
+  "TEAM_CITY",
+  "TEAM_NAME",
+  "TEAM_ABBREVIATION",
+  "ORGANIZATION",
+  "ORGANIZATION_TYPE",
+  "PLAYER_PROFILE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PERSON_ID": "int64",
+  "PLAYER_NAME": "object",
+  "SEASON": "object",
+  "ROUND_NUMBER": "int64",
+  "ROUND_PICK": "int64",
+  "OVERALL_PICK": "int64",
+  "DRAFT_TYPE": "object",
+  "TEAM_ID": "int64",
+  "TEAM_CITY": "object",
+  "TEAM_NAME": "object",
+  "TEAM_ABBREVIATION": "object",
+  "ORGANIZATION": "object",
+  "ORGANIZATION_TYPE": "object",
+  "PLAYER_PROFILE_FLAG": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PERSON_ID": 1642258,
+    "PLAYER_NAME": "Zaccharie Risacher",
+    "SEASON": "2024",
+    "ROUND_NUMBER": 1,
+    "ROUND_PICK": 1,
+    "OVERALL_PICK": 1,
+    "DRAFT_TYPE": "Draft",
+    "TEAM_ID": 1610612737,
+    "TEAM_CITY": "Atlanta",
+    "TEAM_NAME": "Hawks",
+    "TEAM_ABBREVIATION": "ATL",
+    "ORGANIZATION": "JL Bourg (France)",
+    "ORGANIZATION_TYPE": "Other Team/Club",
+    "PLAYER_PROFILE_FLAG": 1
+  },
+  {
+    "PERSON_ID": 1642259,
+    "PLAYER_NAME": "Alex Sarr",
+    "SEASON": "2024",
+    "ROUND_NUMBER": 1,
+    "ROUND_PICK": 2,
+    "OVERALL_PICK": 2,
+    "DRAFT_TYPE": "Draft",
+    "TEAM_ID": 1610612764,
+    "TEAM_CITY": "Washington",
+    "TEAM_NAME": "Wizards",
+    "TEAM_ABBREVIATION": "WAS",
+    "ORGANIZATION": "Perth Wildcats (Australia)",
+    "ORGANIZATION_TYPE": "Other Team/Club",
+    "PLAYER_PROFILE_FLAG": 1
+  }
+]
+```
+
+### FantasyWidget
+Endpoint URL: `fantasywidget`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### FantasyWidgetResult
+Row Count: 569
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "PLAYER_POSITION",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "GP",
+  "MIN",
+  "FAN_DUEL_PTS",
+  "NBA_FANTASY_PTS",
+  "PTS",
+  "REB",
+  "AST",
+  "BLK",
+  "STL",
+  "TOV",
+  "FG3M",
+  "FGA",
+  "FG_PCT",
+  "FTA",
+  "FT_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "PLAYER_POSITION": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "GP": "int64",
+  "MIN": "float64",
+  "FAN_DUEL_PTS": "float64",
+  "NBA_FANTASY_PTS": "float64",
+  "PTS": "float64",
+  "REB": "float64",
+  "AST": "float64",
+  "BLK": "float64",
+  "STL": "float64",
+  "TOV": "float64",
+  "FG3M": "float64",
+  "FGA": "float64",
+  "FG_PCT": "float64",
+  "FTA": "float64",
+  "FT_PCT": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 203999,
+    "PLAYER_NAME": "Nikola Joki\u0107",
+    "PLAYER_POSITION": "C",
+    "TEAM_ID": 1610612743,
+    "TEAM_ABBREVIATION": "DEN",
+    "GP": 70,
+    "MIN": 36.7,
+    "FAN_DUEL_PTS": 61.8,
+    "NBA_FANTASY_PTS": 64.3,
+    "PTS": 29.6,
+    "REB": 12.7,
+    "AST": 10.2,
+    "BLK": 0.64,
+    "STL": 1.81,
+    "TOV": 3.3,
+    "FG3M": 2.0,
+    "FGA": 19.5,
+    "FG_PCT": 0.576,
+    "FTA": 6.4,
+    "FT_PCT": 0.8
+  },
+  {
+    "PLAYER_ID": 203507,
+    "PLAYER_NAME": "Giannis Antetokounmpo",
+    "PLAYER_POSITION": "F",
+    "TEAM_ID": 1610612749,
+    "TEAM_ABBREVIATION": "MIL",
+    "GP": 67,
+    "MIN": 34.2,
+    "FAN_DUEL_PTS": 55.4,
+    "NBA_FANTASY_PTS": 57.4,
+    "PTS": 30.4,
+    "REB": 11.9,
+    "AST": 6.5,
+    "BLK": 1.16,
+    "STL": 0.87,
+    "TOV": 3.1,
+    "FG3M": 0.2,
+    "FGA": 19.7,
+    "FG_PCT": 0.601,
+    "FTA": 10.6,
+    "FT_PCT": 0.617
+  }
+]
+```
+
+### FranchiseHistory
+Endpoint URL: `franchisehistory`
+
+
+### FranchiseLeaders
+Endpoint URL: `franchiseleaders`
+
+
+### FranchisePlayers
+Endpoint URL: `franchiseplayers`
+
+
+### GLAlumBoxScoreSimilarityScore
+Endpoint URL: `glalumboxscoresimilarityscore`
+
+
+### GameRotation
+Endpoint URL: `gamerotation`
+
+
+### HomePageLeaders
+Endpoint URL: `homepageleaders`
+
+
+### HomePageV2
+Endpoint URL: `homepagev2`
+
+
+### HustleStatsBoxScore
+Endpoint URL: `hustlestatsboxscore`
+
+
+### ISTStandings
+Endpoint URL: `iststandings`
+
+
+### InfographicFanDuelPlayer
+Endpoint URL: `infographicfanduelplayer`
+
+
+### LeadersTiles
+Endpoint URL: `leaderstiles`
+
+
+### LeagueDashLineups
+Endpoint URL: `leaguedashlineups`
+
+
+### LeagueDashOppPtShot
+Endpoint URL: `leaguedashoppptshot`
+
+
+### LeagueDashPlayerBioStats
+Endpoint URL: `leaguedashplayerbiostats`
+
+
+### LeagueDashPlayerClutch
+Endpoint URL: `leaguedashplayerclutch`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPlayerClutch
+Row Count: 498
+
+Headers:
+```python
+[
+  "GROUP_SET",
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "NICKNAME",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "AGE",
+  "GP",
+  "W",
+  "L",
+  "W_PCT",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "TOV",
+  "STL",
+  "BLK",
+  "BLKA",
+  "PF",
+  "PFD",
+  "PTS",
+  "PLUS_MINUS",
+  "NBA_FANTASY_PTS",
+  "DD2",
+  "TD3",
+  "WNBA_FANTASY_PTS",
+  "GP_RANK",
+  "W_RANK",
+  "L_RANK",
+  "W_PCT_RANK",
+  "MIN_RANK",
+  "FGM_RANK",
+  "FGA_RANK",
+  "FG_PCT_RANK",
+  "FG3M_RANK",
+  "FG3A_RANK",
+  "FG3_PCT_RANK",
+  "FTM_RANK",
+  "FTA_RANK",
+  "FT_PCT_RANK",
+  "OREB_RANK",
+  "DREB_RANK",
+  "REB_RANK",
+  "AST_RANK",
+  "TOV_RANK",
+  "STL_RANK",
+  "BLK_RANK",
+  "BLKA_RANK",
+  "PF_RANK",
+  "PFD_RANK",
+  "PTS_RANK",
+  "PLUS_MINUS_RANK",
+  "NBA_FANTASY_PTS_RANK",
+  "DD2_RANK",
+  "TD3_RANK",
+  "WNBA_FANTASY_PTS_RANK"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GROUP_SET": "object",
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "NICKNAME": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "AGE": "float64",
+  "GP": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "MIN": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "TOV": "int64",
+  "STL": "int64",
+  "BLK": "int64",
+  "BLKA": "int64",
+  "PF": "int64",
+  "PFD": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "int64",
+  "NBA_FANTASY_PTS": "float64",
+  "DD2": "int64",
+  "TD3": "int64",
+  "WNBA_FANTASY_PTS": "float64",
+  "GP_RANK": "int64",
+  "W_RANK": "int64",
+  "L_RANK": "int64",
+  "W_PCT_RANK": "int64",
+  "MIN_RANK": "int64",
+  "FGM_RANK": "int64",
+  "FGA_RANK": "int64",
+  "FG_PCT_RANK": "int64",
+  "FG3M_RANK": "int64",
+  "FG3A_RANK": "int64",
+  "FG3_PCT_RANK": "int64",
+  "FTM_RANK": "int64",
+  "FTA_RANK": "int64",
+  "FT_PCT_RANK": "int64",
+  "OREB_RANK": "int64",
+  "DREB_RANK": "int64",
+  "REB_RANK": "int64",
+  "AST_RANK": "int64",
+  "TOV_RANK": "int64",
+  "STL_RANK": "int64",
+  "BLK_RANK": "int64",
+  "BLKA_RANK": "int64",
+  "PF_RANK": "int64",
+  "PFD_RANK": "int64",
+  "PTS_RANK": "int64",
+  "PLUS_MINUS_RANK": "int64",
+  "NBA_FANTASY_PTS_RANK": "int64",
+  "DD2_RANK": "int64",
+  "TD3_RANK": "int64",
+  "WNBA_FANTASY_PTS_RANK": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GROUP_SET": "Players",
+    "PLAYER_ID": 1630639,
+    "PLAYER_NAME": "A.J. Lawson",
+    "NICKNAME": "A.J.",
+    "TEAM_ID": 1610612761,
+    "TEAM_ABBREVIATION": "TOR",
+    "AGE": 24.0,
+    "GP": 3,
+    "W": 1,
+    "L": 2,
+    "W_PCT": 0.333,
+    "MIN": 12.433333333333334,
+    "FGM": 3,
+    "FGA": 5,
+    "FG_PCT": 0.6,
+    "FG3M": 2,
+    "FG3A": 4,
+    "FG3_PCT": 0.5,
+    "FTM": 0,
+    "FTA": 0,
+    "FT_PCT": 0.0,
+    "OREB": 0,
+    "DREB": 2,
+    "REB": 2,
+    "AST": 2,
+    "TOV": 0,
+    "STL": 0,
+    "BLK": 0,
+    "BLKA": 0,
+    "PF": 0,
+    "PFD": 0,
+    "PTS": 8,
+    "PLUS_MINUS": -8,
+    "NBA_FANTASY_PTS": 13.4,
+    "DD2": 0,
+    "TD3": 0,
+    "WNBA_FANTASY_PTS": 14.0,
+    "GP_RANK": 380,
+    "W_RANK": 375,
+    "L_RANK": 105,
+    "W_PCT_RANK": 372,
+    "MIN_RANK": 329,
+    "FGM_RANK": 239,
+    "FGA_RANK": 275,
+    "FG_PCT_RANK": 82,
+    "FG3M_RANK": 140,
+    "FG3A_RANK": 189,
+    "FG3_PCT_RANK": 46,
+    "FTM_RANK": 307,
+    "FTA_RANK": 313,
+    "FT_PCT_RANK": 307,
+    "OREB_RANK": 302,
+    "DREB_RANK": 278,
+    "REB_RANK": 308,
+    "AST_RANK": 195,
+    "TOV_RANK": 291,
+    "STL_RANK": 263,
+    "BLK_RANK": 208,
+    "BLKA_RANK": 1,
+    "PF_RANK": 1,
+    "PFD_RANK": 339,
+    "PTS_RANK": 258,
+    "PLUS_MINUS_RANK": 339,
+    "NBA_FANTASY_PTS_RANK": 293,
+    "DD2_RANK": 216,
+    "TD3_RANK": 27,
+    "WNBA_FANTASY_PTS_RANK": 286
+  },
+  {
+    "GROUP_SET": "Players",
+    "PLAYER_ID": 1631260,
+    "PLAYER_NAME": "AJ Green",
+    "NICKNAME": "AJ",
+    "TEAM_ID": 1610612749,
+    "TEAM_ABBREVIATION": "MIL",
+    "AGE": 25.0,
+    "GP": 25,
+    "W": 13,
+    "L": 12,
+    "W_PCT": 0.52,
+    "MIN": 72.74,
+    "FGM": 6,
+    "FGA": 11,
+    "FG_PCT": 0.545,
+    "FG3M": 6,
+    "FG3A": 11,
+    "FG3_PCT": 0.545,
+    "FTM": 2,
+    "FTA": 3,
+    "FT_PCT": 0.667,
+    "OREB": 0,
+    "DREB": 4,
+    "REB": 4,
+    "AST": 4,
+    "TOV": 0,
+    "STL": 1,
+    "BLK": 0,
+    "BLKA": 0,
+    "PF": 8,
+    "PFD": 2,
+    "PTS": 20,
+    "PLUS_MINUS": -15,
+    "NBA_FANTASY_PTS": 33.8,
+    "DD2": 0,
+    "TD3": 0,
+    "WNBA_FANTASY_PTS": 36.0,
+    "GP_RANK": 103,
+    "W_RANK": 96,
+    "L_RANK": 372,
+    "W_PCT_RANK": 199,
+    "MIN_RANK": 122,
+    "FGM_RANK": 160,
+    "FGA_RANK": 196,
+    "FG_PCT_RANK": 110,
+    "FG3M_RANK": 40,
+    "FG3A_RANK": 91,
+    "FG3_PCT_RANK": 41,
+    "FTM_RANK": 210,
+    "FTA_RANK": 213,
+    "FT_PCT_RANK": 208,
+    "OREB_RANK": 302,
+    "DREB_RANK": 207,
+    "REB_RANK": 253,
+    "AST_RANK": 128,
+    "TOV_RANK": 291,
+    "STL_RANK": 157,
+    "BLK_RANK": 208,
+    "BLKA_RANK": 1,
+    "PF_RANK": 374,
+    "PFD_RANK": 215,
+    "PTS_RANK": 157,
+    "PLUS_MINUS_RANK": 410,
+    "NBA_FANTASY_PTS_RANK": 200,
+    "DD2_RANK": 216,
+    "TD3_RANK": 27,
+    "WNBA_FANTASY_PTS_RANK": 176
+  }
+]
+```
+
+### LeagueDashPlayerPtShot
+Endpoint URL: `leaguedashplayerptshot`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPTShots
+Row Count: 566
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "PLAYER_LAST_TEAM_ID",
+  "PLAYER_LAST_TEAM_ABBREVIATION",
+  "AGE",
+  "GP",
+  "G",
+  "FGA_FREQUENCY",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "EFG_PCT",
+  "FG2A_FREQUENCY",
+  "FG2M",
+  "FG2A",
+  "FG2_PCT",
+  "FG3A_FREQUENCY",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "PLAYER_LAST_TEAM_ID": "int64",
+  "PLAYER_LAST_TEAM_ABBREVIATION": "object",
+  "AGE": "float64",
+  "GP": "int64",
+  "G": "int64",
+  "FGA_FREQUENCY": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "EFG_PCT": "float64",
+  "FG2A_FREQUENCY": "float64",
+  "FG2M": "int64",
+  "FG2A": "int64",
+  "FG2_PCT": "float64",
+  "FG3A_FREQUENCY": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 1628983,
+    "PLAYER_NAME": "Shai Gilgeous-Alexander",
+    "PLAYER_LAST_TEAM_ID": 1610612760,
+    "PLAYER_LAST_TEAM_ABBREVIATION": "OKC",
+    "AGE": 26.0,
+    "GP": 76,
+    "G": 76,
+    "FGA_FREQUENCY": 1.0,
+    "FGM": 860,
+    "FGA": 1656,
+    "FG_PCT": 0.519,
+    "EFG_PCT": 0.569,
+    "FG2A_FREQUENCY": 0.737,
+    "FG2M": 697,
+    "FG2A": 1221,
+    "FG2_PCT": 0.571,
+    "FG3A_FREQUENCY": 0.263,
+    "FG3M": 163,
+    "FG3A": 435,
+    "FG3_PCT": 0.375
+  },
+  {
+    "PLAYER_ID": 1630162,
+    "PLAYER_NAME": "Anthony Edwards",
+    "PLAYER_LAST_TEAM_ID": 1610612750,
+    "PLAYER_LAST_TEAM_ABBREVIATION": "MIN",
+    "AGE": 23.0,
+    "GP": 79,
+    "G": 79,
+    "FGA_FREQUENCY": 1.0,
+    "FGM": 721,
+    "FGA": 1612,
+    "FG_PCT": 0.447,
+    "EFG_PCT": 0.547,
+    "FG2A_FREQUENCY": 0.497,
+    "FG2M": 401,
+    "FG2A": 801,
+    "FG2_PCT": 0.501,
+    "FG3A_FREQUENCY": 0.503,
+    "FG3M": 320,
+    "FG3A": 811,
+    "FG3_PCT": 0.395
+  }
+]
+```
+
+### LeagueDashPlayerShotLocations
+Endpoint URL: `leaguedashplayershotlocations`
+
+
+### LeagueDashPlayerStats
+Endpoint URL: `leaguedashplayerstats`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPlayerStats
+Row Count: 569
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "NICKNAME",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "AGE",
+  "GP",
+  "W",
+  "L",
+  "W_PCT",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "TOV",
+  "STL",
+  "BLK",
+  "BLKA",
+  "PF",
+  "PFD",
+  "PTS",
+  "PLUS_MINUS",
+  "NBA_FANTASY_PTS",
+  "DD2",
+  "TD3",
+  "WNBA_FANTASY_PTS",
+  "GP_RANK",
+  "W_RANK",
+  "L_RANK",
+  "W_PCT_RANK",
+  "MIN_RANK",
+  "FGM_RANK",
+  "FGA_RANK",
+  "FG_PCT_RANK",
+  "FG3M_RANK",
+  "FG3A_RANK",
+  "FG3_PCT_RANK",
+  "FTM_RANK",
+  "FTA_RANK",
+  "FT_PCT_RANK",
+  "OREB_RANK",
+  "DREB_RANK",
+  "REB_RANK",
+  "AST_RANK",
+  "TOV_RANK",
+  "STL_RANK",
+  "BLK_RANK",
+  "BLKA_RANK",
+  "PF_RANK",
+  "PFD_RANK",
+  "PTS_RANK",
+  "PLUS_MINUS_RANK",
+  "NBA_FANTASY_PTS_RANK",
+  "DD2_RANK",
+  "TD3_RANK",
+  "WNBA_FANTASY_PTS_RANK"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "NICKNAME": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "AGE": "float64",
+  "GP": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "MIN": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "TOV": "int64",
+  "STL": "int64",
+  "BLK": "int64",
+  "BLKA": "int64",
+  "PF": "int64",
+  "PFD": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "int64",
+  "NBA_FANTASY_PTS": "float64",
+  "DD2": "int64",
+  "TD3": "int64",
+  "WNBA_FANTASY_PTS": "float64",
+  "GP_RANK": "int64",
+  "W_RANK": "int64",
+  "L_RANK": "int64",
+  "W_PCT_RANK": "int64",
+  "MIN_RANK": "int64",
+  "FGM_RANK": "int64",
+  "FGA_RANK": "int64",
+  "FG_PCT_RANK": "int64",
+  "FG3M_RANK": "int64",
+  "FG3A_RANK": "int64",
+  "FG3_PCT_RANK": "int64",
+  "FTM_RANK": "int64",
+  "FTA_RANK": "int64",
+  "FT_PCT_RANK": "int64",
+  "OREB_RANK": "int64",
+  "DREB_RANK": "int64",
+  "REB_RANK": "int64",
+  "AST_RANK": "int64",
+  "TOV_RANK": "int64",
+  "STL_RANK": "int64",
+  "BLK_RANK": "int64",
+  "BLKA_RANK": "int64",
+  "PF_RANK": "int64",
+  "PFD_RANK": "int64",
+  "PTS_RANK": "int64",
+  "PLUS_MINUS_RANK": "int64",
+  "NBA_FANTASY_PTS_RANK": "int64",
+  "DD2_RANK": "int64",
+  "TD3_RANK": "int64",
+  "WNBA_FANTASY_PTS_RANK": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 1630639,
+    "PLAYER_NAME": "A.J. Lawson",
+    "NICKNAME": "A.J.",
+    "TEAM_ID": 1610612761,
+    "TEAM_ABBREVIATION": "TOR",
+    "AGE": 24.0,
+    "GP": 26,
+    "W": 14,
+    "L": 12,
+    "W_PCT": 0.538,
+    "MIN": 486.41,
+    "FGM": 80,
+    "FGA": 190,
+    "FG_PCT": 0.421,
+    "FG3M": 33,
+    "FG3A": 101,
+    "FG3_PCT": 0.327,
+    "FTM": 43,
+    "FTA": 63,
+    "FT_PCT": 0.683,
+    "OREB": 20,
+    "DREB": 66,
+    "REB": 86,
+    "AST": 31,
+    "TOV": 15,
+    "STL": 13,
+    "BLK": 6,
+    "BLKA": 12,
+    "PF": 44,
+    "PFD": 38,
+    "PTS": 236,
+    "PLUS_MINUS": -17,
+    "NBA_FANTASY_PTS": 427.7,
+    "DD2": 2,
+    "TD3": 0,
+    "WNBA_FANTASY_PTS": 424.0,
+    "GP_RANK": 424,
+    "W_RANK": 364,
+    "L_RANK": 146,
+    "W_PCT_RANK": 239,
+    "MIN_RANK": 379,
+    "FGM_RANK": 352,
+    "FGA_RANK": 340,
+    "FG_PCT_RANK": 388,
+    "FG3M_RANK": 282,
+    "FG3A_RANK": 281,
+    "FG3_PCT_RANK": 319,
+    "FTM_RANK": 281,
+    "FTA_RANK": 267,
+    "FT_PCT_RANK": 419,
+    "OREB_RANK": 364,
+    "DREB_RANK": 359,
+    "REB_RANK": 368,
+    "AST_RANK": 397,
+    "TOV_RANK": 414,
+    "STL_RANK": 397,
+    "BLK_RANK": 383,
+    "BLKA_RANK": 241,
+    "PF_RANK": 200,
+    "PFD_RANK": 327,
+    "PTS_RANK": 337,
+    "PLUS_MINUS_RANK": 299,
+    "NBA_FANTASY_PTS_RANK": 375,
+    "DD2_RANK": 159,
+    "TD3_RANK": 44,
+    "WNBA_FANTASY_PTS_RANK": 364
+  },
+  {
+    "PLAYER_ID": 1631260,
+    "PLAYER_NAME": "AJ Green",
+    "NICKNAME": "AJ",
+    "TEAM_ID": 1610612749,
+    "TEAM_ABBREVIATION": "MIL",
+    "AGE": 25.0,
+    "GP": 73,
+    "W": 44,
+    "L": 29,
+    "W_PCT": 0.603,
+    "MIN": 1659.1416666666667,
+    "FGM": 182,
+    "FGA": 424,
+    "FG_PCT": 0.429,
+    "FG3M": 155,
+    "FG3A": 363,
+    "FG3_PCT": 0.427,
+    "FTM": 22,
+    "FTA": 27,
+    "FT_PCT": 0.815,
+    "OREB": 18,
+    "DREB": 156,
+    "REB": 174,
+    "AST": 108,
+    "TOV": 40,
+    "STL": 37,
+    "BLK": 7,
+    "BLKA": 3,
+    "PF": 157,
+    "PFD": 50,
+    "PTS": 541,
+    "PLUS_MINUS": 227,
+    "NBA_FANTASY_PTS": 1003.8,
+    "DD2": 0,
+    "TD3": 0,
+    "WNBA_FANTASY_PTS": 1066.0,
+    "GP_RANK": 86,
+    "W_RANK": 62,
+    "L_RANK": 362,
+    "W_PCT_RANK": 164,
+    "MIN_RANK": 152,
+    "FGM_RANK": 231,
+    "FGA_RANK": 220,
+    "FG_PCT_RANK": 353,
+    "FG3M_RANK": 58,
+    "FG3A_RANK": 77,
+    "FG3_PCT_RANK": 37,
+    "FTM_RANK": 364,
+    "FTA_RANK": 372,
+    "FT_PCT_RANK": 180,
+    "OREB_RANK": 381,
+    "DREB_RANK": 227,
+    "REB_RANK": 261,
+    "AST_RANK": 215,
+    "TOV_RANK": 286,
+    "STL_RANK": 235,
+    "BLK_RANK": 370,
+    "BLKA_RANK": 99,
+    "PF_RANK": 498,
+    "PFD_RANK": 290,
+    "PTS_RANK": 214,
+    "PLUS_MINUS_RANK": 62,
+    "NBA_FANTASY_PTS_RANK": 247,
+    "DD2_RANK": 281,
+    "TD3_RANK": 44,
+    "WNBA_FANTASY_PTS_RANK": 225
+  }
+]
+```
+
+### LeagueDashPtDefend
+Endpoint URL: `leaguedashptdefend`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPTDefend
+Row Count: 568
+
+Headers:
+```python
+[
+  "CLOSE_DEF_PERSON_ID",
+  "PLAYER_NAME",
+  "PLAYER_LAST_TEAM_ID",
+  "PLAYER_LAST_TEAM_ABBREVIATION",
+  "PLAYER_POSITION",
+  "AGE",
+  "GP",
+  "G",
+  "FREQ",
+  "D_FGM",
+  "D_FGA",
+  "D_FG_PCT",
+  "NORMAL_FG_PCT",
+  "PCT_PLUSMINUS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "CLOSE_DEF_PERSON_ID": "int64",
+  "PLAYER_NAME": "object",
+  "PLAYER_LAST_TEAM_ID": "int64",
+  "PLAYER_LAST_TEAM_ABBREVIATION": "object",
+  "PLAYER_POSITION": "object",
+  "AGE": "float64",
+  "GP": "int64",
+  "G": "int64",
+  "FREQ": "float64",
+  "D_FGM": "int64",
+  "D_FGA": "int64",
+  "D_FG_PCT": "float64",
+  "NORMAL_FG_PCT": "float64",
+  "PCT_PLUSMINUS": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "CLOSE_DEF_PERSON_ID": 201572,
+    "PLAYER_NAME": "Brook Lopez",
+    "PLAYER_LAST_TEAM_ID": 1610612749,
+    "PLAYER_LAST_TEAM_ABBREVIATION": "MIL",
+    "PLAYER_POSITION": "C",
+    "AGE": 37.0,
+    "GP": 80,
+    "G": 80,
+    "FREQ": 1.0,
+    "D_FGM": 711,
+    "D_FGA": 1523,
+    "D_FG_PCT": 0.467,
+    "NORMAL_FG_PCT": 0.489,
+    "PCT_PLUSMINUS": -0.022
+  },
+  {
+    "CLOSE_DEF_PERSON_ID": 1627826,
+    "PLAYER_NAME": "Ivica Zubac",
+    "PLAYER_LAST_TEAM_ID": 1610612746,
+    "PLAYER_LAST_TEAM_ABBREVIATION": "LAC",
+    "PLAYER_POSITION": "C",
+    "AGE": 28.0,
+    "GP": 80,
+    "G": 80,
+    "FREQ": 1.0,
+    "D_FGM": 669,
+    "D_FGA": 1461,
+    "D_FG_PCT": 0.458,
+    "NORMAL_FG_PCT": 0.492,
+    "PCT_PLUSMINUS": -0.034
+  }
+]
+```
+
+### LeagueDashPtStats
+Endpoint URL: `leaguedashptstats`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPtStats
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_NAME",
+  "GP",
+  "W",
+  "L",
+  "MIN",
+  "DIST_FEET",
+  "DIST_MILES",
+  "DIST_MILES_OFF",
+  "DIST_MILES_DEF",
+  "AVG_SPEED",
+  "AVG_SPEED_OFF",
+  "AVG_SPEED_DEF"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_NAME": "object",
+  "GP": "int64",
+  "W": "int64",
+  "L": "int64",
+  "MIN": "float64",
+  "DIST_FEET": "int64",
+  "DIST_MILES": "float64",
+  "DIST_MILES_OFF": "float64",
+  "DIST_MILES_DEF": "float64",
+  "AVG_SPEED": "float64",
+  "AVG_SPEED_OFF": "float64",
+  "AVG_SPEED_DEF": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612737,
+    "TEAM_ABBREVIATION": "ATL",
+    "TEAM_NAME": "Atlanta Hawks",
+    "GP": 82,
+    "W": 40,
+    "L": 42,
+    "MIN": 19780.0,
+    "DIST_FEET": 8127584,
+    "DIST_MILES": 1539.3,
+    "DIST_MILES_OFF": 814.8,
+    "DIST_MILES_DEF": 724.6,
+    "AVG_SPEED": 4.36,
+    "AVG_SPEED_OFF": 4.82,
+    "AVG_SPEED_DEF": 3.93
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "TEAM_ABBREVIATION": "BOS",
+    "TEAM_NAME": "Boston Celtics",
+    "GP": 82,
+    "W": 61,
+    "L": 21,
+    "MIN": 19830.0,
+    "DIST_FEET": 7467732,
+    "DIST_MILES": 1414.3,
+    "DIST_MILES_OFF": 756.1,
+    "DIST_MILES_DEF": 658.2,
+    "AVG_SPEED": 4.05,
+    "AVG_SPEED_OFF": 4.2,
+    "AVG_SPEED_DEF": 3.88
+  }
+]
+```
+
+### LeagueDashPtTeamDefend
+Endpoint URL: `leaguedashptteamdefend`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPtTeamDefend
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_NAME",
+  "TEAM_ABBREVIATION",
+  "GP",
+  "G",
+  "FREQ",
+  "D_FGM",
+  "D_FGA",
+  "D_FG_PCT",
+  "NORMAL_FG_PCT",
+  "PCT_PLUSMINUS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_NAME": "object",
+  "TEAM_ABBREVIATION": "object",
+  "GP": "int64",
+  "G": "int64",
+  "FREQ": "float64",
+  "D_FGM": "int64",
+  "D_FGA": "int64",
+  "D_FG_PCT": "float64",
+  "NORMAL_FG_PCT": "float64",
+  "PCT_PLUSMINUS": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612760,
+    "TEAM_NAME": "Oklahoma City Thunder",
+    "TEAM_ABBREVIATION": "OKC",
+    "GP": 82,
+    "G": 82,
+    "FREQ": 1.0,
+    "D_FGM": 3109,
+    "D_FGA": 7130,
+    "D_FG_PCT": 0.436,
+    "NORMAL_FG_PCT": 0.467,
+    "PCT_PLUSMINUS": -0.031
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "TEAM_NAME": "Boston Celtics",
+    "TEAM_ABBREVIATION": "BOS",
+    "GP": 82,
+    "G": 82,
+    "FREQ": 1.0,
+    "D_FGM": 3302,
+    "D_FGA": 7331,
+    "D_FG_PCT": 0.45,
+    "NORMAL_FG_PCT": 0.466,
+    "PCT_PLUSMINUS": -0.015
+  }
+]
+```
+
+### LeagueDashTeamClutch
+Endpoint URL: `leaguedashteamclutch`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashTeamClutch
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_NAME",
+  "GP",
+  "W",
+  "L",
+  "W_PCT",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "TOV",
+  "STL",
+  "BLK",
+  "BLKA",
+  "PF",
+  "PFD",
+  "PTS",
+  "PLUS_MINUS",
+  "GP_RANK",
+  "W_RANK",
+  "L_RANK",
+  "W_PCT_RANK",
+  "MIN_RANK",
+  "FGM_RANK",
+  "FGA_RANK",
+  "FG_PCT_RANK",
+  "FG3M_RANK",
+  "FG3A_RANK",
+  "FG3_PCT_RANK",
+  "FTM_RANK",
+  "FTA_RANK",
+  "FT_PCT_RANK",
+  "OREB_RANK",
+  "DREB_RANK",
+  "REB_RANK",
+  "AST_RANK",
+  "TOV_RANK",
+  "STL_RANK",
+  "BLK_RANK",
+  "BLKA_RANK",
+  "PF_RANK",
+  "PFD_RANK",
+  "PTS_RANK",
+  "PLUS_MINUS_RANK"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_NAME": "object",
+  "GP": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "MIN": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "TOV": "float64",
+  "STL": "int64",
+  "BLK": "int64",
+  "BLKA": "int64",
+  "PF": "int64",
+  "PFD": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "float64",
+  "GP_RANK": "int64",
+  "W_RANK": "int64",
+  "L_RANK": "int64",
+  "W_PCT_RANK": "int64",
+  "MIN_RANK": "int64",
+  "FGM_RANK": "int64",
+  "FGA_RANK": "int64",
+  "FG_PCT_RANK": "int64",
+  "FG3M_RANK": "int64",
+  "FG3A_RANK": "int64",
+  "FG3_PCT_RANK": "int64",
+  "FTM_RANK": "int64",
+  "FTA_RANK": "int64",
+  "FT_PCT_RANK": "int64",
+  "OREB_RANK": "int64",
+  "DREB_RANK": "int64",
+  "REB_RANK": "int64",
+  "AST_RANK": "int64",
+  "TOV_RANK": "int64",
+  "STL_RANK": "int64",
+  "BLK_RANK": "int64",
+  "BLKA_RANK": "int64",
+  "PF_RANK": "int64",
+  "PFD_RANK": "int64",
+  "PTS_RANK": "int64",
+  "PLUS_MINUS_RANK": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612737,
+    "TEAM_NAME": "Atlanta Hawks",
+    "GP": 41,
+    "W": 21,
+    "L": 20,
+    "W_PCT": 0.512,
+    "MIN": 160.035,
+    "FGM": 125,
+    "FGA": 277,
+    "FG_PCT": 0.451,
+    "FG3M": 37,
+    "FG3A": 109,
+    "FG3_PCT": 0.339,
+    "FTM": 115,
+    "FTA": 141,
+    "FT_PCT": 0.816,
+    "OREB": 39,
+    "DREB": 110,
+    "REB": 149,
+    "AST": 79,
+    "TOV": 43.0,
+    "STL": 22,
+    "BLK": 17,
+    "BLKA": 16,
+    "PF": 80,
+    "PFD": 99,
+    "PTS": 402,
+    "PLUS_MINUS": 29.0,
+    "GP_RANK": 7,
+    "W_RANK": 8,
+    "L_RANK": 17,
+    "W_PCT_RANK": 15,
+    "MIN_RANK": 6,
+    "FGM_RANK": 6,
+    "FGA_RANK": 6,
+    "FG_PCT_RANK": 10,
+    "FG3M_RANK": 7,
+    "FG3A_RANK": 12,
+    "FG3_PCT_RANK": 11,
+    "FTM_RANK": 1,
+    "FTA_RANK": 2,
+    "FT_PCT_RANK": 5,
+    "OREB_RANK": 10,
+    "DREB_RANK": 5,
+    "REB_RANK": 7,
+    "AST_RANK": 2,
+    "TOV_RANK": 21,
+    "STL_RANK": 9,
+    "BLK_RANK": 10,
+    "BLKA_RANK": 16,
+    "PF_RANK": 14,
+    "PFD_RANK": 4,
+    "PTS_RANK": 3,
+    "PLUS_MINUS_RANK": 7
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "TEAM_NAME": "Boston Celtics",
+    "GP": 35,
+    "W": 24,
+    "L": 11,
+    "W_PCT": 0.686,
+    "MIN": 138.85833333333332,
+    "FGM": 118,
+    "FGA": 246,
+    "FG_PCT": 0.48,
+    "FG3M": 50,
+    "FG3A": 132,
+    "FG3_PCT": 0.379,
+    "FTM": 79,
+    "FTA": 104,
+    "FT_PCT": 0.76,
+    "OREB": 33,
+    "DREB": 84,
+    "REB": 117,
+    "AST": 68,
+    "TOV": 32.0,
+    "STL": 17,
+    "BLK": 20,
+    "BLKA": 7,
+    "PF": 69,
+    "PFD": 83,
+    "PTS": 365,
+    "PLUS_MINUS": 59.0,
+    "GP_RANK": 21,
+    "W_RANK": 4,
+    "L_RANK": 2,
+    "W_PCT_RANK": 1,
+    "MIN_RANK": 16,
+    "FGM_RANK": 8,
+    "FGA_RANK": 13,
+    "FG_PCT_RANK": 3,
+    "FG3M_RANK": 1,
+    "FG3A_RANK": 3,
+    "FG3_PCT_RANK": 6,
+    "FTM_RANK": 17,
+    "FTA_RANK": 17,
+    "FT_PCT_RANK": 22,
+    "OREB_RANK": 17,
+    "DREB_RANK": 18,
+    "REB_RANK": 21,
+    "AST_RANK": 5,
+    "TOV_RANK": 7,
+    "STL_RANK": 22,
+    "BLK_RANK": 4,
+    "BLKA_RANK": 3,
+    "PF_RANK": 8,
+    "PFD_RANK": 12,
+    "PTS_RANK": 7,
+    "PLUS_MINUS_RANK": 3
+  }
+]
+```
+
+### LeagueDashTeamPtShot
+Endpoint URL: `leaguedashteamptshot`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashPTShots
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_NAME",
+  "TEAM_ABBREVIATION",
+  "GP",
+  "G",
+  "FGA_FREQUENCY",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "EFG_PCT",
+  "FG2A_FREQUENCY",
+  "FG2M",
+  "FG2A",
+  "FG2_PCT",
+  "FG3A_FREQUENCY",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_NAME": "object",
+  "TEAM_ABBREVIATION": "object",
+  "GP": "int64",
+  "G": "int64",
+  "FGA_FREQUENCY": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "EFG_PCT": "float64",
+  "FG2A_FREQUENCY": "float64",
+  "FG2M": "int64",
+  "FG2A": "int64",
+  "FG2_PCT": "float64",
+  "FG3A_FREQUENCY": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612745,
+    "TEAM_NAME": "Houston Rockets",
+    "TEAM_ABBREVIATION": "HOU",
+    "GP": 82,
+    "G": 82,
+    "FGA_FREQUENCY": 1.0,
+    "FGM": 3484,
+    "FGA": 7659,
+    "FG_PCT": 0.455,
+    "EFG_PCT": 0.523,
+    "FG2A_FREQUENCY": 0.616,
+    "FG2M": 2446,
+    "FG2A": 4721,
+    "FG2_PCT": 0.518,
+    "FG3A_FREQUENCY": 0.384,
+    "FG3M": 1038,
+    "FG3A": 2938,
+    "FG3_PCT": 0.353
+  },
+  {
+    "TEAM_ID": 1610612760,
+    "TEAM_NAME": "Oklahoma City Thunder",
+    "TEAM_ABBREVIATION": "OKC",
+    "GP": 82,
+    "G": 82,
+    "FGA_FREQUENCY": 1.0,
+    "FGM": 3660,
+    "FGA": 7600,
+    "FG_PCT": 0.482,
+    "EFG_PCT": 0.56,
+    "FG2A_FREQUENCY": 0.581,
+    "FG2M": 2468,
+    "FG2A": 4416,
+    "FG2_PCT": 0.559,
+    "FG3A_FREQUENCY": 0.419,
+    "FG3M": 1192,
+    "FG3A": 3184,
+    "FG3_PCT": 0.374
+  }
+]
+```
+
+### LeagueDashTeamShotLocations
+Endpoint URL: `leaguedashteamshotlocations`
+
+
+### LeagueDashTeamStats
+Endpoint URL: `leaguedashteamstats`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueDashTeamStats
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_NAME",
+  "GP",
+  "W",
+  "L",
+  "W_PCT",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "TOV",
+  "STL",
+  "BLK",
+  "BLKA",
+  "PF",
+  "PFD",
+  "PTS",
+  "PLUS_MINUS",
+  "GP_RANK",
+  "W_RANK",
+  "L_RANK",
+  "W_PCT_RANK",
+  "MIN_RANK",
+  "FGM_RANK",
+  "FGA_RANK",
+  "FG_PCT_RANK",
+  "FG3M_RANK",
+  "FG3A_RANK",
+  "FG3_PCT_RANK",
+  "FTM_RANK",
+  "FTA_RANK",
+  "FT_PCT_RANK",
+  "OREB_RANK",
+  "DREB_RANK",
+  "REB_RANK",
+  "AST_RANK",
+  "TOV_RANK",
+  "STL_RANK",
+  "BLK_RANK",
+  "BLKA_RANK",
+  "PF_RANK",
+  "PFD_RANK",
+  "PTS_RANK",
+  "PLUS_MINUS_RANK"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_NAME": "object",
+  "GP": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "MIN": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "TOV": "float64",
+  "STL": "int64",
+  "BLK": "int64",
+  "BLKA": "int64",
+  "PF": "int64",
+  "PFD": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "float64",
+  "GP_RANK": "int64",
+  "W_RANK": "int64",
+  "L_RANK": "int64",
+  "W_PCT_RANK": "int64",
+  "MIN_RANK": "int64",
+  "FGM_RANK": "int64",
+  "FGA_RANK": "int64",
+  "FG_PCT_RANK": "int64",
+  "FG3M_RANK": "int64",
+  "FG3A_RANK": "int64",
+  "FG3_PCT_RANK": "int64",
+  "FTM_RANK": "int64",
+  "FTA_RANK": "int64",
+  "FT_PCT_RANK": "int64",
+  "OREB_RANK": "int64",
+  "DREB_RANK": "int64",
+  "REB_RANK": "int64",
+  "AST_RANK": "int64",
+  "TOV_RANK": "int64",
+  "STL_RANK": "int64",
+  "BLK_RANK": "int64",
+  "BLKA_RANK": "int64",
+  "PF_RANK": "int64",
+  "PFD_RANK": "int64",
+  "PTS_RANK": "int64",
+  "PLUS_MINUS_RANK": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612737,
+    "TEAM_NAME": "Atlanta Hawks",
+    "GP": 82,
+    "W": 40,
+    "L": 42,
+    "W_PCT": 0.488,
+    "MIN": 3956.0,
+    "FGM": 3556,
+    "FGA": 7528,
+    "FG_PCT": 0.472,
+    "FG3M": 1107,
+    "FG3A": 3089,
+    "FG3_PCT": 0.358,
+    "FTM": 1472,
+    "FTA": 1900,
+    "FT_PCT": 0.775,
+    "OREB": 974,
+    "DREB": 2675,
+    "REB": 3649,
+    "AST": 2426,
+    "TOV": 1273.0,
+    "STL": 798,
+    "BLK": 419,
+    "BLKA": 403,
+    "PF": 1564,
+    "PFD": 1563,
+    "PTS": 9691,
+    "PLUS_MINUS": -93.0,
+    "GP_RANK": 1,
+    "W_RANK": 16,
+    "L_RANK": 16,
+    "W_PCT_RANK": 16,
+    "MIN_RANK": 14,
+    "FGM_RANK": 6,
+    "FGA_RANK": 5,
+    "FG_PCT_RANK": 14,
+    "FG3M_RANK": 14,
+    "FG3A_RANK": 15,
+    "FG3_PCT_RANK": 18,
+    "FTM_RANK": 3,
+    "FTA_RANK": 4,
+    "FT_PCT_RANK": 18,
+    "OREB_RANK": 9,
+    "DREB_RANK": 23,
+    "REB_RANK": 14,
+    "AST_RANK": 2,
+    "TOV_RANK": 26,
+    "STL_RANK": 2,
+    "BLK_RANK": 12,
+    "BLKA_RANK": 15,
+    "PF_RANK": 22,
+    "PFD_RANK": 8,
+    "PTS_RANK": 5,
+    "PLUS_MINUS_RANK": 18
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "TEAM_NAME": "Boston Celtics",
+    "GP": 82,
+    "W": 61,
+    "L": 21,
+    "W_PCT": 0.744,
+    "MIN": 3966.0,
+    "FGM": 3413,
+    "FGA": 7382,
+    "FG_PCT": 0.462,
+    "FG3M": 1457,
+    "FG3A": 3955,
+    "FG3_PCT": 0.368,
+    "FTM": 1251,
+    "FTA": 1565,
+    "FT_PCT": 0.799,
+    "OREB": 933,
+    "DREB": 2783,
+    "REB": 3716,
+    "AST": 2144,
+    "TOV": 973.0,
+    "STL": 589,
+    "BLK": 452,
+    "BLKA": 295,
+    "PF": 1303,
+    "PFD": 1438,
+    "PTS": 9534,
+    "PLUS_MINUS": 747.0,
+    "GP_RANK": 1,
+    "W_RANK": 3,
+    "L_RANK": 3,
+    "W_PCT_RANK": 3,
+    "MIN_RANK": 6,
+    "FGM_RANK": 16,
+    "FGA_RANK": 11,
+    "FG_PCT_RANK": 19,
+    "FG3M_RANK": 1,
+    "FG3A_RANK": 1,
+    "FG3_PCT_RANK": 10,
+    "FTM_RANK": 30,
+    "FTA_RANK": 30,
+    "FT_PCT_RANK": 6,
+    "OREB_RANK": 10,
+    "DREB_RANK": 7,
+    "REB_RANK": 8,
+    "AST_RANK": 16,
+    "TOV_RANK": 2,
+    "STL_RANK": 29,
+    "BLK_RANK": 5,
+    "BLKA_RANK": 1,
+    "PF_RANK": 2,
+    "PFD_RANK": 27,
+    "PTS_RANK": 8,
+    "PLUS_MINUS_RANK": 3
+  }
+]
+```
+
+### LeagueGameFinder
+Endpoint URL: `leaguegamefinder`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueGameFinderResults
+Row Count: 30000
+
+Headers:
+```python
+[
+  "SEASON_ID",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_NAME",
+  "GAME_ID",
+  "GAME_DATE",
+  "MATCHUP",
+  "WL",
+  "MIN",
+  "PTS",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "STL",
+  "BLK",
+  "TOV",
+  "PF",
+  "PLUS_MINUS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "SEASON_ID": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_NAME": "object",
+  "GAME_ID": "object",
+  "GAME_DATE": "object",
+  "MATCHUP": "object",
+  "WL": "object",
+  "MIN": "int64",
+  "PTS": "int64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "STL": "int64",
+  "BLK": "int64",
+  "TOV": "int64",
+  "PF": "int64",
+  "PLUS_MINUS": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "SEASON_ID": "42024",
+    "TEAM_ID": 1612709925,
+    "TEAM_ABBREVIATION": "OSC",
+    "TEAM_NAME": "Osceola Magic",
+    "GAME_ID": "2042400403",
+    "GAME_DATE": "2025-04-14",
+    "MATCHUP": "OSC vs. STO",
+    "WL": "L",
+    "MIN": 239,
+    "PTS": 110,
+    "FGM": 36,
+    "FGA": 88,
+    "FG_PCT": 0.409,
+    "FG3M": 16,
+    "FG3A": 47,
+    "FG3_PCT": 0.34,
+    "FTM": 12,
+    "FTA": 12,
+    "FT_PCT": 1.0,
+    "OREB": 10,
+    "DREB": 34,
+    "REB": 44,
+    "AST": 20,
+    "STL": 11,
+    "BLK": 5,
+    "TOV": 18,
+    "PF": 30,
+    "PLUS_MINUS": -8.0
+  },
+  {
+    "SEASON_ID": "42024",
+    "TEAM_ID": 1612709914,
+    "TEAM_ABBREVIATION": "STO",
+    "TEAM_NAME": "Stockton Kings",
+    "GAME_ID": "2042400403",
+    "GAME_DATE": "2025-04-14",
+    "MATCHUP": "STO @ OSC",
+    "WL": "W",
+    "MIN": 241,
+    "PTS": 118,
+    "FGM": 37,
+    "FGA": 83,
+    "FG_PCT": 0.446,
+    "FG3M": 10,
+    "FG3A": 34,
+    "FG3_PCT": 0.294,
+    "FTM": 23,
+    "FTA": 28,
+    "FT_PCT": 0.821,
+    "OREB": 12,
+    "DREB": 38,
+    "REB": 50,
+    "AST": 23,
+    "STL": 12,
+    "BLK": 2,
+    "TOV": 16,
+    "PF": 19,
+    "PLUS_MINUS": 8.0
+  }
+]
+```
+
+### LeagueGameLog
+Endpoint URL: `leaguegamelog`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### LeagueGameLog
+Row Count: 2460
+
+Headers:
+```python
+[
+  "SEASON_ID",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_NAME",
+  "GAME_ID",
+  "GAME_DATE",
+  "MATCHUP",
+  "WL",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "STL",
+  "BLK",
+  "TOV",
+  "PF",
+  "PTS",
+  "PLUS_MINUS",
+  "VIDEO_AVAILABLE"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "SEASON_ID": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_NAME": "object",
+  "GAME_ID": "object",
+  "GAME_DATE": "object",
+  "MATCHUP": "object",
+  "WL": "object",
+  "MIN": "int64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "STL": "int64",
+  "BLK": "int64",
+  "TOV": "int64",
+  "PF": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "int64",
+  "VIDEO_AVAILABLE": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "SEASON_ID": "22024",
+    "TEAM_ID": 1610612752,
+    "TEAM_ABBREVIATION": "NYK",
+    "TEAM_NAME": "New York Knicks",
+    "GAME_ID": "0022400061",
+    "GAME_DATE": "2024-10-22",
+    "MATCHUP": "NYK @ BOS",
+    "WL": "L",
+    "MIN": 240,
+    "FGM": 43,
+    "FGA": 78,
+    "FG_PCT": 0.551,
+    "FG3M": 11,
+    "FG3A": 30,
+    "FG3_PCT": 0.367,
+    "FTM": 12,
+    "FTA": 16,
+    "FT_PCT": 0.75,
+    "OREB": 5,
+    "DREB": 29,
+    "REB": 34,
+    "AST": 20,
+    "STL": 2,
+    "BLK": 3,
+    "TOV": 12,
+    "PF": 12,
+    "PTS": 109,
+    "PLUS_MINUS": -23,
+    "VIDEO_AVAILABLE": 1
+  },
+  {
+    "SEASON_ID": "22024",
+    "TEAM_ID": 1610612738,
+    "TEAM_ABBREVIATION": "BOS",
+    "TEAM_NAME": "Boston Celtics",
+    "GAME_ID": "0022400061",
+    "GAME_DATE": "2024-10-22",
+    "MATCHUP": "BOS vs. NYK",
+    "WL": "W",
+    "MIN": 240,
+    "FGM": 48,
+    "FGA": 95,
+    "FG_PCT": 0.505,
+    "FG3M": 29,
+    "FG3A": 61,
+    "FG3_PCT": 0.475,
+    "FTM": 7,
+    "FTA": 8,
+    "FT_PCT": 0.875,
+    "OREB": 11,
+    "DREB": 29,
+    "REB": 40,
+    "AST": 33,
+    "STL": 6,
+    "BLK": 3,
+    "TOV": 4,
+    "PF": 15,
+    "PTS": 132,
+    "PLUS_MINUS": 23,
+    "VIDEO_AVAILABLE": 1
+  }
+]
+```
+
+### LeagueHustleStatsPlayer
+Endpoint URL: `leaguehustlestatsplayer`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### HustleStatsPlayer
+Row Count: 567
+
+Headers:
+```python
+[
+  "PLAYER_ID",
+  "PLAYER_NAME",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "AGE",
+  "G",
+  "MIN",
+  "CONTESTED_SHOTS",
+  "CONTESTED_SHOTS_2PT",
+  "CONTESTED_SHOTS_3PT",
+  "DEFLECTIONS",
+  "CHARGES_DRAWN",
+  "SCREEN_ASSISTS",
+  "SCREEN_AST_PTS",
+  "OFF_LOOSE_BALLS_RECOVERED",
+  "DEF_LOOSE_BALLS_RECOVERED",
+  "LOOSE_BALLS_RECOVERED",
+  "PCT_LOOSE_BALLS_RECOVERED_OFF",
+  "PCT_LOOSE_BALLS_RECOVERED_DEF",
+  "OFF_BOXOUTS",
+  "DEF_BOXOUTS",
+  "BOX_OUT_PLAYER_TEAM_REBS",
+  "BOX_OUT_PLAYER_REBS",
+  "BOX_OUTS",
+  "PCT_BOX_OUTS_OFF",
+  "PCT_BOX_OUTS_DEF",
+  "PCT_BOX_OUTS_TEAM_REB",
+  "PCT_BOX_OUTS_REB"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PLAYER_ID": "int64",
+  "PLAYER_NAME": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "AGE": "float64",
+  "G": "int64",
+  "MIN": "float64",
+  "CONTESTED_SHOTS": "int64",
+  "CONTESTED_SHOTS_2PT": "int64",
+  "CONTESTED_SHOTS_3PT": "int64",
+  "DEFLECTIONS": "int64",
+  "CHARGES_DRAWN": "int64",
+  "SCREEN_ASSISTS": "int64",
+  "SCREEN_AST_PTS": "int64",
+  "OFF_LOOSE_BALLS_RECOVERED": "int64",
+  "DEF_LOOSE_BALLS_RECOVERED": "int64",
+  "LOOSE_BALLS_RECOVERED": "int64",
+  "PCT_LOOSE_BALLS_RECOVERED_OFF": "float64",
+  "PCT_LOOSE_BALLS_RECOVERED_DEF": "float64",
+  "OFF_BOXOUTS": "int64",
+  "DEF_BOXOUTS": "int64",
+  "BOX_OUT_PLAYER_TEAM_REBS": "int64",
+  "BOX_OUT_PLAYER_REBS": "int64",
+  "BOX_OUTS": "int64",
+  "PCT_BOX_OUTS_OFF": "float64",
+  "PCT_BOX_OUTS_DEF": "float64",
+  "PCT_BOX_OUTS_TEAM_REB": "float64",
+  "PCT_BOX_OUTS_REB": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PLAYER_ID": 1630639,
+    "PLAYER_NAME": "A.J. Lawson",
+    "TEAM_ID": 1610612761,
+    "TEAM_ABBREVIATION": "TOR",
+    "AGE": 24.0,
+    "G": 24,
+    "MIN": 484.0,
+    "CONTESTED_SHOTS": 49,
+    "CONTESTED_SHOTS_2PT": 28,
+    "CONTESTED_SHOTS_3PT": 21,
+    "DEFLECTIONS": 26,
+    "CHARGES_DRAWN": 0,
+    "SCREEN_ASSISTS": 7,
+    "SCREEN_AST_PTS": 16,
+    "OFF_LOOSE_BALLS_RECOVERED": 1,
+    "DEF_LOOSE_BALLS_RECOVERED": 5,
+    "LOOSE_BALLS_RECOVERED": 6,
+    "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.167,
+    "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.833,
+    "OFF_BOXOUTS": 0,
+    "DEF_BOXOUTS": 5,
+    "BOX_OUT_PLAYER_TEAM_REBS": 5,
+    "BOX_OUT_PLAYER_REBS": 3,
+    "BOX_OUTS": 5,
+    "PCT_BOX_OUTS_OFF": 0.0,
+    "PCT_BOX_OUTS_DEF": 1.0,
+    "PCT_BOX_OUTS_TEAM_REB": 1.0,
+    "PCT_BOX_OUTS_REB": 0.6
+  },
+  {
+    "PLAYER_ID": 1631260,
+    "PLAYER_NAME": "AJ Green",
+    "TEAM_ID": 1610612749,
+    "TEAM_ABBREVIATION": "MIL",
+    "AGE": 25.0,
+    "G": 72,
+    "MIN": 1656.0,
+    "CONTESTED_SHOTS": 237,
+    "CONTESTED_SHOTS_2PT": 131,
+    "CONTESTED_SHOTS_3PT": 106,
+    "DEFLECTIONS": 66,
+    "CHARGES_DRAWN": 5,
+    "SCREEN_ASSISTS": 28,
+    "SCREEN_AST_PTS": 63,
+    "OFF_LOOSE_BALLS_RECOVERED": 11,
+    "DEF_LOOSE_BALLS_RECOVERED": 18,
+    "LOOSE_BALLS_RECOVERED": 29,
+    "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.379,
+    "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.621,
+    "OFF_BOXOUTS": 2,
+    "DEF_BOXOUTS": 36,
+    "BOX_OUT_PLAYER_TEAM_REBS": 36,
+    "BOX_OUT_PLAYER_REBS": 8,
+    "BOX_OUTS": 38,
+    "PCT_BOX_OUTS_OFF": 0.053,
+    "PCT_BOX_OUTS_DEF": 0.947,
+    "PCT_BOX_OUTS_TEAM_REB": 0.947,
+    "PCT_BOX_OUTS_REB": 0.211
+  }
+]
+```
+
+### LeagueHustleStatsTeam
+Endpoint URL: `leaguehustlestatsteam`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### HustleStatsTeam
+Row Count: 30
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "TEAM_NAME",
+  "MIN",
+  "CONTESTED_SHOTS",
+  "CONTESTED_SHOTS_2PT",
+  "CONTESTED_SHOTS_3PT",
+  "DEFLECTIONS",
+  "CHARGES_DRAWN",
+  "SCREEN_ASSISTS",
+  "SCREEN_AST_PTS",
+  "OFF_LOOSE_BALLS_RECOVERED",
+  "DEF_LOOSE_BALLS_RECOVERED",
+  "LOOSE_BALLS_RECOVERED",
+  "PCT_LOOSE_BALLS_RECOVERED_OFF",
+  "PCT_LOOSE_BALLS_RECOVERED_DEF",
+  "OFF_BOXOUTS",
+  "DEF_BOXOUTS",
+  "BOX_OUTS",
+  "PCT_BOX_OUTS_OFF",
+  "PCT_BOX_OUTS_DEF"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "TEAM_NAME": "object",
+  "MIN": "float64",
+  "CONTESTED_SHOTS": "int64",
+  "CONTESTED_SHOTS_2PT": "int64",
+  "CONTESTED_SHOTS_3PT": "int64",
+  "DEFLECTIONS": "int64",
+  "CHARGES_DRAWN": "int64",
+  "SCREEN_ASSISTS": "int64",
+  "SCREEN_AST_PTS": "int64",
+  "OFF_LOOSE_BALLS_RECOVERED": "int64",
+  "DEF_LOOSE_BALLS_RECOVERED": "int64",
+  "LOOSE_BALLS_RECOVERED": "int64",
+  "PCT_LOOSE_BALLS_RECOVERED_OFF": "float64",
+  "PCT_LOOSE_BALLS_RECOVERED_DEF": "float64",
+  "OFF_BOXOUTS": "int64",
+  "DEF_BOXOUTS": "int64",
+  "BOX_OUTS": "int64",
+  "PCT_BOX_OUTS_OFF": "float64",
+  "PCT_BOX_OUTS_DEF": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612737,
+    "TEAM_NAME": "Atlanta Hawks",
+    "MIN": 3115.0,
+    "CONTESTED_SHOTS": 3396,
+    "CONTESTED_SHOTS_2PT": 2017,
+    "CONTESTED_SHOTS_3PT": 1379,
+    "DEFLECTIONS": 1547,
+    "CHARGES_DRAWN": 34,
+    "SCREEN_ASSISTS": 585,
+    "SCREEN_AST_PTS": 1386,
+    "OFF_LOOSE_BALLS_RECOVERED": 195,
+    "DEF_LOOSE_BALLS_RECOVERED": 198,
+    "LOOSE_BALLS_RECOVERED": 393,
+    "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.496,
+    "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.504,
+    "OFF_BOXOUTS": 98,
+    "DEF_BOXOUTS": 354,
+    "BOX_OUTS": 452,
+    "PCT_BOX_OUTS_OFF": 0.217,
+    "PCT_BOX_OUTS_DEF": 0.783
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "TEAM_NAME": "Boston Celtics",
+    "MIN": 2980.0,
+    "CONTESTED_SHOTS": 3541,
+    "CONTESTED_SHOTS_2PT": 2151,
+    "CONTESTED_SHOTS_3PT": 1390,
+    "DEFLECTIONS": 1143,
+    "CHARGES_DRAWN": 19,
+    "SCREEN_ASSISTS": 675,
+    "SCREEN_AST_PTS": 1720,
+    "OFF_LOOSE_BALLS_RECOVERED": 204,
+    "DEF_LOOSE_BALLS_RECOVERED": 188,
+    "LOOSE_BALLS_RECOVERED": 392,
+    "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.52,
+    "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.48,
+    "OFF_BOXOUTS": 118,
+    "DEF_BOXOUTS": 449,
+    "BOX_OUTS": 567,
+    "PCT_BOX_OUTS_OFF": 0.208,
+    "PCT_BOX_OUTS_DEF": 0.792
+  }
+]
+```
+
+### LeagueLeaders
+Endpoint URL: `leagueleaders`
+
+
+### LeagueLineupViz
+Endpoint URL: `leaguelineupviz`
+
+
+### LeaguePlayerOnDetails
+Endpoint URL: `leagueplayerondetails`
+
+
+### LeagueSeasonMatchups
+Endpoint URL: `leagueseasonmatchups`
+
+
+### LeagueStandings
+Endpoint URL: `leaguestandings`
+
+
+### LeagueStandingsV3
+Endpoint URL: `leaguestandingsv3`
+
+
+### MatchupsRollup
+Endpoint URL: `matchupsrollup`
+
+
+### PlayByPlay
+Endpoint URL: `playbyplay`
+
+
+### PlayByPlayV2
+Endpoint URL: `playbyplayv2`
+
+
+### PlayByPlayV3
+Endpoint URL: `playbyplayv3`
+
+
+### PlayerAwards
+Endpoint URL: `playerawards`
+
+
+### PlayerCareerByCollege
+Endpoint URL: `playercareerbycollege`
+
+
+### PlayerCareerByCollegeRollup
+Endpoint URL: `playercareerbycollegerollup`
+
+
+### PlayerCareerStats
+Endpoint URL: `playercareerstats`
+
+
+### PlayerCompare
+Endpoint URL: `playercompare`
+
+
+### PlayerDashPtPass
+Endpoint URL: `playerdashptpass`
+
+
+### PlayerDashPtReb
+Endpoint URL: `playerdashptreb`
+
+
+### PlayerDashPtShotDefend
+Endpoint URL: `playerdashptshotdefend`
+
+
+### PlayerDashPtShots
+Endpoint URL: `playerdashptshots`
+
+
+### PlayerDashboardByClutch
+Endpoint URL: `playerdashboardbyclutch`
+
+
+### PlayerDashboardByGameSplits
+Endpoint URL: `playerdashboardbygamesplits`
+
+
+### PlayerDashboardByGeneralSplits
+Endpoint URL: `playerdashboardbygeneralsplits`
+
+
+### PlayerDashboardByLastNGames
+Endpoint URL: `playerdashboardbylastngames`
+
+
+### PlayerDashboardByShootingSplits
+Endpoint URL: `playerdashboardbyshootingsplits`
+
+
+### PlayerDashboardByTeamPerformance
+Endpoint URL: `playerdashboardbyteamperformance`
+
+
+### PlayerDashboardByYearOverYear
+Endpoint URL: `playerdashboardbyyearoveryear`
+
+
+### PlayerEstimatedMetrics
+Endpoint URL: `playerestimatedmetrics`
+
+
+### PlayerFantasyProfile
+Endpoint URL: `playerfantasyprofile`
+
+
+### PlayerFantasyProfileBarGraph
+Endpoint URL: `playerfantasyprofilebargraph`
+
+
+### PlayerGameLog
+Endpoint URL: `playergamelog`
+
+
+### PlayerGameLogs
+Endpoint URL: `playergamelogs`
+
+
+### PlayerGameStreakFinder
+Endpoint URL: `playergamestreakfinder`
+
+
+### PlayerIndex
+Endpoint URL: `playerindex`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### PlayerIndex
+Row Count: 575
+
+Headers:
+```python
+[
+  "PERSON_ID",
+  "PLAYER_LAST_NAME",
+  "PLAYER_FIRST_NAME",
+  "PLAYER_SLUG",
+  "TEAM_ID",
+  "TEAM_SLUG",
+  "IS_DEFUNCT",
+  "TEAM_CITY",
+  "TEAM_NAME",
+  "TEAM_ABBREVIATION",
+  "JERSEY_NUMBER",
+  "POSITION",
+  "HEIGHT",
+  "WEIGHT",
+  "COLLEGE",
+  "COUNTRY",
+  "DRAFT_YEAR",
+  "DRAFT_ROUND",
+  "DRAFT_NUMBER",
+  "ROSTER_STATUS",
+  "FROM_YEAR",
+  "TO_YEAR",
+  "PTS",
+  "REB",
+  "AST",
+  "STATS_TIMEFRAME"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "PERSON_ID": "int64",
+  "PLAYER_LAST_NAME": "object",
+  "PLAYER_FIRST_NAME": "object",
+  "PLAYER_SLUG": "object",
+  "TEAM_ID": "int64",
+  "TEAM_SLUG": "object",
+  "IS_DEFUNCT": "int64",
+  "TEAM_CITY": "object",
+  "TEAM_NAME": "object",
+  "TEAM_ABBREVIATION": "object",
+  "JERSEY_NUMBER": "object",
+  "POSITION": "object",
+  "HEIGHT": "object",
+  "WEIGHT": "object",
+  "COLLEGE": "object",
+  "COUNTRY": "object",
+  "DRAFT_YEAR": "float64",
+  "DRAFT_ROUND": "float64",
+  "DRAFT_NUMBER": "float64",
+  "ROSTER_STATUS": "float64",
+  "FROM_YEAR": "object",
+  "TO_YEAR": "object",
+  "PTS": "float64",
+  "REB": "float64",
+  "AST": "float64",
+  "STATS_TIMEFRAME": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "PERSON_ID": 1630173,
+    "PLAYER_LAST_NAME": "Achiuwa",
+    "PLAYER_FIRST_NAME": "Precious",
+    "PLAYER_SLUG": "precious-achiuwa",
+    "TEAM_ID": 1610612752,
+    "TEAM_SLUG": "knicks",
+    "IS_DEFUNCT": 0,
+    "TEAM_CITY": "New York",
+    "TEAM_NAME": "Knicks",
+    "TEAM_ABBREVIATION": "NYK",
+    "JERSEY_NUMBER": "5",
+    "POSITION": "F",
+    "HEIGHT": "6-8",
+    "WEIGHT": "243",
+    "COLLEGE": "Memphis",
+    "COUNTRY": "Nigeria",
+    "DRAFT_YEAR": 2020.0,
+    "DRAFT_ROUND": 1.0,
+    "DRAFT_NUMBER": 20.0,
+    "ROSTER_STATUS": 1.0,
+    "FROM_YEAR": "2020",
+    "TO_YEAR": "2024",
+    "PTS": 6.6,
+    "REB": 5.6,
+    "AST": 1.0,
+    "STATS_TIMEFRAME": "Season"
+  },
+  {
+    "PERSON_ID": 203500,
+    "PLAYER_LAST_NAME": "Adams",
+    "PLAYER_FIRST_NAME": "Steven",
+    "PLAYER_SLUG": "steven-adams",
+    "TEAM_ID": 1610612745,
+    "TEAM_SLUG": "rockets",
+    "IS_DEFUNCT": 0,
+    "TEAM_CITY": "Houston",
+    "TEAM_NAME": "Rockets",
+    "TEAM_ABBREVIATION": "HOU",
+    "JERSEY_NUMBER": "12",
+    "POSITION": "C",
+    "HEIGHT": "6-11",
+    "WEIGHT": "265",
+    "COLLEGE": "Pittsburgh",
+    "COUNTRY": "New Zealand",
+    "DRAFT_YEAR": 2013.0,
+    "DRAFT_ROUND": 1.0,
+    "DRAFT_NUMBER": 12.0,
+    "ROSTER_STATUS": 1.0,
+    "FROM_YEAR": "2013",
+    "TO_YEAR": "2024",
+    "PTS": 3.9,
+    "REB": 5.6,
+    "AST": 1.1,
+    "STATS_TIMEFRAME": "Season"
+  }
+]
+```
+
+### PlayerNextNGames
+Endpoint URL: `playernextngames`
+
+
+### PlayerProfileV2
+Endpoint URL: `playerprofilev2`
+
+
+### PlayerVsPlayer
+Endpoint URL: `playervsplayer`
+
+
+### PlayoffPicture
+Endpoint URL: `playoffpicture`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### EastConfPlayoffPicture
+Row Count: 4
+
+Headers:
+```python
+[
+  "CONFERENCE",
+  "HIGH_SEED_RANK",
+  "HIGH_SEED_TEAM",
+  "HIGH_SEED_TEAM_ID",
+  "LOW_SEED_RANK",
+  "LOW_SEED_TEAM",
+  "LOW_SEED_TEAM_ID",
+  "HIGH_SEED_SERIES_W",
+  "HIGH_SEED_SERIES_L",
+  "HIGH_SEED_SERIES_REMAINING_G",
+  "HIGH_SEED_SERIES_REMAINING_HOME_G",
+  "HIGH_SEED_SERIES_REMAINING_AWAY_G"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "CONFERENCE": "object",
+  "HIGH_SEED_RANK": "int64",
+  "HIGH_SEED_TEAM": "object",
+  "HIGH_SEED_TEAM_ID": "int64",
+  "LOW_SEED_RANK": "int64",
+  "LOW_SEED_TEAM": "object",
+  "LOW_SEED_TEAM_ID": "int64",
+  "HIGH_SEED_SERIES_W": "int64",
+  "HIGH_SEED_SERIES_L": "int64",
+  "HIGH_SEED_SERIES_REMAINING_G": "int64",
+  "HIGH_SEED_SERIES_REMAINING_HOME_G": "int64",
+  "HIGH_SEED_SERIES_REMAINING_AWAY_G": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "CONFERENCE": "East",
+    "HIGH_SEED_RANK": 1,
+    "HIGH_SEED_TEAM": "Cleveland",
+    "HIGH_SEED_TEAM_ID": 1610612739,
+    "LOW_SEED_RANK": 8,
+    "LOW_SEED_TEAM": "Atlanta",
+    "LOW_SEED_TEAM_ID": 1610612737,
+    "HIGH_SEED_SERIES_W": 1,
+    "HIGH_SEED_SERIES_L": 2,
+    "HIGH_SEED_SERIES_REMAINING_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_HOME_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_AWAY_G": 0
+  },
+  {
+    "CONFERENCE": "East",
+    "HIGH_SEED_RANK": 2,
+    "HIGH_SEED_TEAM": "Boston",
+    "HIGH_SEED_TEAM_ID": 1610612738,
+    "LOW_SEED_RANK": 7,
+    "LOW_SEED_TEAM": "Orlando",
+    "LOW_SEED_TEAM_ID": 1610612753,
+    "HIGH_SEED_SERIES_W": 1,
+    "HIGH_SEED_SERIES_L": 2,
+    "HIGH_SEED_SERIES_REMAINING_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_HOME_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_AWAY_G": 0
+  }
+]
+```
+
+#### WestConfPlayoffPicture
+Row Count: 4
+
+Headers:
+```python
+[
+  "CONFERENCE",
+  "HIGH_SEED_RANK",
+  "HIGH_SEED_TEAM",
+  "HIGH_SEED_TEAM_ID",
+  "LOW_SEED_RANK",
+  "LOW_SEED_TEAM",
+  "LOW_SEED_TEAM_ID",
+  "HIGH_SEED_SERIES_W",
+  "HIGH_SEED_SERIES_L",
+  "HIGH_SEED_SERIES_REMAINING_G",
+  "HIGH_SEED_SERIES_REMAINING_HOME_G",
+  "HIGH_SEED_SERIES_REMAINING_AWAY_G"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "CONFERENCE": "object",
+  "HIGH_SEED_RANK": "int64",
+  "HIGH_SEED_TEAM": "object",
+  "HIGH_SEED_TEAM_ID": "int64",
+  "LOW_SEED_RANK": "int64",
+  "LOW_SEED_TEAM": "object",
+  "LOW_SEED_TEAM_ID": "int64",
+  "HIGH_SEED_SERIES_W": "int64",
+  "HIGH_SEED_SERIES_L": "int64",
+  "HIGH_SEED_SERIES_REMAINING_G": "int64",
+  "HIGH_SEED_SERIES_REMAINING_HOME_G": "int64",
+  "HIGH_SEED_SERIES_REMAINING_AWAY_G": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "CONFERENCE": "West",
+    "HIGH_SEED_RANK": 1,
+    "HIGH_SEED_TEAM": "Oklahoma City",
+    "HIGH_SEED_TEAM_ID": 1610612760,
+    "LOW_SEED_RANK": 8,
+    "LOW_SEED_TEAM": "Memphis",
+    "LOW_SEED_TEAM_ID": 1610612763,
+    "HIGH_SEED_SERIES_W": 4,
+    "HIGH_SEED_SERIES_L": 0,
+    "HIGH_SEED_SERIES_REMAINING_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_HOME_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_AWAY_G": 0
+  },
+  {
+    "CONFERENCE": "West",
+    "HIGH_SEED_RANK": 2,
+    "HIGH_SEED_TEAM": "Houston",
+    "HIGH_SEED_TEAM_ID": 1610612745,
+    "LOW_SEED_RANK": 7,
+    "LOW_SEED_TEAM": "Golden State",
+    "LOW_SEED_TEAM_ID": 1610612744,
+    "HIGH_SEED_SERIES_W": 2,
+    "HIGH_SEED_SERIES_L": 3,
+    "HIGH_SEED_SERIES_REMAINING_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_HOME_G": 0,
+    "HIGH_SEED_SERIES_REMAINING_AWAY_G": 0
+  }
+]
+```
+
+#### EastConfStandings
+Row Count: 15
+
+Headers:
+```python
+[
+  "CONFERENCE",
+  "RANK",
+  "TEAM",
+  "TEAM_SLUG",
+  "TEAM_ID",
+  "WINS",
+  "LOSSES",
+  "PCT",
+  "DIV",
+  "CONF",
+  "HOME",
+  "AWAY",
+  "GB",
+  "GR_OVER_500",
+  "GR_OVER_500_HOME",
+  "GR_OVER_500_AWAY",
+  "GR_UNDER_500",
+  "GR_UNDER_500_HOME",
+  "GR_UNDER_500_AWAY",
+  "RANKING_CRITERIA",
+  "CLINCHED_PLAYOFFS",
+  "CLINCHED_CONFERENCE",
+  "CLINCHED_DIVISION",
+  "ELIMINATED_PLAYOFFS",
+  "SOSA_REMAINING"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "CONFERENCE": "object",
+  "RANK": "int64",
+  "TEAM": "object",
+  "TEAM_SLUG": "object",
+  "TEAM_ID": "int64",
+  "WINS": "int64",
+  "LOSSES": "int64",
+  "PCT": "float64",
+  "DIV": "object",
+  "CONF": "object",
+  "HOME": "object",
+  "AWAY": "object",
+  "GB": "float64",
+  "GR_OVER_500": "int64",
+  "GR_OVER_500_HOME": "int64",
+  "GR_OVER_500_AWAY": "int64",
+  "GR_UNDER_500": "int64",
+  "GR_UNDER_500_HOME": "int64",
+  "GR_UNDER_500_AWAY": "int64",
+  "RANKING_CRITERIA": "int64",
+  "CLINCHED_PLAYOFFS": "int64",
+  "CLINCHED_CONFERENCE": "int64",
+  "CLINCHED_DIVISION": "int64",
+  "ELIMINATED_PLAYOFFS": "int64",
+  "SOSA_REMAINING": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "CONFERENCE": "East",
+    "RANK": 1,
+    "TEAM": "Cleveland",
+    "TEAM_SLUG": "cavaliers",
+    "TEAM_ID": 1610612739,
+    "WINS": 64,
+    "LOSSES": 18,
+    "PCT": 0.78,
+    "DIV": "12-4 ",
+    "CONF": "41-11",
+    "HOME": "34-7 ",
+    "AWAY": "30-11",
+    "GB": 0.0,
+    "GR_OVER_500": 0,
+    "GR_OVER_500_HOME": 0,
+    "GR_OVER_500_AWAY": 0,
+    "GR_UNDER_500": 0,
+    "GR_UNDER_500_HOME": 0,
+    "GR_UNDER_500_AWAY": 0,
+    "RANKING_CRITERIA": 0,
+    "CLINCHED_PLAYOFFS": 1,
+    "CLINCHED_CONFERENCE": 1,
+    "CLINCHED_DIVISION": 1,
+    "ELIMINATED_PLAYOFFS": 0,
+    "SOSA_REMAINING": null
+  },
+  {
+    "CONFERENCE": "East",
+    "RANK": 2,
+    "TEAM": "Boston",
+    "TEAM_SLUG": "celtics",
+    "TEAM_ID": 1610612738,
+    "WINS": 61,
+    "LOSSES": 21,
+    "PCT": 0.744,
+    "DIV": "14-2 ",
+    "CONF": "39-13",
+    "HOME": "28-13",
+    "AWAY": "33-8 ",
+    "GB": 3.0,
+    "GR_OVER_500": 0,
+    "GR_OVER_500_HOME": 0,
+    "GR_OVER_500_AWAY": 0,
+    "GR_UNDER_500": 0,
+    "GR_UNDER_500_HOME": 0,
+    "GR_UNDER_500_AWAY": 0,
+    "RANKING_CRITERIA": 0,
+    "CLINCHED_PLAYOFFS": 1,
+    "CLINCHED_CONFERENCE": 0,
+    "CLINCHED_DIVISION": 1,
+    "ELIMINATED_PLAYOFFS": 0,
+    "SOSA_REMAINING": null
+  }
+]
+```
+
+#### WestConfStandings
+Row Count: 15
+
+Headers:
+```python
+[
+  "CONFERENCE",
+  "RANK",
+  "TEAM",
+  "TEAM_SLUG",
+  "TEAM_ID",
+  "WINS",
+  "LOSSES",
+  "PCT",
+  "DIV",
+  "CONF",
+  "HOME",
+  "AWAY",
+  "GB",
+  "GR_OVER_500",
+  "GR_OVER_500_HOME",
+  "GR_OVER_500_AWAY",
+  "GR_UNDER_500",
+  "GR_UNDER_500_HOME",
+  "GR_UNDER_500_AWAY",
+  "RANKING_CRITERIA",
+  "CLINCHED_PLAYOFFS",
+  "CLINCHED_CONFERENCE",
+  "CLINCHED_DIVISION",
+  "ELIMINATED_PLAYOFFS",
+  "SOSA_REMAINING"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "CONFERENCE": "object",
+  "RANK": "int64",
+  "TEAM": "object",
+  "TEAM_SLUG": "object",
+  "TEAM_ID": "int64",
+  "WINS": "int64",
+  "LOSSES": "int64",
+  "PCT": "float64",
+  "DIV": "object",
+  "CONF": "object",
+  "HOME": "object",
+  "AWAY": "object",
+  "GB": "float64",
+  "GR_OVER_500": "int64",
+  "GR_OVER_500_HOME": "int64",
+  "GR_OVER_500_AWAY": "int64",
+  "GR_UNDER_500": "int64",
+  "GR_UNDER_500_HOME": "int64",
+  "GR_UNDER_500_AWAY": "int64",
+  "RANKING_CRITERIA": "int64",
+  "CLINCHED_PLAYOFFS": "int64",
+  "CLINCHED_CONFERENCE": "int64",
+  "CLINCHED_DIVISION": "int64",
+  "ELIMINATED_PLAYOFFS": "int64",
+  "SOSA_REMAINING": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "CONFERENCE": "West",
+    "RANK": 1,
+    "TEAM": "Oklahoma City",
+    "TEAM_SLUG": "thunder",
+    "TEAM_ID": 1610612760,
+    "WINS": 68,
+    "LOSSES": 14,
+    "PCT": 0.829,
+    "DIV": "12-4 ",
+    "CONF": "39-13",
+    "HOME": "35-6 ",
+    "AWAY": "32-8 ",
+    "GB": 0.0,
+    "GR_OVER_500": 0,
+    "GR_OVER_500_HOME": 0,
+    "GR_OVER_500_AWAY": 0,
+    "GR_UNDER_500": 0,
+    "GR_UNDER_500_HOME": 0,
+    "GR_UNDER_500_AWAY": 0,
+    "RANKING_CRITERIA": 0,
+    "CLINCHED_PLAYOFFS": 1,
+    "CLINCHED_CONFERENCE": 1,
+    "CLINCHED_DIVISION": 1,
+    "ELIMINATED_PLAYOFFS": 0,
+    "SOSA_REMAINING": null
+  },
+  {
+    "CONFERENCE": "West",
+    "RANK": 2,
+    "TEAM": "Houston",
+    "TEAM_SLUG": "rockets",
+    "TEAM_ID": 1610612745,
+    "WINS": 52,
+    "LOSSES": 30,
+    "PCT": 0.634,
+    "DIV": "13-3 ",
+    "CONF": "31-21",
+    "HOME": "29-12",
+    "AWAY": "23-17",
+    "GB": 16.0,
+    "GR_OVER_500": 0,
+    "GR_OVER_500_HOME": 0,
+    "GR_OVER_500_AWAY": 0,
+    "GR_UNDER_500": 0,
+    "GR_UNDER_500_HOME": 0,
+    "GR_UNDER_500_AWAY": 0,
+    "RANKING_CRITERIA": 0,
+    "CLINCHED_PLAYOFFS": 1,
+    "CLINCHED_CONFERENCE": 0,
+    "CLINCHED_DIVISION": 1,
+    "ELIMINATED_PLAYOFFS": 0,
+    "SOSA_REMAINING": null
+  }
+]
+```
+
+#### EastConfRemainingGames
+Row Count: 15
+
+Headers:
+```python
+[
+  "TEAM",
+  "TEAM_ID",
+  "REMAINING_G",
+  "REMAINING_HOME_G",
+  "REMAINING_AWAY_G"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM": "object",
+  "TEAM_ID": "int64",
+  "REMAINING_G": "int64",
+  "REMAINING_HOME_G": "int64",
+  "REMAINING_AWAY_G": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM": "Atlanta",
+    "TEAM_ID": 1610612737,
+    "REMAINING_G": 0,
+    "REMAINING_HOME_G": 0,
+    "REMAINING_AWAY_G": 0
+  },
+  {
+    "TEAM": "Boston",
+    "TEAM_ID": 1610612738,
+    "REMAINING_G": 0,
+    "REMAINING_HOME_G": 0,
+    "REMAINING_AWAY_G": 0
+  }
+]
+```
+
+#### WestConfRemainingGames
+Row Count: 15
+
+Headers:
+```python
+[
+  "TEAM",
+  "TEAM_ID",
+  "REMAINING_G",
+  "REMAINING_HOME_G",
+  "REMAINING_AWAY_G"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM": "object",
+  "TEAM_ID": "int64",
+  "REMAINING_G": "int64",
+  "REMAINING_HOME_G": "int64",
+  "REMAINING_AWAY_G": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM": "Dallas",
+    "TEAM_ID": 1610612742,
+    "REMAINING_G": 0,
+    "REMAINING_HOME_G": 0,
+    "REMAINING_AWAY_G": 0
+  },
+  {
+    "TEAM": "Denver",
+    "TEAM_ID": 1610612743,
+    "REMAINING_G": 0,
+    "REMAINING_HOME_G": 0,
+    "REMAINING_AWAY_G": 0
+  }
+]
+```
+
+### ScoreboardV2
+Endpoint URL: `scoreboardv2`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### GameHeader
+Row Count: 2
+
+Headers:
+```python
+[
+  "GAME_DATE_EST",
+  "GAME_SEQUENCE",
+  "GAME_ID",
+  "GAME_STATUS_ID",
+  "GAME_STATUS_TEXT",
+  "GAMECODE",
+  "HOME_TEAM_ID",
+  "VISITOR_TEAM_ID",
+  "SEASON",
+  "LIVE_PERIOD",
+  "LIVE_PC_TIME",
+  "NATL_TV_BROADCASTER_ABBREVIATION",
+  "HOME_TV_BROADCASTER_ABBREVIATION",
+  "AWAY_TV_BROADCASTER_ABBREVIATION",
+  "LIVE_PERIOD_TIME_BCAST",
+  "ARENA_NAME",
+  "WH_STATUS",
+  "WNBA_COMMISSIONER_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_DATE_EST": "object",
+  "GAME_SEQUENCE": "int64",
+  "GAME_ID": "object",
+  "GAME_STATUS_ID": "int64",
+  "GAME_STATUS_TEXT": "object",
+  "GAMECODE": "object",
+  "HOME_TEAM_ID": "int64",
+  "VISITOR_TEAM_ID": "int64",
+  "SEASON": "object",
+  "LIVE_PERIOD": "int64",
+  "LIVE_PC_TIME": "object",
+  "NATL_TV_BROADCASTER_ABBREVIATION": "object",
+  "HOME_TV_BROADCASTER_ABBREVIATION": "object",
+  "AWAY_TV_BROADCASTER_ABBREVIATION": "object",
+  "LIVE_PERIOD_TIME_BCAST": "object",
+  "ARENA_NAME": "object",
+  "WH_STATUS": "int64",
+  "WNBA_COMMISSIONER_FLAG": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_DATE_EST": "2025-04-15T00:00:00",
+    "GAME_SEQUENCE": 1,
+    "GAME_ID": "0052400101",
+    "GAME_STATUS_ID": 1,
+    "GAME_STATUS_TEXT": "7:30 pm ET",
+    "GAMECODE": "20250415/ATLORL",
+    "HOME_TEAM_ID": 1610612753,
+    "VISITOR_TEAM_ID": 1610612737,
+    "SEASON": "2024",
+    "LIVE_PERIOD": 0,
+    "LIVE_PC_TIME": "     ",
+    "NATL_TV_BROADCASTER_ABBREVIATION": "TNT/truTV/Max",
+    "HOME_TV_BROADCASTER_ABBREVIATION": null,
+    "AWAY_TV_BROADCASTER_ABBREVIATION": null,
+    "LIVE_PERIOD_TIME_BCAST": "Q0       - TNT/truTV/Max",
+    "ARENA_NAME": "Kia Center",
+    "WH_STATUS": 0,
+    "WNBA_COMMISSIONER_FLAG": 0
+  },
+  {
+    "GAME_DATE_EST": "2025-04-15T00:00:00",
+    "GAME_SEQUENCE": 2,
+    "GAME_ID": "0052400121",
+    "GAME_STATUS_ID": 1,
+    "GAME_STATUS_TEXT": "10:00 pm ET",
+    "GAMECODE": "20250415/MEMGSW",
+    "HOME_TEAM_ID": 1610612744,
+    "VISITOR_TEAM_ID": 1610612763,
+    "SEASON": "2024",
+    "LIVE_PERIOD": 0,
+    "LIVE_PC_TIME": "     ",
+    "NATL_TV_BROADCASTER_ABBREVIATION": "TNT/truTV/Max",
+    "HOME_TV_BROADCASTER_ABBREVIATION": null,
+    "AWAY_TV_BROADCASTER_ABBREVIATION": null,
+    "LIVE_PERIOD_TIME_BCAST": "Q0       - TNT/truTV/Max",
+    "ARENA_NAME": "Chase Center",
+    "WH_STATUS": 0,
+    "WNBA_COMMISSIONER_FLAG": 0
+  }
+]
+```
+
+#### LineScore
+Row Count: 4
+
+Headers:
+```python
+[
+  "GAME_DATE_EST",
+  "GAME_SEQUENCE",
+  "GAME_ID",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_CITY_NAME",
+  "TEAM_NAME",
+  "TEAM_WINS_LOSSES",
+  "PTS_QTR1",
+  "PTS_QTR2",
+  "PTS_QTR3",
+  "PTS_QTR4",
+  "PTS_OT1",
+  "PTS_OT2",
+  "PTS_OT3",
+  "PTS_OT4",
+  "PTS_OT5",
+  "PTS_OT6",
+  "PTS_OT7",
+  "PTS_OT8",
+  "PTS_OT9",
+  "PTS_OT10",
+  "PTS",
+  "FG_PCT",
+  "FT_PCT",
+  "FG3_PCT",
+  "AST",
+  "REB",
+  "TOV"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_DATE_EST": "object",
+  "GAME_SEQUENCE": "int64",
+  "GAME_ID": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_CITY_NAME": "object",
+  "TEAM_NAME": "object",
+  "TEAM_WINS_LOSSES": "object",
+  "PTS_QTR1": "object",
+  "PTS_QTR2": "object",
+  "PTS_QTR3": "object",
+  "PTS_QTR4": "object",
+  "PTS_OT1": "object",
+  "PTS_OT2": "object",
+  "PTS_OT3": "object",
+  "PTS_OT4": "object",
+  "PTS_OT5": "object",
+  "PTS_OT6": "object",
+  "PTS_OT7": "object",
+  "PTS_OT8": "object",
+  "PTS_OT9": "object",
+  "PTS_OT10": "object",
+  "PTS": "object",
+  "FG_PCT": "object",
+  "FT_PCT": "object",
+  "FG3_PCT": "object",
+  "AST": "object",
+  "REB": "object",
+  "TOV": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_DATE_EST": "2025-04-15T00:00:00",
+    "GAME_SEQUENCE": 1,
+    "GAME_ID": "0052400101",
+    "TEAM_ID": 1610612737,
+    "TEAM_ABBREVIATION": "ATL",
+    "TEAM_CITY_NAME": "Atlanta",
+    "TEAM_NAME": "Hawks",
+    "TEAM_WINS_LOSSES": "-",
+    "PTS_QTR1": null,
+    "PTS_QTR2": null,
+    "PTS_QTR3": null,
+    "PTS_QTR4": null,
+    "PTS_OT1": null,
+    "PTS_OT2": null,
+    "PTS_OT3": null,
+    "PTS_OT4": null,
+    "PTS_OT5": null,
+    "PTS_OT6": null,
+    "PTS_OT7": null,
+    "PTS_OT8": null,
+    "PTS_OT9": null,
+    "PTS_OT10": null,
+    "PTS": null,
+    "FG_PCT": null,
+    "FT_PCT": null,
+    "FG3_PCT": null,
+    "AST": null,
+    "REB": null,
+    "TOV": null
+  },
+  {
+    "GAME_DATE_EST": "2025-04-15T00:00:00",
+    "GAME_SEQUENCE": 1,
+    "GAME_ID": "0052400101",
+    "TEAM_ID": 1610612753,
+    "TEAM_ABBREVIATION": "ORL",
+    "TEAM_CITY_NAME": "Orlando",
+    "TEAM_NAME": "Magic",
+    "TEAM_WINS_LOSSES": "-",
+    "PTS_QTR1": null,
+    "PTS_QTR2": null,
+    "PTS_QTR3": null,
+    "PTS_QTR4": null,
+    "PTS_OT1": null,
+    "PTS_OT2": null,
+    "PTS_OT3": null,
+    "PTS_OT4": null,
+    "PTS_OT5": null,
+    "PTS_OT6": null,
+    "PTS_OT7": null,
+    "PTS_OT8": null,
+    "PTS_OT9": null,
+    "PTS_OT10": null,
+    "PTS": null,
+    "FG_PCT": null,
+    "FT_PCT": null,
+    "FG3_PCT": null,
+    "AST": null,
+    "REB": null,
+    "TOV": null
+  }
+]
+```
+
+#### LastMeeting
+Row Count: 2
+
+Headers:
+```python
+[
+  "GAME_ID",
+  "LAST_GAME_ID",
+  "LAST_GAME_DATE_EST",
+  "LAST_GAME_HOME_TEAM_ID",
+  "LAST_GAME_HOME_TEAM_CITY",
+  "LAST_GAME_HOME_TEAM_NAME",
+  "LAST_GAME_HOME_TEAM_ABBREVIATION",
+  "LAST_GAME_HOME_TEAM_POINTS",
+  "LAST_GAME_VISITOR_TEAM_ID",
+  "LAST_GAME_VISITOR_TEAM_CITY",
+  "LAST_GAME_VISITOR_TEAM_NAME",
+  "LAST_GAME_VISITOR_TEAM_CITY1",
+  "LAST_GAME_VISITOR_TEAM_POINTS"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_ID": "object",
+  "LAST_GAME_ID": "object",
+  "LAST_GAME_DATE_EST": "object",
+  "LAST_GAME_HOME_TEAM_ID": "int64",
+  "LAST_GAME_HOME_TEAM_CITY": "object",
+  "LAST_GAME_HOME_TEAM_NAME": "object",
+  "LAST_GAME_HOME_TEAM_ABBREVIATION": "object",
+  "LAST_GAME_HOME_TEAM_POINTS": "int64",
+  "LAST_GAME_VISITOR_TEAM_ID": "int64",
+  "LAST_GAME_VISITOR_TEAM_CITY": "object",
+  "LAST_GAME_VISITOR_TEAM_NAME": "object",
+  "LAST_GAME_VISITOR_TEAM_CITY1": "object",
+  "LAST_GAME_VISITOR_TEAM_POINTS": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_ID": "0052400101",
+    "LAST_GAME_ID": "0022401186",
+    "LAST_GAME_DATE_EST": "2025-04-13T00:00:00",
+    "LAST_GAME_HOME_TEAM_ID": 1610612753,
+    "LAST_GAME_HOME_TEAM_CITY": "Orlando",
+    "LAST_GAME_HOME_TEAM_NAME": "Magic",
+    "LAST_GAME_HOME_TEAM_ABBREVIATION": "ORL",
+    "LAST_GAME_HOME_TEAM_POINTS": 105,
+    "LAST_GAME_VISITOR_TEAM_ID": 1610612737,
+    "LAST_GAME_VISITOR_TEAM_CITY": "Atlanta",
+    "LAST_GAME_VISITOR_TEAM_NAME": "Hawks",
+    "LAST_GAME_VISITOR_TEAM_CITY1": "ATL",
+    "LAST_GAME_VISITOR_TEAM_POINTS": 117
+  },
+  {
+    "GAME_ID": "0052400121",
+    "LAST_GAME_ID": "0022401100",
+    "LAST_GAME_DATE_EST": "2025-04-01T00:00:00",
+    "LAST_GAME_HOME_TEAM_ID": 1610612744,
+    "LAST_GAME_HOME_TEAM_CITY": "Golden State",
+    "LAST_GAME_HOME_TEAM_NAME": "Warriors",
+    "LAST_GAME_HOME_TEAM_ABBREVIATION": "GSW",
+    "LAST_GAME_HOME_TEAM_POINTS": 134,
+    "LAST_GAME_VISITOR_TEAM_ID": 1610612763,
+    "LAST_GAME_VISITOR_TEAM_CITY": "Memphis",
+    "LAST_GAME_VISITOR_TEAM_NAME": "Grizzlies",
+    "LAST_GAME_VISITOR_TEAM_CITY1": "MEM",
+    "LAST_GAME_VISITOR_TEAM_POINTS": 125
+  }
+]
+```
+
+#### EastConfStandingsByDay
+Row Count: 15
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "LEAGUE_ID",
+  "SEASON_ID",
+  "STANDINGSDATE",
+  "CONFERENCE",
+  "TEAM",
+  "G",
+  "W",
+  "L",
+  "W_PCT",
+  "HOME_RECORD",
+  "ROAD_RECORD"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "LEAGUE_ID": "object",
+  "SEASON_ID": "object",
+  "STANDINGSDATE": "object",
+  "CONFERENCE": "object",
+  "TEAM": "object",
+  "G": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "HOME_RECORD": "object",
+  "ROAD_RECORD": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612739,
+    "LEAGUE_ID": "00",
+    "SEASON_ID": "22024",
+    "STANDINGSDATE": "04/15/2025",
+    "CONFERENCE": "East",
+    "TEAM": "Cleveland",
+    "G": 82,
+    "W": 64,
+    "L": 18,
+    "W_PCT": 0.78,
+    "HOME_RECORD": "34-7",
+    "ROAD_RECORD": "30-11"
+  },
+  {
+    "TEAM_ID": 1610612738,
+    "LEAGUE_ID": "00",
+    "SEASON_ID": "22024",
+    "STANDINGSDATE": "04/15/2025",
+    "CONFERENCE": "East",
+    "TEAM": "Boston",
+    "G": 82,
+    "W": 61,
+    "L": 21,
+    "W_PCT": 0.744,
+    "HOME_RECORD": "28-13",
+    "ROAD_RECORD": "33-8"
+  }
+]
+```
+
+#### WestConfStandingsByDay
+Row Count: 15
+
+Headers:
+```python
+[
+  "TEAM_ID",
+  "LEAGUE_ID",
+  "SEASON_ID",
+  "STANDINGSDATE",
+  "CONFERENCE",
+  "TEAM",
+  "G",
+  "W",
+  "L",
+  "W_PCT",
+  "HOME_RECORD",
+  "ROAD_RECORD"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_ID": "int64",
+  "LEAGUE_ID": "object",
+  "SEASON_ID": "object",
+  "STANDINGSDATE": "object",
+  "CONFERENCE": "object",
+  "TEAM": "object",
+  "G": "int64",
+  "W": "int64",
+  "L": "int64",
+  "W_PCT": "float64",
+  "HOME_RECORD": "object",
+  "ROAD_RECORD": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_ID": 1610612760,
+    "LEAGUE_ID": "00",
+    "SEASON_ID": "22024",
+    "STANDINGSDATE": "04/15/2025",
+    "CONFERENCE": "West",
+    "TEAM": "Oklahoma City",
+    "G": 82,
+    "W": 68,
+    "L": 14,
+    "W_PCT": 0.829,
+    "HOME_RECORD": "35-6",
+    "ROAD_RECORD": "32-8"
+  },
+  {
+    "TEAM_ID": 1610612745,
+    "LEAGUE_ID": "00",
+    "SEASON_ID": "22024",
+    "STANDINGSDATE": "04/15/2025",
+    "CONFERENCE": "West",
+    "TEAM": "Houston",
+    "G": 82,
+    "W": 52,
+    "L": 30,
+    "W_PCT": 0.634,
+    "HOME_RECORD": "29-12",
+    "ROAD_RECORD": "23-17"
+  }
+]
+```
+
+#### Available
+Row Count: 2
+
+Headers:
+```python
+[
+  "GAME_ID",
+  "PT_AVAILABLE"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_ID": "object",
+  "PT_AVAILABLE": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_ID": "0052400101",
+    "PT_AVAILABLE": 0
+  },
+  {
+    "GAME_ID": "0052400121",
+    "PT_AVAILABLE": 0
+  }
+]
+```
+
+### ShotChartDetail
+Endpoint URL: `shotchartdetail`
+
+
+### ShotChartLeagueWide
+Endpoint URL: `shotchartleaguewide`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### League_Wide
+Row Count: 20
+
+Headers:
+```python
+[
+  "GRID_TYPE",
+  "SHOT_ZONE_BASIC",
+  "SHOT_ZONE_AREA",
+  "SHOT_ZONE_RANGE",
+  "FGA",
+  "FGM",
+  "FG_PCT"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GRID_TYPE": "object",
+  "SHOT_ZONE_BASIC": "object",
+  "SHOT_ZONE_AREA": "object",
+  "SHOT_ZONE_RANGE": "object",
+  "FGA": "int64",
+  "FGM": "int64",
+  "FG_PCT": "float64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GRID_TYPE": "League Averages",
+    "SHOT_ZONE_BASIC": "Above the Break 3",
+    "SHOT_ZONE_AREA": "Back Court(BC)",
+    "SHOT_ZONE_RANGE": "Back Court Shot",
+    "FGA": 38,
+    "FGM": 1,
+    "FG_PCT": 0.026
+  },
+  {
+    "GRID_TYPE": "League Averages",
+    "SHOT_ZONE_BASIC": "Above the Break 3",
+    "SHOT_ZONE_AREA": "Center(C)",
+    "SHOT_ZONE_RANGE": "24+ ft.",
+    "FGA": 17147,
+    "FGM": 5987,
+    "FG_PCT": 0.349
+  }
+]
+```
+
+### ShotChartLineupDetail
+Endpoint URL: `shotchartlineupdetail`
+
+
+### SynergyPlayTypes
+Endpoint URL: `synergyplaytypes`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+### TeamAndPlayersVsPlayers
+Endpoint URL: `teamandplayersvsplayers`
+
+
+### TeamDashLineups
+Endpoint URL: `teamdashlineups`
+
+
+### TeamDashPtPass
+Endpoint URL: `teamdashptpass`
+
+
+### TeamDashPtReb
+Endpoint URL: `teamdashptreb`
+
+
+### TeamDashPtShots
+Endpoint URL: `teamdashptshots`
+
+
+### TeamDashboardByGeneralSplits
+Endpoint URL: `teamdashboardbygeneralsplits`
+
+
+### TeamDashboardByShootingSplits
+Endpoint URL: `teamdashboardbyshootingsplits`
+
+
+### TeamDetails
+Endpoint URL: `teamdetails`
+
+
+### TeamEstimatedMetrics
+Endpoint URL: `teamestimatedmetrics`
+
+
+### TeamGameLog
+Endpoint URL: `teamgamelog`
+
+
+### TeamGameLogs
+Endpoint URL: `teamgamelogs`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### TeamGameLogs
+Row Count: 2460
+
+Headers:
+```python
+[
+  "SEASON_YEAR",
+  "TEAM_ID",
+  "TEAM_ABBREVIATION",
+  "TEAM_NAME",
+  "GAME_ID",
+  "GAME_DATE",
+  "MATCHUP",
+  "WL",
+  "MIN",
+  "FGM",
+  "FGA",
+  "FG_PCT",
+  "FG3M",
+  "FG3A",
+  "FG3_PCT",
+  "FTM",
+  "FTA",
+  "FT_PCT",
+  "OREB",
+  "DREB",
+  "REB",
+  "AST",
+  "TOV",
+  "STL",
+  "BLK",
+  "BLKA",
+  "PF",
+  "PFD",
+  "PTS",
+  "PLUS_MINUS",
+  "GP_RANK",
+  "W_RANK",
+  "L_RANK",
+  "W_PCT_RANK",
+  "MIN_RANK",
+  "FGM_RANK",
+  "FGA_RANK",
+  "FG_PCT_RANK",
+  "FG3M_RANK",
+  "FG3A_RANK",
+  "FG3_PCT_RANK",
+  "FTM_RANK",
+  "FTA_RANK",
+  "FT_PCT_RANK",
+  "OREB_RANK",
+  "DREB_RANK",
+  "REB_RANK",
+  "AST_RANK",
+  "TOV_RANK",
+  "STL_RANK",
+  "BLK_RANK",
+  "BLKA_RANK",
+  "PF_RANK",
+  "PFD_RANK",
+  "PTS_RANK",
+  "PLUS_MINUS_RANK",
+  "AVAILABLE_FLAG"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "SEASON_YEAR": "object",
+  "TEAM_ID": "int64",
+  "TEAM_ABBREVIATION": "object",
+  "TEAM_NAME": "object",
+  "GAME_ID": "object",
+  "GAME_DATE": "object",
+  "MATCHUP": "object",
+  "WL": "object",
+  "MIN": "float64",
+  "FGM": "int64",
+  "FGA": "int64",
+  "FG_PCT": "float64",
+  "FG3M": "int64",
+  "FG3A": "int64",
+  "FG3_PCT": "float64",
+  "FTM": "int64",
+  "FTA": "int64",
+  "FT_PCT": "float64",
+  "OREB": "int64",
+  "DREB": "int64",
+  "REB": "int64",
+  "AST": "int64",
+  "TOV": "float64",
+  "STL": "int64",
+  "BLK": "int64",
+  "BLKA": "int64",
+  "PF": "int64",
+  "PFD": "int64",
+  "PTS": "int64",
+  "PLUS_MINUS": "float64",
+  "GP_RANK": "int64",
+  "W_RANK": "int64",
+  "L_RANK": "int64",
+  "W_PCT_RANK": "int64",
+  "MIN_RANK": "int64",
+  "FGM_RANK": "int64",
+  "FGA_RANK": "int64",
+  "FG_PCT_RANK": "int64",
+  "FG3M_RANK": "int64",
+  "FG3A_RANK": "int64",
+  "FG3_PCT_RANK": "int64",
+  "FTM_RANK": "int64",
+  "FTA_RANK": "int64",
+  "FT_PCT_RANK": "int64",
+  "OREB_RANK": "int64",
+  "DREB_RANK": "int64",
+  "REB_RANK": "int64",
+  "AST_RANK": "int64",
+  "TOV_RANK": "int64",
+  "STL_RANK": "int64",
+  "BLK_RANK": "int64",
+  "BLKA_RANK": "int64",
+  "PF_RANK": "int64",
+  "PFD_RANK": "int64",
+  "PTS_RANK": "int64",
+  "PLUS_MINUS_RANK": "int64",
+  "AVAILABLE_FLAG": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "SEASON_YEAR": "2016-17",
+    "TEAM_ID": 1610612754,
+    "TEAM_ABBREVIATION": "IND",
+    "TEAM_NAME": "Indiana Pacers",
+    "GAME_ID": "0021601226",
+    "GAME_DATE": "2017-04-12T00:00:00",
+    "MATCHUP": "IND vs. ATL",
+    "WL": "W",
+    "MIN": 48.0,
+    "FGM": 39,
+    "FGA": 82,
+    "FG_PCT": 0.476,
+    "FG3M": 10,
+    "FG3A": 24,
+    "FG3_PCT": 0.417,
+    "FTM": 16,
+    "FTA": 19,
+    "FT_PCT": 0.842,
+    "OREB": 8,
+    "DREB": 33,
+    "REB": 41,
+    "AST": 21,
+    "TOV": 10.0,
+    "STL": 5,
+    "BLK": 7,
+    "BLKA": 4,
+    "PF": 14,
+    "PFD": 15,
+    "PTS": 104,
+    "PLUS_MINUS": 18.0,
+    "GP_RANK": 1,
+    "W_RANK": 1,
+    "L_RANK": 1,
+    "W_PCT_RANK": 1,
+    "MIN_RANK": 141,
+    "FGM_RANK": 1119,
+    "FGA_RANK": 1642,
+    "FG_PCT_RANK": 902,
+    "FG3M_RANK": 920,
+    "FG3A_RANK": 1580,
+    "FG3_PCT_RANK": 597,
+    "FTM_RANK": 1370,
+    "FTA_RANK": 1657,
+    "FT_PCT_RANK": 569,
+    "OREB_RANK": 1592,
+    "DREB_RANK": 1211,
+    "REB_RANK": 1524,
+    "AST_RANK": 1407,
+    "TOV_RANK": 280,
+    "STL_RANK": 1904,
+    "BLK_RANK": 324,
+    "BLKA_RANK": 825,
+    "PF_RANK": 159,
+    "PFD_RANK": 2104,
+    "PTS_RANK": 1339,
+    "PLUS_MINUS_RANK": 217,
+    "AVAILABLE_FLAG": 1
+  },
+  {
+    "SEASON_YEAR": "2016-17",
+    "TEAM_ID": 1610612760,
+    "TEAM_ABBREVIATION": "OKC",
+    "TEAM_NAME": "Oklahoma City Thunder",
+    "GAME_ID": "0021601225",
+    "GAME_DATE": "2017-04-12T00:00:00",
+    "MATCHUP": "OKC vs. DEN",
+    "WL": "L",
+    "MIN": 48.0,
+    "FGM": 43,
+    "FGA": 101,
+    "FG_PCT": 0.426,
+    "FG3M": 8,
+    "FG3A": 25,
+    "FG3_PCT": 0.32,
+    "FTM": 11,
+    "FTA": 17,
+    "FT_PCT": 0.647,
+    "OREB": 14,
+    "DREB": 37,
+    "REB": 51,
+    "AST": 20,
+    "TOV": 12.0,
+    "STL": 10,
+    "BLK": 8,
+    "BLKA": 8,
+    "PF": 24,
+    "PFD": 17,
+    "PTS": 105,
+    "PLUS_MINUS": -6.0,
+    "GP_RANK": 1,
+    "W_RANK": 1231,
+    "L_RANK": 1231,
+    "W_PCT_RANK": 1231,
+    "MIN_RANK": 141,
+    "FGM_RANK": 460,
+    "FGA_RANK": 45,
+    "FG_PCT_RANK": 1757,
+    "FG3M_RANK": 1491,
+    "FG3A_RANK": 1391,
+    "FG3_PCT_RANK": 1591,
+    "FTM_RANK": 2097,
+    "FTA_RANK": 1908,
+    "FT_PCT_RANK": 2190,
+    "OREB_RANK": 307,
+    "DREB_RANK": 533,
+    "REB_RANK": 263,
+    "AST_RANK": 1584,
+    "TOV_RANK": 668,
+    "STL_RANK": 396,
+    "BLK_RANK": 195,
+    "BLKA_RANK": 2138,
+    "PF_RANK": 2005,
+    "PFD_RANK": 1757,
+    "PTS_RANK": 1242,
+    "PLUS_MINUS_RANK": 1564,
+    "AVAILABLE_FLAG": 1
+  }
+]
+```
+
+### TeamGameStreakFinder
+Endpoint URL: `teamgamestreakfinder`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### TeamGameStreakFinderParametersResults
+Row Count: 100
+
+Headers:
+```python
+[
+  "TEAM_NAME",
+  "TEAM_ID",
+  "GAMESTREAK",
+  "STARTDATE",
+  "ENDDATE",
+  "ACTIVESTREAK",
+  "NUMSEASONS",
+  "LASTSEASON",
+  "FIRSTSEASON",
+  "ABBREVIATION"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "TEAM_NAME": "object",
+  "TEAM_ID": "int64",
+  "GAMESTREAK": "int64",
+  "STARTDATE": "object",
+  "ENDDATE": "object",
+  "ACTIVESTREAK": "int64",
+  "NUMSEASONS": "int64",
+  "LASTSEASON": "object",
+  "FIRSTSEASON": "object",
+  "ABBREVIATION": "object"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "TEAM_NAME": "San Antonio Spurs",
+    "TEAM_ID": 1610612759,
+    "GAMESTREAK": 3480,
+    "STARTDATE": "1983-10-29T00:00:00",
+    "ENDDATE": "2025-04-13T00:00:00",
+    "ACTIVESTREAK": 1,
+    "NUMSEASONS": 42,
+    "LASTSEASON": "2024-25",
+    "FIRSTSEASON": "1983-84",
+    "ABBREVIATION": null
+  },
+  {
+    "TEAM_NAME": "Philadelphia 76ers",
+    "TEAM_ID": 1610612755,
+    "GAMESTREAK": 3478,
+    "STARTDATE": "1983-10-28T00:00:00",
+    "ENDDATE": "2025-04-13T00:00:00",
+    "ACTIVESTREAK": 1,
+    "NUMSEASONS": 42,
+    "LASTSEASON": "2024-25",
+    "FIRSTSEASON": "1983-84",
+    "ABBREVIATION": null
+  }
+]
+```
+
+### TeamHistoricalLeaders
+Endpoint URL: `teamhistoricalleaders`
+
+
+### TeamInfoCommon
+Endpoint URL: `teaminfocommon`
+
+
+### TeamPlayerDashboard
+Endpoint URL: `teamplayerdashboard`
+
+
+### TeamPlayerOnOffDetails
+Endpoint URL: `teamplayeronoffdetails`
+
+
+### TeamPlayerOnOffSummary
+Endpoint URL: `teamplayeronoffsummary`
+
+
+### TeamVsPlayer
+Endpoint URL: `teamvsplayer`
+
+
+### TeamYearByYearStats
+Endpoint URL: `teamyearbyyearstats`
+
+
+### VideoDetails
+Endpoint URL: `videodetails`
+
+
+### VideoDetailsAsset
+Endpoint URL: `videodetailsasset`
+
+
+### VideoEvents
+Endpoint URL: `videoevents`
+
+
+### VideoStatus
+Endpoint URL: `videostatus`
+
+
+Example Parameters Used:
+```python
+{}
+```
+
+Available Datasets:
+
+#### VideoStatus
+Row Count: 2
+
+Headers:
+```python
+[
+  "GAME_ID",
+  "GAME_DATE",
+  "VISITOR_TEAM_ID",
+  "VISITOR_TEAM_CITY",
+  "VISITOR_TEAM_NAME",
+  "VISITOR_TEAM_ABBREVIATION",
+  "HOME_TEAM_ID",
+  "HOME_TEAM_CITY",
+  "HOME_TEAM_NAME",
+  "HOME_TEAM_ABBREVIATION",
+  "GAME_STATUS",
+  "GAME_STATUS_TEXT",
+  "IS_AVAILABLE",
+  "PT_XYZ_AVAILABLE"
+]
+```
+
+Columns and Data Types:
+```python
+{
+  "GAME_ID": "object",
+  "GAME_DATE": "object",
+  "VISITOR_TEAM_ID": "int64",
+  "VISITOR_TEAM_CITY": "object",
+  "VISITOR_TEAM_NAME": "object",
+  "VISITOR_TEAM_ABBREVIATION": "object",
+  "HOME_TEAM_ID": "int64",
+  "HOME_TEAM_CITY": "object",
+  "HOME_TEAM_NAME": "object",
+  "HOME_TEAM_ABBREVIATION": "object",
+  "GAME_STATUS": "int64",
+  "GAME_STATUS_TEXT": "object",
+  "IS_AVAILABLE": "int64",
+  "PT_XYZ_AVAILABLE": "int64"
+}
+```
+
+Sample Data:
+```python
+[
+  {
+    "GAME_ID": "0052400101",
+    "GAME_DATE": "04/15/2025",
+    "VISITOR_TEAM_ID": 1610612737,
+    "VISITOR_TEAM_CITY": "Atlanta",
+    "VISITOR_TEAM_NAME": "Hawks",
+    "VISITOR_TEAM_ABBREVIATION": "ATL",
+    "HOME_TEAM_ID": 1610612753,
+    "HOME_TEAM_CITY": "Orlando",
+    "HOME_TEAM_NAME": "Magic",
+    "HOME_TEAM_ABBREVIATION": "ORL",
+    "GAME_STATUS": 1,
+    "GAME_STATUS_TEXT": "7:30 pm ET",
+    "IS_AVAILABLE": 0,
+    "PT_XYZ_AVAILABLE": 0
+  },
+  {
+    "GAME_ID": "0052400121",
+    "GAME_DATE": "04/15/2025",
+    "VISITOR_TEAM_ID": 1610612763,
+    "VISITOR_TEAM_CITY": "Memphis",
+    "VISITOR_TEAM_NAME": "Grizzlies",
+    "VISITOR_TEAM_ABBREVIATION": "MEM",
+    "HOME_TEAM_ID": 1610612744,
+    "HOME_TEAM_CITY": "Golden State",
+    "HOME_TEAM_NAME": "Warriors",
+    "HOME_TEAM_ABBREVIATION": "GSW",
+    "GAME_STATUS": 1,
+    "GAME_STATUS_TEXT": "10:00 pm ET",
+    "IS_AVAILABLE": 0,
+    "PT_XYZ_AVAILABLE": 0
+  }
+]
+```
+
+### WinProbabilityPBP
+Endpoint URL: `winprobabilitypbp`
+

@@ -1,0 +1,725 @@
+{
+  "generated_date": "2025-04-15T12:25:49.296410",
+  "parameters": {
+    "Active": {
+      "name": "Active",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "ActiveNullable": {
+      "name": "ActiveNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "AheadBehind": {
+      "name": "AheadBehind",
+      "default": "Ahead or Behind",
+      "pattern": null,
+      "values": null
+    },
+    "AheadBehindNullable": {
+      "name": "AheadBehindNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "AllStar": {
+      "name": "AllStar",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "AllStarNullable": {
+      "name": "AllStarNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "ClutchTime": {
+      "name": "ClutchTime",
+      "default": "Last 5 Minutes",
+      "pattern": null,
+      "values": null
+    },
+    "ClutchTimeNullable": {
+      "name": "ClutchTimeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Conference": {
+      "name": "Conference",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "ConferenceNullable": {
+      "name": "ConferenceNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "ContextMeasureSimple": {
+      "name": "ContextMeasureSimple",
+      "default": "PTS",
+      "pattern": null,
+      "values": null
+    },
+    "ContextMeasureSimpleNullable": {
+      "name": "ContextMeasureSimpleNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "ContextMeasureDetailed": {
+      "name": "ContextMeasureDetailed",
+      "default": "PTS",
+      "pattern": null,
+      "values": null
+    },
+    "DayOffset": {
+      "name": "DayOffset",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "DefenseCategory": {
+      "name": "DefenseCategory",
+      "default": "Overall",
+      "pattern": null,
+      "values": null
+    },
+    "DefenseCategoryNullable": {
+      "name": "DefenseCategoryNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Direction": {
+      "name": "Direction",
+      "default": "ASC",
+      "pattern": null,
+      "values": null
+    },
+    "DistanceRange": {
+      "name": "DistanceRange",
+      "default": "By Zone",
+      "pattern": null,
+      "values": null
+    },
+    "DivisionSimple": {
+      "name": "DivisionSimple",
+      "default": "Atlantic",
+      "pattern": null,
+      "values": null
+    },
+    "DivisionSimpleNullable": {
+      "name": "DivisionSimpleNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Division": {
+      "name": "Division",
+      "default": "East",
+      "pattern": null,
+      "values": null
+    },
+    "DivisionNullable": {
+      "name": "DivisionNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "EndRange": {
+      "name": "EndRange",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "EndRangeNullable": {
+      "name": "EndRangeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "GameDate": {
+      "name": "GameDate",
+      "default": "2025-04-15",
+      "pattern": null,
+      "values": null
+    },
+    "GameScopeSimple": {
+      "name": "GameScopeSimple",
+      "default": "Last 10",
+      "pattern": null,
+      "values": null
+    },
+    "GameScopeSimpleNullable": {
+      "name": "GameScopeSimpleNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "GameScopeDetailed": {
+      "name": "GameScopeDetailed",
+      "default": "Season",
+      "pattern": null,
+      "values": null
+    },
+    "GameSegment": {
+      "name": "GameSegment",
+      "default": "First Half",
+      "pattern": null,
+      "values": null
+    },
+    "GameSegmentNullable": {
+      "name": "GameSegmentNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "GroupQuantity": {
+      "name": "GroupQuantity",
+      "default": "5",
+      "pattern": null,
+      "values": null
+    },
+    "Historical": {
+      "name": "Historical",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "HistoricalNullable": {
+      "name": "HistoricalNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "LastNGames": {
+      "name": "LastNGames",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "LastNGamesNullable": {
+      "name": "LastNGamesNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "LeagueID": {
+      "name": "LeagueID",
+      "default": "00",
+      "pattern": null,
+      "values": null
+    },
+    "LeagueIDNullable": {
+      "name": "LeagueIDNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Location": {
+      "name": "Location",
+      "default": "Home",
+      "pattern": null,
+      "values": null
+    },
+    "LocationNullable": {
+      "name": "LocationNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "MeasureTypeBase": {
+      "name": "MeasureTypeBase",
+      "default": "Base",
+      "pattern": null,
+      "values": null
+    },
+    "MeasureTypeSimple": {
+      "name": "MeasureTypeSimple",
+      "default": "Base",
+      "pattern": null,
+      "values": null
+    },
+    "MeasureTypePlayerGameLogs": {
+      "name": "MeasureTypePlayerGameLogs",
+      "default": "Base",
+      "pattern": null,
+      "values": null
+    },
+    "MeasureTypeDetailed": {
+      "name": "MeasureTypeDetailed",
+      "default": "Base",
+      "pattern": null,
+      "values": null
+    },
+    "MeasureTypeDetailedDefense": {
+      "name": "MeasureTypeDetailedDefense",
+      "default": "Base",
+      "pattern": null,
+      "values": null
+    },
+    "Month": {
+      "name": "Month",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "MonthNullable": {
+      "name": "MonthNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "NumberOfGames": {
+      "name": "NumberOfGames",
+      "default": "2147483647",
+      "pattern": null,
+      "values": null
+    },
+    "Outcome": {
+      "name": "Outcome",
+      "default": "W",
+      "pattern": null,
+      "values": null
+    },
+    "OutcomeNullable": {
+      "name": "OutcomeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PaceAdjust": {
+      "name": "PaceAdjust",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "PaceAdjustNo": {
+      "name": "PaceAdjustNo",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "PlusMinus": {
+      "name": "PlusMinus",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "PlusMinusNo": {
+      "name": "PlusMinusNo",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "Period": {
+      "name": "Period",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "PeriodNullable": {
+      "name": "PeriodNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "StartPeriod": {
+      "name": "StartPeriod",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "StartPeriodNullable": {
+      "name": "StartPeriodNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "EndPeriod": {
+      "name": "EndPeriod",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "EndPeriodNullable": {
+      "name": "EndPeriodNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PerModeSimple": {
+      "name": "PerModeSimple",
+      "default": "Totals",
+      "pattern": null,
+      "values": null
+    },
+    "PerModeSimpleNullable": {
+      "name": "PerModeSimpleNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PerMode36": {
+      "name": "PerMode36",
+      "default": "Totals",
+      "pattern": null,
+      "values": null
+    },
+    "PerMode48": {
+      "name": "PerMode48",
+      "default": "Totals",
+      "pattern": null,
+      "values": null
+    },
+    "PerModeTime": {
+      "name": "PerModeTime",
+      "default": "Totals",
+      "pattern": null,
+      "values": null
+    },
+    "PerModeDetailed": {
+      "name": "PerModeDetailed",
+      "default": "Totals",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerExperience": {
+      "name": "PlayerExperience",
+      "default": "Rookie",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerExperienceNullable": {
+      "name": "PlayerExperienceNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerOrTeam": {
+      "name": "PlayerOrTeam",
+      "default": "Team",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerOrTeamAbbreviation": {
+      "name": "PlayerOrTeamAbbreviation",
+      "default": "T",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerPosition": {
+      "name": "PlayerPosition",
+      "default": "Forward",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerPositionNullable": {
+      "name": "PlayerPositionNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PositionNullable": {
+      "name": "PositionNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerPositionAbbreviation": {
+      "name": "PlayerPositionAbbreviation",
+      "default": "F",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerPositionAbbreviationNullable": {
+      "name": "PlayerPositionAbbreviationNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PlayerScope": {
+      "name": "PlayerScope",
+      "default": "All Players",
+      "pattern": null,
+      "values": null
+    },
+    "TodaysPlayers": {
+      "name": "TodaysPlayers",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "ActivePlayers": {
+      "name": "ActivePlayers",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "PlayType": {
+      "name": "PlayType",
+      "default": "Transition",
+      "pattern": null,
+      "values": null
+    },
+    "PlayTypeNullable": {
+      "name": "PlayTypeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PointDiff": {
+      "name": "PointDiff",
+      "default": "5",
+      "pattern": null,
+      "values": null
+    },
+    "PointDiffNullable": {
+      "name": "PointDiffNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "PtMeasureType": {
+      "name": "PtMeasureType",
+      "default": "SpeedDistance",
+      "pattern": null,
+      "values": null
+    },
+    "RangeType": {
+      "name": "RangeType",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "RangeTypeNullable": {
+      "name": "RangeTypeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Rank": {
+      "name": "Rank",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "RankNo": {
+      "name": "RankNo",
+      "default": "N",
+      "pattern": null,
+      "values": null
+    },
+    "RunType": {
+      "name": "RunType",
+      "default": "each second",
+      "pattern": null,
+      "values": null
+    },
+    "StartRange": {
+      "name": "StartRange",
+      "default": "0",
+      "pattern": null,
+      "values": null
+    },
+    "StartRangeNullable": {
+      "name": "StartRangeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Scope": {
+      "name": "Scope",
+      "default": "S",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonYear": {
+      "name": "SeasonYear",
+      "default": "2024",
+      "pattern": null,
+      "values": null
+    },
+    "WnbaSeasonYear": {
+      "name": "WnbaSeasonYear",
+      "default": "2025",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonYearNullable": {
+      "name": "SeasonYearNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Season": {
+      "name": "Season",
+      "default": "2024-25",
+      "pattern": null,
+      "values": null
+    },
+    "WnbaSeason": {
+      "name": "WnbaSeason",
+      "default": "2025",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonNullable": {
+      "name": "SeasonNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonAll": {
+      "name": "SeasonAll",
+      "default": "2024-25",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonAllNullable": {
+      "name": "SeasonAllNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonAll_Time": {
+      "name": "SeasonAll_Time",
+      "default": "2024-25",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonAllTime": {
+      "name": "SeasonAllTime",
+      "default": "2024-25",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonID": {
+      "name": "SeasonID",
+      "default": "22024",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonType": {
+      "name": "SeasonType",
+      "default": "Regular Season",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonTypePlayoffs": {
+      "name": "SeasonTypePlayoffs",
+      "default": "Regular Season",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonTypeNullable": {
+      "name": "SeasonTypeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonTypeAllStar": {
+      "name": "SeasonTypeAllStar",
+      "default": "Regular Season",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonTypeAllStarNullable": {
+      "name": "SeasonTypeAllStarNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonSegment": {
+      "name": "SeasonSegment",
+      "default": "Post All-Star",
+      "pattern": null,
+      "values": null
+    },
+    "SeasonSegmentNullable": {
+      "name": "SeasonSegmentNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Section": {
+      "name": "Section",
+      "default": "group",
+      "pattern": null,
+      "values": null
+    },
+    "ShotClockRange": {
+      "name": "ShotClockRange",
+      "default": "ShotClock Off",
+      "pattern": null,
+      "values": null
+    },
+    "ShotClockRangeNullable": {
+      "name": "ShotClockRangeNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Sorter": {
+      "name": "Sorter",
+      "default": "DATE",
+      "pattern": null,
+      "values": null
+    },
+    "StarterBench": {
+      "name": "StarterBench",
+      "default": "Starters",
+      "pattern": null,
+      "values": null
+    },
+    "StarterBenchNullable": {
+      "name": "StarterBenchNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    },
+    "Stat": {
+      "name": "Stat",
+      "default": "PTS",
+      "pattern": null,
+      "values": null
+    },
+    "StatCategory": {
+      "name": "StatCategory",
+      "default": "Points",
+      "pattern": null,
+      "values": null
+    },
+    "StatCategoryAbbreviation": {
+      "name": "StatCategoryAbbreviation",
+      "default": "PTS",
+      "pattern": null,
+      "values": null
+    },
+    "StatType": {
+      "name": "StatType",
+      "default": "Traditional",
+      "pattern": null,
+      "values": null
+    },
+    "TypeGrouping": {
+      "name": "TypeGrouping",
+      "default": "offensive",
+      "pattern": null,
+      "values": null
+    },
+    "TypeGroupingNullable": {
+      "name": "TypeGroupingNullable",
+      "default": "",
+      "pattern": null,
+      "values": null
+    }
+  }
+}
