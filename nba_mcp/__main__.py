@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#__main__.py
 """
 NBA MCP Server main entry point.
 This allows the server to be run with 'python -m nba_mcp'
@@ -9,7 +9,7 @@ import traceback
 
 def main():
     try:
-        # Import here to avoid circular imports
+        # Import the main function directly from nba_server module
         from nba_mcp.nba_server import main as server_main
         
         # Log startup to stderr for diagnostics

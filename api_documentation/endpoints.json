@@ -4,6 +4,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to GPLeaders, PTSLeaders, ASTLeaders, STLLeaders, OREBLeaders, DREBLeaders, REBLeaders, BLKLeaders, FGMLeaders, FGALeaders, FG_PCTLeaders, TOVLeaders, FG3MLeaders, FG3ALeaders, FG3_PCTLeaders, PFLeaders, FTMLeaders, FTALeaders, FT_PCTLeaders.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -794,6 +795,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to AssistLeaders.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -846,6 +848,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to AssistTracker.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -875,6 +878,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreAdvancedV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -884,6 +888,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreAdvancedV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -893,6 +898,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreDefensiveV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -902,6 +908,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreFourFactorsV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -911,6 +918,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreFourFactorsV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -920,6 +928,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreHustleV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -929,6 +938,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreMatchupsV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -938,6 +948,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreMiscV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -947,6 +958,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreMiscV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -956,6 +968,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScorePlayerTrackV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -965,6 +978,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScorePlayerTrackV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -974,6 +988,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreScoringV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -983,6 +998,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreScoringV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -992,6 +1008,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreSummaryV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -1001,6 +1018,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreTraditionalV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -1010,6 +1028,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreTraditionalV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -1019,6 +1038,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreUsageV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -1028,6 +1048,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "BoxScoreUsageV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -1037,6 +1058,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to CommonAllPlayers.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1144,6 +1166,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CommonPlayerInfo.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -1153,6 +1176,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to PlayoffSeries.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1205,6 +1229,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CommonTeamRoster.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -1214,6 +1239,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to TeamYears.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1266,6 +1292,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CumeStatsPlayer.__init__() missing 2 required positional arguments: 'player_id' and 'game_ids'"
     }
@@ -1275,6 +1302,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CumeStatsPlayerGames.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -1284,6 +1312,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CumeStatsTeam.__init__() missing 2 required positional arguments: 'team_id' and 'game_ids'"
     }
@@ -1293,6 +1322,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "CumeStatsTeamGames.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -1302,6 +1332,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "Expecting value: line 1 column 1 (char 0)"
     }
@@ -1311,6 +1342,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {}
@@ -1321,6 +1353,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Results.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1408,6 +1441,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Results.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1585,6 +1619,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Results.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1702,6 +1737,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Results.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -1984,6 +2020,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to DraftCombineStats.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -2246,6 +2283,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to DraftHistory.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -2343,6 +2381,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to FantasyWidgetResult.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -2470,6 +2509,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to FranchiseHistory, DefunctTeams.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -2663,6 +2703,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "FranchiseLeaders.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -2672,6 +2713,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "FranchisePlayers.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -2681,6 +2723,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "GLAlumBoxScoreSimilarityScore.__init__() missing 2 required positional arguments: 'person2_id' and 'person1_id'"
     }
@@ -2690,6 +2733,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "GameRotation.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -2699,6 +2743,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
     }
@@ -2708,6 +2753,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to HomePageStat1, HomePageStat2, HomePageStat3, HomePageStat4, HomePageStat5, HomePageStat6, HomePageStat7, HomePageStat8.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -3047,6 +3093,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "HustleStatsBoxScore.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -3056,6 +3103,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -3065,6 +3113,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "InfographicFanDuelPlayer.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -3074,6 +3123,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -3083,6 +3133,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Lineups.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -3395,6 +3446,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPTShots.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -3512,6 +3564,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPlayerBioStats.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -3654,6 +3707,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPlayerClutch.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4016,6 +4070,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPTShots.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4143,6 +4198,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "0"
     }
@@ -4152,6 +4208,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPlayerStats.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4509,6 +4566,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPTDefend.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4606,6 +4664,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPtStats.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4703,6 +4762,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPtTeamDefend.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -4785,6 +4845,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashTeamClutch.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -5082,6 +5143,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashPTShots.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -5199,6 +5261,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
     }
@@ -5208,8 +5271,297 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueDashTeamStats.",
     "data_structure": {
-      "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
+      "parameters_used": {},
+      "datasets": {
+        "dataset_0": {
+          "name": "LeagueDashTeamStats",
+          "headers": [
+            "TEAM_ID",
+            "TEAM_NAME",
+            "GP",
+            "W",
+            "L",
+            "W_PCT",
+            "MIN",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "TOV",
+            "STL",
+            "BLK",
+            "BLKA",
+            "PF",
+            "PFD",
+            "PTS",
+            "PLUS_MINUS",
+            "GP_RANK",
+            "W_RANK",
+            "L_RANK",
+            "W_PCT_RANK",
+            "MIN_RANK",
+            "FGM_RANK",
+            "FGA_RANK",
+            "FG_PCT_RANK",
+            "FG3M_RANK",
+            "FG3A_RANK",
+            "FG3_PCT_RANK",
+            "FTM_RANK",
+            "FTA_RANK",
+            "FT_PCT_RANK",
+            "OREB_RANK",
+            "DREB_RANK",
+            "REB_RANK",
+            "AST_RANK",
+            "TOV_RANK",
+            "STL_RANK",
+            "BLK_RANK",
+            "BLKA_RANK",
+            "PF_RANK",
+            "PFD_RANK",
+            "PTS_RANK",
+            "PLUS_MINUS_RANK"
+          ],
+          "columns": [
+            "TEAM_ID",
+            "TEAM_NAME",
+            "GP",
+            "W",
+            "L",
+            "W_PCT",
+            "MIN",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "TOV",
+            "STL",
+            "BLK",
+            "BLKA",
+            "PF",
+            "PFD",
+            "PTS",
+            "PLUS_MINUS",
+            "GP_RANK",
+            "W_RANK",
+            "L_RANK",
+            "W_PCT_RANK",
+            "MIN_RANK",
+            "FGM_RANK",
+            "FGA_RANK",
+            "FG_PCT_RANK",
+            "FG3M_RANK",
+            "FG3A_RANK",
+            "FG3_PCT_RANK",
+            "FTM_RANK",
+            "FTA_RANK",
+            "FT_PCT_RANK",
+            "OREB_RANK",
+            "DREB_RANK",
+            "REB_RANK",
+            "AST_RANK",
+            "TOV_RANK",
+            "STL_RANK",
+            "BLK_RANK",
+            "BLKA_RANK",
+            "PF_RANK",
+            "PFD_RANK",
+            "PTS_RANK",
+            "PLUS_MINUS_RANK"
+          ],
+          "dtypes": {
+            "TEAM_ID": "int64",
+            "TEAM_NAME": "object",
+            "GP": "int64",
+            "W": "int64",
+            "L": "int64",
+            "W_PCT": "float64",
+            "MIN": "float64",
+            "FGM": "int64",
+            "FGA": "int64",
+            "FG_PCT": "float64",
+            "FG3M": "int64",
+            "FG3A": "int64",
+            "FG3_PCT": "float64",
+            "FTM": "int64",
+            "FTA": "int64",
+            "FT_PCT": "float64",
+            "OREB": "int64",
+            "DREB": "int64",
+            "REB": "int64",
+            "AST": "int64",
+            "TOV": "float64",
+            "STL": "int64",
+            "BLK": "int64",
+            "BLKA": "int64",
+            "PF": "int64",
+            "PFD": "int64",
+            "PTS": "int64",
+            "PLUS_MINUS": "float64",
+            "GP_RANK": "int64",
+            "W_RANK": "int64",
+            "L_RANK": "int64",
+            "W_PCT_RANK": "int64",
+            "MIN_RANK": "int64",
+            "FGM_RANK": "int64",
+            "FGA_RANK": "int64",
+            "FG_PCT_RANK": "int64",
+            "FG3M_RANK": "int64",
+            "FG3A_RANK": "int64",
+            "FG3_PCT_RANK": "int64",
+            "FTM_RANK": "int64",
+            "FTA_RANK": "int64",
+            "FT_PCT_RANK": "int64",
+            "OREB_RANK": "int64",
+            "DREB_RANK": "int64",
+            "REB_RANK": "int64",
+            "AST_RANK": "int64",
+            "TOV_RANK": "int64",
+            "STL_RANK": "int64",
+            "BLK_RANK": "int64",
+            "BLKA_RANK": "int64",
+            "PF_RANK": "int64",
+            "PFD_RANK": "int64",
+            "PTS_RANK": "int64",
+            "PLUS_MINUS_RANK": "int64"
+          },
+          "sample_data": [
+            {
+              "TEAM_ID": 1610612737,
+              "TEAM_NAME": "Atlanta Hawks",
+              "GP": 82,
+              "W": 40,
+              "L": 42,
+              "W_PCT": 0.488,
+              "MIN": 3956.0,
+              "FGM": 3556,
+              "FGA": 7528,
+              "FG_PCT": 0.472,
+              "FG3M": 1107,
+              "FG3A": 3089,
+              "FG3_PCT": 0.358,
+              "FTM": 1472,
+              "FTA": 1900,
+              "FT_PCT": 0.775,
+              "OREB": 974,
+              "DREB": 2675,
+              "REB": 3649,
+              "AST": 2426,
+              "TOV": 1273.0,
+              "STL": 798,
+              "BLK": 419,
+              "BLKA": 403,
+              "PF": 1564,
+              "PFD": 1563,
+              "PTS": 9691,
+              "PLUS_MINUS": -93.0,
+              "GP_RANK": 1,
+              "W_RANK": 16,
+              "L_RANK": 16,
+              "W_PCT_RANK": 16,
+              "MIN_RANK": 14,
+              "FGM_RANK": 6,
+              "FGA_RANK": 5,
+              "FG_PCT_RANK": 14,
+              "FG3M_RANK": 14,
+              "FG3A_RANK": 15,
+              "FG3_PCT_RANK": 18,
+              "FTM_RANK": 3,
+              "FTA_RANK": 4,
+              "FT_PCT_RANK": 18,
+              "OREB_RANK": 9,
+              "DREB_RANK": 23,
+              "REB_RANK": 14,
+              "AST_RANK": 2,
+              "TOV_RANK": 26,
+              "STL_RANK": 2,
+              "BLK_RANK": 12,
+              "BLKA_RANK": 15,
+              "PF_RANK": 22,
+              "PFD_RANK": 8,
+              "PTS_RANK": 5,
+              "PLUS_MINUS_RANK": 18
+            },
+            {
+              "TEAM_ID": 1610612738,
+              "TEAM_NAME": "Boston Celtics",
+              "GP": 82,
+              "W": 61,
+              "L": 21,
+              "W_PCT": 0.744,
+              "MIN": 3966.0,
+              "FGM": 3413,
+              "FGA": 7382,
+              "FG_PCT": 0.462,
+              "FG3M": 1457,
+              "FG3A": 3955,
+              "FG3_PCT": 0.368,
+              "FTM": 1251,
+              "FTA": 1565,
+              "FT_PCT": 0.799,
+              "OREB": 933,
+              "DREB": 2783,
+              "REB": 3716,
+              "AST": 2144,
+              "TOV": 973.0,
+              "STL": 589,
+              "BLK": 452,
+              "BLKA": 295,
+              "PF": 1303,
+              "PFD": 1438,
+              "PTS": 9534,
+              "PLUS_MINUS": 747.0,
+              "GP_RANK": 1,
+              "W_RANK": 3,
+              "L_RANK": 3,
+              "W_PCT_RANK": 3,
+              "MIN_RANK": 6,
+              "FGM_RANK": 16,
+              "FGA_RANK": 11,
+              "FG_PCT_RANK": 19,
+              "FG3M_RANK": 1,
+              "FG3A_RANK": 1,
+              "FG3_PCT_RANK": 10,
+              "FTM_RANK": 30,
+              "FTA_RANK": 30,
+              "FT_PCT_RANK": 6,
+              "OREB_RANK": 10,
+              "DREB_RANK": 7,
+              "REB_RANK": 8,
+              "AST_RANK": 16,
+              "TOV_RANK": 2,
+              "STL_RANK": 29,
+              "BLK_RANK": 5,
+              "BLKA_RANK": 1,
+              "PF_RANK": 2,
+              "PFD_RANK": 27,
+              "PTS_RANK": 8,
+              "PLUS_MINUS_RANK": 3
+            }
+          ],
+          "row_count": 30
+        }
+      }
     }
   },
   "LeagueGameFinder": {
@@ -5217,8 +5569,167 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueGameFinderResults.",
     "data_structure": {
-      "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
+      "parameters_used": {},
+      "datasets": {
+        "dataset_0": {
+          "name": "LeagueGameFinderResults",
+          "headers": [
+            "SEASON_ID",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "TEAM_NAME",
+            "GAME_ID",
+            "GAME_DATE",
+            "MATCHUP",
+            "WL",
+            "MIN",
+            "PTS",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "STL",
+            "BLK",
+            "TOV",
+            "PF",
+            "PLUS_MINUS"
+          ],
+          "columns": [
+            "SEASON_ID",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "TEAM_NAME",
+            "GAME_ID",
+            "GAME_DATE",
+            "MATCHUP",
+            "WL",
+            "MIN",
+            "PTS",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "STL",
+            "BLK",
+            "TOV",
+            "PF",
+            "PLUS_MINUS"
+          ],
+          "dtypes": {
+            "SEASON_ID": "object",
+            "TEAM_ID": "int64",
+            "TEAM_ABBREVIATION": "object",
+            "TEAM_NAME": "object",
+            "GAME_ID": "object",
+            "GAME_DATE": "object",
+            "MATCHUP": "object",
+            "WL": "object",
+            "MIN": "int64",
+            "PTS": "int64",
+            "FGM": "int64",
+            "FGA": "int64",
+            "FG_PCT": "float64",
+            "FG3M": "int64",
+            "FG3A": "int64",
+            "FG3_PCT": "float64",
+            "FTM": "int64",
+            "FTA": "int64",
+            "FT_PCT": "float64",
+            "OREB": "int64",
+            "DREB": "int64",
+            "REB": "int64",
+            "AST": "int64",
+            "STL": "int64",
+            "BLK": "int64",
+            "TOV": "int64",
+            "PF": "int64",
+            "PLUS_MINUS": "float64"
+          },
+          "sample_data": [
+            {
+              "SEASON_ID": "42024",
+              "TEAM_ID": 1612709925,
+              "TEAM_ABBREVIATION": "OSC",
+              "TEAM_NAME": "Osceola Magic",
+              "GAME_ID": "2042400403",
+              "GAME_DATE": "2025-04-14",
+              "MATCHUP": "OSC vs. STO",
+              "WL": "L",
+              "MIN": 239,
+              "PTS": 110,
+              "FGM": 36,
+              "FGA": 88,
+              "FG_PCT": 0.409,
+              "FG3M": 16,
+              "FG3A": 47,
+              "FG3_PCT": 0.34,
+              "FTM": 12,
+              "FTA": 12,
+              "FT_PCT": 1.0,
+              "OREB": 10,
+              "DREB": 34,
+              "REB": 44,
+              "AST": 20,
+              "STL": 11,
+              "BLK": 5,
+              "TOV": 18,
+              "PF": 30,
+              "PLUS_MINUS": -8.0
+            },
+            {
+              "SEASON_ID": "42024",
+              "TEAM_ID": 1612709914,
+              "TEAM_ABBREVIATION": "STO",
+              "TEAM_NAME": "Stockton Kings",
+              "GAME_ID": "2042400403",
+              "GAME_DATE": "2025-04-14",
+              "MATCHUP": "STO @ OSC",
+              "WL": "W",
+              "MIN": 241,
+              "PTS": 118,
+              "FGM": 37,
+              "FGA": 83,
+              "FG_PCT": 0.446,
+              "FG3M": 10,
+              "FG3A": 34,
+              "FG3_PCT": 0.294,
+              "FTM": 23,
+              "FTA": 28,
+              "FT_PCT": 0.821,
+              "OREB": 12,
+              "DREB": 38,
+              "REB": 50,
+              "AST": 23,
+              "STL": 12,
+              "BLK": 2,
+              "TOV": 16,
+              "PF": 19,
+              "PLUS_MINUS": 8.0
+            }
+          ],
+          "row_count": 30000
+        }
+      }
     }
   },
   "LeagueGameLog": {
@@ -5226,8 +5737,172 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to LeagueGameLog.",
     "data_structure": {
-      "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
+      "parameters_used": {},
+      "datasets": {
+        "dataset_0": {
+          "name": "LeagueGameLog",
+          "headers": [
+            "SEASON_ID",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "TEAM_NAME",
+            "GAME_ID",
+            "GAME_DATE",
+            "MATCHUP",
+            "WL",
+            "MIN",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "STL",
+            "BLK",
+            "TOV",
+            "PF",
+            "PTS",
+            "PLUS_MINUS",
+            "VIDEO_AVAILABLE"
+          ],
+          "columns": [
+            "SEASON_ID",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "TEAM_NAME",
+            "GAME_ID",
+            "GAME_DATE",
+            "MATCHUP",
+            "WL",
+            "MIN",
+            "FGM",
+            "FGA",
+            "FG_PCT",
+            "FG3M",
+            "FG3A",
+            "FG3_PCT",
+            "FTM",
+            "FTA",
+            "FT_PCT",
+            "OREB",
+            "DREB",
+            "REB",
+            "AST",
+            "STL",
+            "BLK",
+            "TOV",
+            "PF",
+            "PTS",
+            "PLUS_MINUS",
+            "VIDEO_AVAILABLE"
+          ],
+          "dtypes": {
+            "SEASON_ID": "object",
+            "TEAM_ID": "int64",
+            "TEAM_ABBREVIATION": "object",
+            "TEAM_NAME": "object",
+            "GAME_ID": "object",
+            "GAME_DATE": "object",
+            "MATCHUP": "object",
+            "WL": "object",
+            "MIN": "int64",
+            "FGM": "int64",
+            "FGA": "int64",
+            "FG_PCT": "float64",
+            "FG3M": "int64",
+            "FG3A": "int64",
+            "FG3_PCT": "float64",
+            "FTM": "int64",
+            "FTA": "int64",
+            "FT_PCT": "float64",
+            "OREB": "int64",
+            "DREB": "int64",
+            "REB": "int64",
+            "AST": "int64",
+            "STL": "int64",
+            "BLK": "int64",
+            "TOV": "int64",
+            "PF": "int64",
+            "PTS": "int64",
+            "PLUS_MINUS": "int64",
+            "VIDEO_AVAILABLE": "int64"
+          },
+          "sample_data": [
+            {
+              "SEASON_ID": "22024",
+              "TEAM_ID": 1610612738,
+              "TEAM_ABBREVIATION": "BOS",
+              "TEAM_NAME": "Boston Celtics",
+              "GAME_ID": "0022400061",
+              "GAME_DATE": "2024-10-22",
+              "MATCHUP": "BOS vs. NYK",
+              "WL": "W",
+              "MIN": 240,
+              "FGM": 48,
+              "FGA": 95,
+              "FG_PCT": 0.505,
+              "FG3M": 29,
+              "FG3A": 61,
+              "FG3_PCT": 0.475,
+              "FTM": 7,
+              "FTA": 8,
+              "FT_PCT": 0.875,
+              "OREB": 11,
+              "DREB": 29,
+              "REB": 40,
+              "AST": 33,
+              "STL": 6,
+              "BLK": 3,
+              "TOV": 4,
+              "PF": 15,
+              "PTS": 132,
+              "PLUS_MINUS": 23,
+              "VIDEO_AVAILABLE": 1
+            },
+            {
+              "SEASON_ID": "22024",
+              "TEAM_ID": 1610612750,
+              "TEAM_ABBREVIATION": "MIN",
+              "TEAM_NAME": "Minnesota Timberwolves",
+              "GAME_ID": "0022400062",
+              "GAME_DATE": "2024-10-22",
+              "MATCHUP": "MIN @ LAL",
+              "WL": "L",
+              "MIN": 240,
+              "FGM": 35,
+              "FGA": 85,
+              "FG_PCT": 0.412,
+              "FG3M": 13,
+              "FG3A": 41,
+              "FG3_PCT": 0.317,
+              "FTM": 20,
+              "FTA": 27,
+              "FT_PCT": 0.741,
+              "OREB": 12,
+              "DREB": 35,
+              "REB": 47,
+              "AST": 17,
+              "STL": 4,
+              "BLK": 1,
+              "TOV": 16,
+              "PF": 22,
+              "PTS": 103,
+              "PLUS_MINUS": -7,
+              "VIDEO_AVAILABLE": 1
+            }
+          ],
+          "row_count": 2460
+        }
+      }
     }
   },
   "LeagueHustleStatsPlayer": {
@@ -5235,8 +5910,167 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to HustleStatsPlayer.",
     "data_structure": {
-      "error": "HTTPSConnectionPool(host='stats.nba.com', port=443): Read timed out. (read timeout=30)"
+      "parameters_used": {},
+      "datasets": {
+        "dataset_0": {
+          "name": "HustleStatsPlayer",
+          "headers": [
+            "PLAYER_ID",
+            "PLAYER_NAME",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "AGE",
+            "G",
+            "MIN",
+            "CONTESTED_SHOTS",
+            "CONTESTED_SHOTS_2PT",
+            "CONTESTED_SHOTS_3PT",
+            "DEFLECTIONS",
+            "CHARGES_DRAWN",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "OFF_LOOSE_BALLS_RECOVERED",
+            "DEF_LOOSE_BALLS_RECOVERED",
+            "LOOSE_BALLS_RECOVERED",
+            "PCT_LOOSE_BALLS_RECOVERED_OFF",
+            "PCT_LOOSE_BALLS_RECOVERED_DEF",
+            "OFF_BOXOUTS",
+            "DEF_BOXOUTS",
+            "BOX_OUT_PLAYER_TEAM_REBS",
+            "BOX_OUT_PLAYER_REBS",
+            "BOX_OUTS",
+            "PCT_BOX_OUTS_OFF",
+            "PCT_BOX_OUTS_DEF",
+            "PCT_BOX_OUTS_TEAM_REB",
+            "PCT_BOX_OUTS_REB"
+          ],
+          "columns": [
+            "PLAYER_ID",
+            "PLAYER_NAME",
+            "TEAM_ID",
+            "TEAM_ABBREVIATION",
+            "AGE",
+            "G",
+            "MIN",
+            "CONTESTED_SHOTS",
+            "CONTESTED_SHOTS_2PT",
+            "CONTESTED_SHOTS_3PT",
+            "DEFLECTIONS",
+            "CHARGES_DRAWN",
+            "SCREEN_ASSISTS",
+            "SCREEN_AST_PTS",
+            "OFF_LOOSE_BALLS_RECOVERED",
+            "DEF_LOOSE_BALLS_RECOVERED",
+            "LOOSE_BALLS_RECOVERED",
+            "PCT_LOOSE_BALLS_RECOVERED_OFF",
+            "PCT_LOOSE_BALLS_RECOVERED_DEF",
+            "OFF_BOXOUTS",
+            "DEF_BOXOUTS",
+            "BOX_OUT_PLAYER_TEAM_REBS",
+            "BOX_OUT_PLAYER_REBS",
+            "BOX_OUTS",
+            "PCT_BOX_OUTS_OFF",
+            "PCT_BOX_OUTS_DEF",
+            "PCT_BOX_OUTS_TEAM_REB",
+            "PCT_BOX_OUTS_REB"
+          ],
+          "dtypes": {
+            "PLAYER_ID": "int64",
+            "PLAYER_NAME": "object",
+            "TEAM_ID": "int64",
+            "TEAM_ABBREVIATION": "object",
+            "AGE": "float64",
+            "G": "int64",
+            "MIN": "float64",
+            "CONTESTED_SHOTS": "int64",
+            "CONTESTED_SHOTS_2PT": "int64",
+            "CONTESTED_SHOTS_3PT": "int64",
+            "DEFLECTIONS": "int64",
+            "CHARGES_DRAWN": "int64",
+            "SCREEN_ASSISTS": "int64",
+            "SCREEN_AST_PTS": "int64",
+            "OFF_LOOSE_BALLS_RECOVERED": "int64",
+            "DEF_LOOSE_BALLS_RECOVERED": "int64",
+            "LOOSE_BALLS_RECOVERED": "int64",
+            "PCT_LOOSE_BALLS_RECOVERED_OFF": "float64",
+            "PCT_LOOSE_BALLS_RECOVERED_DEF": "float64",
+            "OFF_BOXOUTS": "int64",
+            "DEF_BOXOUTS": "int64",
+            "BOX_OUT_PLAYER_TEAM_REBS": "int64",
+            "BOX_OUT_PLAYER_REBS": "int64",
+            "BOX_OUTS": "int64",
+            "PCT_BOX_OUTS_OFF": "float64",
+            "PCT_BOX_OUTS_DEF": "float64",
+            "PCT_BOX_OUTS_TEAM_REB": "float64",
+            "PCT_BOX_OUTS_REB": "float64"
+          },
+          "sample_data": [
+            {
+              "PLAYER_ID": 1630639,
+              "PLAYER_NAME": "A.J. Lawson",
+              "TEAM_ID": 1610612761,
+              "TEAM_ABBREVIATION": "TOR",
+              "AGE": 24.0,
+              "G": 24,
+              "MIN": 484.0,
+              "CONTESTED_SHOTS": 49,
+              "CONTESTED_SHOTS_2PT": 28,
+              "CONTESTED_SHOTS_3PT": 21,
+              "DEFLECTIONS": 26,
+              "CHARGES_DRAWN": 0,
+              "SCREEN_ASSISTS": 7,
+              "SCREEN_AST_PTS": 16,
+              "OFF_LOOSE_BALLS_RECOVERED": 1,
+              "DEF_LOOSE_BALLS_RECOVERED": 5,
+              "LOOSE_BALLS_RECOVERED": 6,
+              "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.167,
+              "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.833,
+              "OFF_BOXOUTS": 0,
+              "DEF_BOXOUTS": 5,
+              "BOX_OUT_PLAYER_TEAM_REBS": 5,
+              "BOX_OUT_PLAYER_REBS": 3,
+              "BOX_OUTS": 5,
+              "PCT_BOX_OUTS_OFF": 0.0,
+              "PCT_BOX_OUTS_DEF": 1.0,
+              "PCT_BOX_OUTS_TEAM_REB": 1.0,
+              "PCT_BOX_OUTS_REB": 0.6
+            },
+            {
+              "PLAYER_ID": 1631260,
+              "PLAYER_NAME": "AJ Green",
+              "TEAM_ID": 1610612749,
+              "TEAM_ABBREVIATION": "MIL",
+              "AGE": 25.0,
+              "G": 72,
+              "MIN": 1656.0,
+              "CONTESTED_SHOTS": 237,
+              "CONTESTED_SHOTS_2PT": 131,
+              "CONTESTED_SHOTS_3PT": 106,
+              "DEFLECTIONS": 66,
+              "CHARGES_DRAWN": 5,
+              "SCREEN_ASSISTS": 28,
+              "SCREEN_AST_PTS": 63,
+              "OFF_LOOSE_BALLS_RECOVERED": 11,
+              "DEF_LOOSE_BALLS_RECOVERED": 18,
+              "LOOSE_BALLS_RECOVERED": 29,
+              "PCT_LOOSE_BALLS_RECOVERED_OFF": 0.379,
+              "PCT_LOOSE_BALLS_RECOVERED_DEF": 0.621,
+              "OFF_BOXOUTS": 2,
+              "DEF_BOXOUTS": 36,
+              "BOX_OUT_PLAYER_TEAM_REBS": 36,
+              "BOX_OUT_PLAYER_REBS": 8,
+              "BOX_OUTS": 38,
+              "PCT_BOX_OUTS_OFF": 0.053,
+              "PCT_BOX_OUTS_DEF": 0.947,
+              "PCT_BOX_OUTS_TEAM_REB": 0.947,
+              "PCT_BOX_OUTS_REB": 0.211
+            }
+          ],
+          "row_count": 567
+        }
+      }
     }
   },
   "LeagueHustleStatsTeam": {
@@ -5244,6 +6078,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to HustleStatsTeam.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -5371,6 +6206,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -5380,6 +6216,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "LeagueLineupViz.__init__() missing 1 required positional argument: 'minutes_min'"
     }
@@ -5389,6 +6226,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "LeaguePlayerOnDetails.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -5398,6 +6236,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to SeasonMatchups.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -5560,6 +6399,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Standings.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -5818,89 +6658,6 @@
             {
               "LeagueID": "00",
               "SeasonID": "22024",
-              "TeamID": 1610612760,
-              "TeamCity": "Oklahoma City",
-              "TeamName": "Thunder",
-              "Conference": "West",
-              "ConferenceRecord": "39-13",
-              "PlayoffRank": 1,
-              "ClinchIndicator": " - w",
-              "Division": "Northwest",
-              "DivisionRecord": "12-4 ",
-              "DivisionRank": 1,
-              "WINS": 68,
-              "LOSSES": 14,
-              "WinPCT": 0.829,
-              "LeagueRank": 1.0,
-              "Record": "68-14",
-              "HOME": "35-6 ",
-              "ROAD": "32-8 ",
-              "L10": "8-2  ",
-              "Last10Home": "8-2  ",
-              "Last10Road": "9-1  ",
-              "OT": "0-1  ",
-              "ThreePTSOrLess": "1-4  ",
-              "TenPTSOrMore": "54-5 ",
-              "LongHomeStreak": 12,
-              "strLongHomeStreak": "W 12",
-              "LongRoadStreak": 11,
-              "strLongRoadStreak": "W 11",
-              "LongWinStreak": 15,
-              "LongLossStreak": 2,
-              "CurrentHomeStreak": 1,
-              "strCurrentHomeStreak": "W 1",
-              "CurrentRoadStreak": 3,
-              "strCurrentRoadStreak": "W 3",
-              "CurrentStreak": 4,
-              "strCurrentStreak": "W 4",
-              "ConferenceGamesBack": 0.0,
-              "DivisionGamesBack": 0.0,
-              "ClinchedConferenceTitle": 1,
-              "ClinchedDivisionTitle": 1,
-              "ClinchedPlayoffBirth": 1,
-              "EliminatedConference": 0,
-              "EliminatedDivision": 0,
-              "AheadAtHalf": "53-5 ",
-              "BehindAtHalf": "14-9 ",
-              "TiedAtHalf": "1-0  ",
-              "AheadAtThird": "61-2 ",
-              "BehindAtThird": "6-10 ",
-              "TiedAtThird": "1-2  ",
-              "Score100PTS": "67-12",
-              "OppScore100PTS": "49-14",
-              "OppOver500": "36-12",
-              "LeadInFGPCT": "58-3 ",
-              "LeadInReb": "35-3 ",
-              "FewerTurnovers": "55-12",
-              "PointsPG": 120.5,
-              "OppPointsPG": 107.6,
-              "DiffPointsPG": 12.9,
-              "vsEast": "29-1",
-              "vsAtlantic": "10-0",
-              "vsCentral": "9-1",
-              "vsSoutheast": "10-0",
-              "vsWest": "39-13",
-              "vsNorthwest": "12-4",
-              "vsPacific": "13-3",
-              "vsSouthwest": "14-6",
-              "Jan": "10-4",
-              "Feb": "11-2",
-              "Mar": "15-1",
-              "Apr": "5-2",
-              "May": null,
-              "Jun": null,
-              "Jul": null,
-              "Aug": null,
-              "Sep": null,
-              "Oct": "4-0",
-              "Nov": "11-4",
-              "Dec": "12-1",
-              "PreAS": "68-14",
-              "PostAS": null
-            },
-            {
-              "LeagueID": "00",
-              "SeasonID": "22024",
               "TeamID": 1610612739,
               "TeamCity": "Cleveland",
               "TeamName": "Cavaliers",
@@ -5980,6 +6737,89 @@
               "Dec": "12-1",
               "PreAS": "64-18",
               "PostAS": null
+            },
+            {
+              "LeagueID": "00",
+              "SeasonID": "22024",
+              "TeamID": 1610612760,
+              "TeamCity": "Oklahoma City",
+              "TeamName": "Thunder",
+              "Conference": "West",
+              "ConferenceRecord": "39-13",
+              "PlayoffRank": 1,
+              "ClinchIndicator": " - w",
+              "Division": "Northwest",
+              "DivisionRecord": "12-4 ",
+              "DivisionRank": 1,
+              "WINS": 68,
+              "LOSSES": 14,
+              "WinPCT": 0.829,
+              "LeagueRank": 1.0,
+              "Record": "68-14",
+              "HOME": "35-6 ",
+              "ROAD": "32-8 ",
+              "L10": "8-2  ",
+              "Last10Home": "8-2  ",
+              "Last10Road": "9-1  ",
+              "OT": "0-1  ",
+              "ThreePTSOrLess": "1-4  ",
+              "TenPTSOrMore": "54-5 ",
+              "LongHomeStreak": 12,
+              "strLongHomeStreak": "W 12",
+              "LongRoadStreak": 11,
+              "strLongRoadStreak": "W 11",
+              "LongWinStreak": 15,
+              "LongLossStreak": 2,
+              "CurrentHomeStreak": 1,
+              "strCurrentHomeStreak": "W 1",
+              "CurrentRoadStreak": 3,
+              "strCurrentRoadStreak": "W 3",
+              "CurrentStreak": 4,
+              "strCurrentStreak": "W 4",
+              "ConferenceGamesBack": 0.0,
+              "DivisionGamesBack": 0.0,
+              "ClinchedConferenceTitle": 1,
+              "ClinchedDivisionTitle": 1,
+              "ClinchedPlayoffBirth": 1,
+              "EliminatedConference": 0,
+              "EliminatedDivision": 0,
+              "AheadAtHalf": "53-5 ",
+              "BehindAtHalf": "14-9 ",
+              "TiedAtHalf": "1-0  ",
+              "AheadAtThird": "61-2 ",
+              "BehindAtThird": "6-10 ",
+              "TiedAtThird": "1-2  ",
+              "Score100PTS": "67-12",
+              "OppScore100PTS": "49-14",
+              "OppOver500": "36-12",
+              "LeadInFGPCT": "58-3 ",
+              "LeadInReb": "35-3 ",
+              "FewerTurnovers": "55-12",
+              "PointsPG": 120.5,
+              "OppPointsPG": 107.6,
+              "DiffPointsPG": 12.9,
+              "vsEast": "29-1",
+              "vsAtlantic": "10-0",
+              "vsCentral": "9-1",
+              "vsSoutheast": "10-0",
+              "vsWest": "39-13",
+              "vsNorthwest": "12-4",
+              "vsPacific": "13-3",
+              "vsSouthwest": "14-6",
+              "Jan": "10-4",
+              "Feb": "11-2",
+              "Mar": "15-1",
+              "Apr": "5-2",
+              "May": null,
+              "Jun": null,
+              "Jul": null,
+              "Aug": null,
+              "Sep": null,
+              "Oct": "4-0",
+              "Nov": "11-4",
+              "Dec": "12-1",
+              "PreAS": "68-14",
+              "PostAS": null
             }
           ],
           "row_count": 30
@@ -5992,6 +6832,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to Standings.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -6479,6 +7320,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to MatchupsRollup.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -6616,6 +7458,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayByPlay.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -6625,6 +7468,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayByPlayV2.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -6634,6 +7478,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayByPlayV3.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -6643,6 +7488,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerAwards.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6652,6 +7498,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerCareerByCollege.__init__() missing 1 required positional argument: 'college'"
     }
@@ -6661,6 +7508,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -6670,6 +7518,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerCareerStats.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6679,6 +7528,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerCompare.__init__() missing 2 required positional arguments: 'vs_player_id_list' and 'player_id_list'"
     }
@@ -6688,6 +7538,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashPtPass.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -6697,6 +7548,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashPtReb.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -6706,6 +7558,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashPtShotDefend.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -6715,6 +7568,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashPtShots.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -6724,6 +7578,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByClutch.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6733,6 +7588,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByGameSplits.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6742,6 +7598,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByGeneralSplits.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6751,6 +7608,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByLastNGames.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6760,6 +7618,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByShootingSplits.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6769,6 +7628,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByTeamPerformance.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6778,6 +7638,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerDashboardByYearOverYear.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6787,6 +7648,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -6796,6 +7658,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerFantasyProfile.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6805,6 +7668,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerFantasyProfileBarGraph.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6814,6 +7678,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerGameLog.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -6823,6 +7688,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to PlayerGameLogs.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -7195,6 +8061,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to PlayerGameStreakFinderResults.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -7267,6 +8134,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to PlayerIndex.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -7424,6 +8292,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerNextNGames.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -7433,6 +8302,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerProfileV2.__init__() missing 1 required positional argument: 'player_id'"
     }
@@ -7442,6 +8312,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "PlayerVsPlayer.__init__() missing 2 required positional arguments: 'vs_player_id' and 'player_id'"
     }
@@ -7451,6 +8322,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to EastConfPlayoffPicture, WestConfPlayoffPicture, EastConfStandings, WestConfStandings, EastConfRemainingGames, WestConfRemainingGames.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -7978,6 +8850,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to GameHeader, LineScore, LastMeeting, EastConfStandingsByDay, WestConfStandingsByDay, Available.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -8515,6 +9388,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "ShotChartDetail.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -8524,6 +9398,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to League_Wide.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -8586,6 +9461,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSet'"
     }
@@ -8595,6 +9471,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {}
@@ -8605,6 +9482,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamAndPlayersVsPlayers.__init__() missing 12 required positional arguments: 'vs_team_id', 'vs_player_id5', 'vs_player_id4', 'vs_player_id3', 'vs_player_id2', 'vs_player_id1', 'team_id', 'player_id5', 'player_id4', 'player_id3', 'player_id2', and 'player_id1'"
     }
@@ -8614,6 +9492,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashLineups.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8623,6 +9502,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashPtPass.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8632,6 +9512,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashPtReb.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8641,6 +9522,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashPtShots.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8650,6 +9532,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashboardByGeneralSplits.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8659,6 +9542,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDashboardByShootingSplits.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8668,6 +9552,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamDetails.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8677,6 +9562,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "'resultSets'"
     }
@@ -8686,6 +9572,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamGameLog.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -8695,6 +9582,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to TeamGameLogs.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -9007,6 +9895,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to TeamGameStreakFinderParametersResults.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -9084,6 +9973,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamHistoricalLeaders.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9093,6 +9983,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamInfoCommon.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9102,6 +9993,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamPlayerDashboard.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9111,6 +10003,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamPlayerOnOffDetails.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9120,6 +10013,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamPlayerOnOffSummary.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9129,6 +10023,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamVsPlayer.__init__() missing 2 required positional arguments: 'vs_player_id' and 'team_id'"
     }
@@ -9138,6 +10033,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "TeamYearByYearStats.__init__() missing 1 required positional argument: 'team_id'"
     }
@@ -9147,6 +10043,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "VideoDetails.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -9156,6 +10053,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "VideoDetailsAsset.__init__() missing 2 required positional arguments: 'team_id' and 'player_id'"
     }
@@ -9165,6 +10063,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "VideoEvents.__init__() missing 1 required positional argument: 'game_id'"
     }
@@ -9174,6 +10073,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "This endpoint returns data related to VideoStatus.",
     "data_structure": {
       "parameters_used": {},
       "datasets": {
@@ -9271,6 +10171,7 @@
     "parameters": [],
     "optional_parameters": [],
     "default_parameters": {},
+    "quick_description": "No dataset information available.",
     "data_structure": {
       "error": "WinProbabilityPBP.__init__() missing 1 required positional argument: 'game_id'"
     }

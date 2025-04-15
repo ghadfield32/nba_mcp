@@ -1,3 +1,4 @@
+#client.py
 from datetime import datetime, date, timedelta
 from typing import Optional, Dict, Any, List, Union
 import logging
@@ -5,7 +6,8 @@ import sys
 import traceback
 import re
 import asyncio
-
+import pandas as pd
+import logging
 
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
@@ -15,9 +17,64 @@ from nba_api.stats.endpoints import (
     LeagueGameLog,
     PlayerProfileV2,
     CommonPlayerInfo,
-    PlayerGameLog
+    PlayerGameLog,
+    scoreboardv2
 )
 from nba_api.stats.static import players, teams
+
+
+# ---------------------------------------------------
+# Load static lookups once and create reverse lookups
+# ---------------------------------------------------
+_TEAM_LOOKUP: Dict[int, str] = {
+    t["id"]: t["full_name"] 
+    for t in teams.get_teams()
+}
+_PLAYER_LOOKUP: Dict[int, str] = {
+    p["id"]: f"{p['first_name']} {p['last_name']}" 
+    for p in players.get_players()
+}
+
+# Create reverse lookups (name -> id)
+_TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
+_PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
+
+
+def get_player_id(player_name: str) -> Optional[int]:
+    """Convert player name to ID, with case-insensitive partial matching."""
+    if not player_name:
+        return None
+    
+    player_name_lower = player_name.lower()
+    # Try exact match first
+    for name, id in _PLAYER_NAME_TO_ID.items():
+        if name.lower() == player_name_lower:
+            return id
+    
+    # Try partial match
+    for name, id in _PLAYER_NAME_TO_ID.items():
+        if player_name_lower in name.lower():
+            return id
+    
+    return None
+
+def get_team_id(team_name: str) -> Optional[int]:
+    """Convert team name to ID, with case-insensitive partial matching."""
+    if not team_name:
+        return None
+    
+    team_name_lower = team_name.lower()
+    # Try exact match first
+    for name, id in _TEAM_NAME_TO_ID.items():
+        if name.lower() == team_name_lower:
+            return id
+    
+    # Try partial match
+    for name, id in _TEAM_NAME_TO_ID.items():
+        if team_name_lower in name.lower():
+            return id
+    
+    return None
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,77 +95,84 @@ class NBAApiClient:
             "status_code": getattr(e, "status_code", None)
         }
 
-    async def get_games_by_date(self, date_str: str) -> Dict[str, Any]:
+    async def get_games_by_date(
+        target_date: Optional[date] = None,
+        max_days_back: int = 7
+    ) -> pd.DataFrame:
         """
-        Get NBA games for a specific date.
-
+        Find the most recent day (within max_days_back days) that had NBA games and return game details.
+        
         Args:
-            date_str: Date in YYYY-MM-DD format
-
+            target_date: Specific date to start searching from (defaults to today).
+            max_days_back: Maximum number of days to search back if no games on target_date.
+        
         Returns:
-            Dictionary containing game data
+            A pandas DataFrame containing game data.
         """
-        try:
-            # Parse the date string to date object
-            try:
-                game_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            except ValueError:
-                return {"error": f"Invalid date format: {date_str}. Please use YYYY-MM-DD format.", "data": None, "query_date": date_str}
+        if target_date is None:
+            target_date = date.today()
+        
+        for days_back in range(max_days_back):
+            check_date = target_date - timedelta(days=days_back)
+            date_str = check_date.strftime("%m/%d/%Y")
             
-            # Get scoreboard data for the date - ScoreBoard doesn't accept game_date but uses date as a property
             try:
-                # First create the scoreboard without parameters, then set date if needed
-                sb = scoreboard.ScoreBoard()
-                if game_date != date.today():
-                    # Update the internal date property - this is what the API actually uses
-                    sb.game_date = game_date
-                data = sb.get_dict()
+                sb2 = scoreboardv2.ScoreboardV2(game_date=date_str)
+                headers = sb2.game_header.get_data_frame()
+                lines = sb2.line_score.get_data_frame()
             except Exception as e:
-                return {"error": f"Failed to retrieve scoreboard: {str(e)}", "data": None, "query_date": date_str}
-            
-            # Check if data exists and has the expected structure
-            if not data or "scoreboard" not in data or "games" not in data["scoreboard"]:
-                return {"error": "No games data available for this date", "data": None, "query_date": date_str}
-                
-            # Format the data to match the expected structure
-            formatted_games = []
-            games_list = data["scoreboard"]["games"]
-            
-            if not games_list:
-                # Return empty array but with clear indication there were no games scheduled
-                return {"data": [], "message": f"No games scheduled on {game_date.strftime('%B %d, %Y')}.", "query_date": date_str}
-                
-            for game in games_list:
+                logger.warning(f"Error fetching data for {date_str}: {str(e)}")
+                continue
+
+            if headers.empty:
+                continue
+
+            # Merge headers with line scores
+            merged = headers.merge(lines, on="GAME_ID", suffixes=("", "_line"))
+            games_list = []
+
+            for game_id in merged["GAME_ID"].unique():
+                game_data = merged[merged["GAME_ID"] == game_id]
                 try:
-                    home_team = {
-                        "full_name": game["homeTeam"]["teamName"],
-                        "id": game["homeTeam"]["teamId"]
-                    }
-                    visitor_team = {
-                        "full_name": game["awayTeam"]["teamName"],
-                        "id": game["awayTeam"]["teamId"]
-                    }
-                    
-                    formatted_game = {
-                        "id": game["gameId"],
-                        "home_team": home_team,
-                        "visitor_team": visitor_team,
-                        "home_team_score": int(game.get("homeTeam", {}).get("score", 0)),
-                        "visitor_team_score": int(game.get("awayTeam", {}).get("score", 0)),
-                        "status": game["gameStatus"],
-                        "period": game.get("period", 0),
-                        "time": game.get("gameClock", ""),
-                        "date": date_str
-                    }
-                    formatted_games.append(formatted_game)
-                except (KeyError, TypeError) as e:
-                    logger.warning(f"Error formatting game data: {str(e)}")
+                    home_row = game_data[game_data["HOME_TEAM_ID"] == game_data["TEAM_ID"]].iloc[0]
+                    away_row = game_data[game_data["VISITOR_TEAM_ID"] == game_data["TEAM_ID"]].iloc[0]
+                except IndexError as ie:
+                    logger.warning(f"Could not find complete data for game {game_id}: {str(ie)}")
                     continue
-            
-            return {"data": formatted_games, "query_date": date_str}
-            
-        except Exception as e:
-            return self._handle_response_error(e, "get_games_by_date")
+                    
+                games_list.append({
+                    "date": pd.to_datetime(home_row["GAME_DATE_EST"]).date(),
+                    "game_id": game_id,
+                    "status": home_row["GAME_STATUS_TEXT"],
+                    "home_team": _TEAM_LOOKUP.get(int(home_row["TEAM_ID"])),
+                    "home_pts": home_row["PTS"],
+                    "home_fg_pct": home_row.get("FG_PCT", 0),
+                    "away_team": _TEAM_LOOKUP.get(int(away_row["TEAM_ID"])),
+                    "away_pts": away_row["PTS"],
+                    "away_fg_pct": away_row.get("FG_PCT", 0),
+                    "game_time": home_row.get("GAME_STATUS_TEXT", ""),
+                    "attendance": home_row.get("ATTENDANCE", 0),
+                    "game_duration": home_row.get("GAME_TIME", "")
+                })
+
+            if games_list:
+                df = pd.DataFrame(games_list)
+                # Convert fraction values to percentage format for readability.
+                pct_columns = [col for col in df.columns if 'pct' in col.lower()]
+                for col in pct_columns:
+                    df[col] = df[col].multiply(100).round(1)
+                logger.info(f"Found games on {date_str}")
+                return df
+        # If no games found, return an empty DataFrame with standard columns.
+        columns = [
+            "date", "game_id", "status",
+            "home_team", "home_pts", "home_fg_pct",
+            "away_team", "away_pts", "away_fg_pct",
+            "game_time", "attendance", "game_duration"
+        ]
+        logger.warning("No games found in the lookback window.")
+        return pd.DataFrame(columns=columns)
+
 
     def find_player_by_name(self, player_name: str) -> Optional[Dict[str, Any]]:
         """
@@ -200,14 +264,17 @@ class NBAApiClient:
             Dictionary with player stats
         """
         try:
-            # Find the player
-            print(f"DEBUG: Starting player stats lookup for '{player_name}'", file=sys.stderr)
-            player = self.find_player_by_name(player_name)
+            # Get player ID using the lookup function
+            player_id = get_player_id(player_name)
             
-            if not player:
+            if not player_id:
                 error_msg = f"No player found matching '{player_name}'"
                 print(f"ERROR: {error_msg}", file=sys.stderr)
                 return {"error": error_msg}
+            
+            # Get player name from the lookup for display
+            player_name_display = player_name
+            # We could also retrieve the full name from the PLAYER_LOOKUP if needed
             
             # Get season string
             if season is None:
@@ -221,8 +288,7 @@ class NBAApiClient:
             
             # Get player game averages
             try:
-                player_id = player["id"]
-                print(f"DEBUG: Fetching stats for player ID {player_id} ({player['first_name']} {player['last_name']})", file=sys.stderr)
+                print(f"DEBUG: Fetching stats for player ID {player_id} ({player_name})", file=sys.stderr)
                 
                 # Use PlayerProfileV2 to get season averages
                 print(f"DEBUG: Calling PlayerProfileV2 API...", file=sys.stderr)
@@ -269,7 +335,7 @@ class NBAApiClient:
                 # If we couldn't find stats in the profile, try PlayerGameLog
                 if not season_stats:
                     print(f"DEBUG: No season stats found in profile data, trying PlayerGameLog...", file=sys.stderr)
-                    game_log = PlayerGameLog(player_id=player["id"], season=season_string)
+                    game_log = PlayerGameLog(player_id=player_id, season=season_string)
                     games_data = game_log.get_dict()
                     
                     if games_data.get("resultSets", [{}])[0].get("rowSet"):
@@ -296,7 +362,7 @@ class NBAApiClient:
                             
                             season_stats = {
                                 "season_id": season_string,
-                                "player_id": player["id"],
+                                "player_id": player_id,
                                 "games_played": games_played,
                                 "pts": round(pts_sum / games_played, 1) if games_played > 0 else 0,
                                 "reb": round(reb_sum / games_played, 1) if games_played > 0 else 0,
@@ -306,23 +372,23 @@ class NBAApiClient:
                 # If we still don't have stats, return error
                 if not season_stats:
                     return {
-                        "player": f"{player['first_name']} {player['last_name']}",
+                        "player": f"{player_name_display}",
                         "season": season_year,
                         "stats": None,
-                        "error": f"No stats available for {player['first_name']} {player['last_name']} in season {season_string}"
+                        "error": f"No stats available for {player_name_display} in season {season_string}"
                     }
                 
                 # Return the player stats
                 return {
-                    "player": f"{player['first_name']} {player['last_name']}",
+                    "player": f"{player_name_display}",
                     "season": season_year,
                     "stats": season_stats
                 }
                 
             except Exception as e:
                 return {
-                    "error": f"Error fetching stats for {player['first_name']} {player['last_name']}, season {season_string}: {str(e)}",
-                    "player": f"{player['first_name']} {player['last_name']}",
+                    "error": f"Error fetching stats for {player_name_display}, season {season_string}: {str(e)}",
+                    "player": f"{player_name_display}",
                     "season": season_year,
                     "stats": None
                 }
@@ -330,18 +396,24 @@ class NBAApiClient:
         except Exception as e:
             return self._handle_response_error(e, "get_player_stats")
 
-    async def get_live_scoreboard(self) -> Dict[str, Any]:
+    async def get_live_scoreboard(self, as_dataframe: bool = True) -> Union[Dict[str, Any], pd.DataFrame]:
         """
-        Get live scoreboard data from the NBA API.
-
+        Fetch the current NBA scoreboard with live game data.
+        
+        Args:
+            as_dataframe: If True, returns a pandas DataFrame; otherwise, returns raw dict data.
+            
         Returns:
-            Dictionary containing live scoreboard data with game details including:
-            - meta: API metadata including version, request URL, timestamp, and status code
-            - scoreboard: Game data including gameDate, leagueId, leagueName, and games array
+            The scoreboard data in the specified format.
+            
+        Note:
+            The response contains:
+                - meta: API metadata including version, request URL, timestamp, and status code
+                - scoreboard: Game data including gameDate, leagueId, leagueName, and games array
         """
         
         try:
-            # Create scoreboard instance
+            # Create scoreboard instance - no date parameter needed for live
             sb = scoreboard.ScoreBoard()
             
             # Get raw data dictionary
@@ -362,115 +434,130 @@ class NBAApiClient:
             if "gameDate" not in data["scoreboard"] or "games" not in data["scoreboard"]:
                 return {"error": "Invalid scoreboard data structure"}
                 
-            # Return the complete data structure (includes meta and scoreboard)
-            return data
+            # If not requesting DataFrame, return the complete raw data
+            if not as_dataframe:
+                return data
             
+            # Extract games for DataFrame conversion
+            games = data.get("scoreboard", {}).get("games", [])
+            
+            # Return as DataFrame
+            return pd.DataFrame(games)
+                
         except Exception as e:
             return self._handle_response_error(e, "get_live_scoreboard")
 
-    async def get_player_career_stats(self, player_id: str) -> Dict[str, Any]:
+    async def get_player_career_stats(self, player_name_or_id: str, as_dataframe: bool = True) -> Union[Dict[str, Any], pd.DataFrame]:
         """
-        Get career statistics for a specific player.
-
+        Retrieve career stats for an NBA player, given either name or ID.
+        
         Args:
-            player_id: NBA player ID (e.g., '203999' for Nikola Jokić)
-
+            player_name_or_id: Player name (e.g., "LeBron James") or numeric string ID.
+            as_dataframe: If True, return a pandas DataFrame; otherwise, return the raw dict.
+            
         Returns:
-            Dictionary containing player career statistics
+            The career statistics as DataFrame or dict.
+            
+        Raises:
+            ValueError: If the player cannot be found.
         """
+        # Resolve player ID: if already numeric use it; otherwise use the lookup function
+        if player_name_or_id.isdigit():
+            pid = player_name_or_id
+        else:
+            # Find the player ID using the lookup function
+            pid = get_player_id(player_name_or_id)
+            if not pid:
+                raise ValueError(f"No player found matching '{player_name_or_id}'")
+        
         try:
-            # Convert string player_id to integer if needed
-            if isinstance(player_id, str) and player_id.isdigit():
-                player_id = int(player_id)
-                
-            career = playercareerstats.PlayerCareerStats(player_id=player_id)
-            data = career.get_dict()
-            
-            # Validate response structure
-            if not data or "resultSets" not in data:
-                return {"error": "Invalid response format from player career stats API"}
-                
-            # Check for expected data in response
-            if not data["resultSets"]:
-                return {"error": "No result sets found in player career stats response"}
-                
-            return data
-            
+            career = playercareerstats.PlayerCareerStats(player_id=pid)
+            if as_dataframe:
+                df = career.get_data_frames()[0]
+                logger.info(f"Retrieved career stats for player ID {pid}")
+                return df
+            else:
+                return career.get_dict()
         except Exception as e:
-            return self._handle_response_error(e, "get_player_career_stats")
+            logger.error(f"Error in get_player_career_stats: {str(e)}")
+            return {"error": f"Error fetching career stats: {str(e)}"}
 
-    async def get_league_leaders(self, season: str = None, stat_category: str = "PTS") -> Dict[str, Any]:
+    async def get_league_leaders(self, season: str, stat_category: str = "PTS", as_dataframe: bool = True) -> Union[Dict[str, Any], pd.DataFrame]:
         """
-        Get league leaders for a specific statistical category.
-
+        Retrieve league leaders for a specified season and statistical category.
+        
         Args:
-            season: Season in format 'YYYY-YY' (e.g., '2023-24')
-            stat_category: Statistical category (PTS, AST, REB, etc.)
-
+            season: Season string in the format 'YYYY-YY' (e.g. '2024-25').
+            stat_category: Statistical category such as "PTS", "AST", etc.
+            as_dataframe: If True, returns a pandas DataFrame; otherwise, returns raw dict data.
+            
         Returns:
-            Dictionary containing league leaders data
+            League leaders data in the desired format.
         """
         try:
-            # Get season string if not provided
-            if season is None:
-                season = self.get_season_string()
-                
-            leaders = LeagueLeaders(season=season, stat_category=stat_category)
-            data = leaders.get_dict()
-            
-            # Validate response structure
-            if not data or "resultSet" not in data:
-                return {"error": "Invalid response format from league leaders API"}
-                
-            # Check for expected data in response
-            if "rowSet" not in data["resultSet"] or not data["resultSet"]["rowSet"]:
-                return {"error": "No leaders data found in response"}
-                
-            return data
+            leaders = LeagueLeaders(season=season, stat_category_simple=stat_category)
+            if as_dataframe:
+                df = leaders.get_data_frames()[0]
+                logger.info(f"Retrieved league leaders for season {season}, category {stat_category}")
+                return df
+            else:
+                return leaders.get_dict()
+        except Exception as e:
+            logger.error(f"Error in get_league_leaders: {str(e)}")
+            return {"error": f"Error fetching league leaders: {str(e)}"}
             
         except Exception as e:
             return self._handle_response_error(e, "get_league_leaders")
 
-    async def get_league_game_log(self, season: str = None, team_id: Optional[str] = None) -> Dict[str, Any]:
+    async def get_league_game_log(self, 
+        season: str,
+        team_name_or_id: Optional[str] = None,
+        as_dataframe: bool = True
+    ) -> Union[Dict[str, Any], pd.DataFrame]:
         """
-        Get game log data for the league or a specific team.
-
+        Retrieve the league game log for a given season and optionally filter by team.
+        
         Args:
-            season: Season in format 'YYYY-YY' (e.g., '2023-24')
-            team_id: Optional team ID to filter results
-
+            season: Season string in format 'YYYY-YY' (e.g., '2024-25').
+            team_name_or_id: Optional team name or numeric ID.
+            as_dataframe: If True, returns a pandas DataFrame; otherwise, returns the raw dictionary.
+        
         Returns:
-            Dictionary containing game log data
+            League game log data in the selected format.
+            
+        Raises:
+            ValueError: If team lookup fails.
         """
-        try:
-            # Get season string if not provided
-            if season is None:
-                season = self.get_season_string()
-                
-            # Convert team_id to integer if provided as string
-            if team_id and isinstance(team_id, str) and team_id.isdigit():
-                team_id = int(team_id)
-                
-            # Get game log data
-            if team_id:
-                game_log = LeagueGameLog(season=season, team_id_nullable=team_id)
+        tid: Optional[Union[int, str]] = None
+        if team_name_or_id:
+            if team_name_or_id.isdigit():
+                tid = team_name_or_id
             else:
-                game_log = LeagueGameLog(season=season)
+                # Use the team lookup function
+                tid = get_team_id(team_name_or_id)
+                if tid is None:
+                    raise ValueError(f"No team found matching '{team_name_or_id}'")
+
+        try:
+            if tid:
+                log = LeagueGameLog(season=season, team_id=int(tid))
+            else:
+                log = LeagueGameLog(season=season)
                 
-            data = game_log.get_dict()
-            
-            # Validate response structure
-            if not data or "resultSets" not in data:
-                return {"error": "Invalid response format from league game log API"}
-                
-            # Check for expected data in response
-            if not data["resultSets"] or "rowSet" not in data["resultSets"][0]:
-                return {"error": "No game log data found in response"}
-                
-            return data
-            
+            if as_dataframe:
+                df = log.get_data_frames()[0]
+                # If filtering by team and no rows found, patch log to return an empty dataframe.
+                if df.empty:
+                    def _empty_get_frames():
+                        return [pd.DataFrame(columns=df.columns)]
+                    log.get_data_frames = _empty_get_frames  # type: ignore
+                    return log.get_data_frames()[0]
+                return df
+            else:
+                return log.get_dict()
         except Exception as e:
-            return self._handle_response_error(e, "get_league_game_log")
+            logger.error(f"Error in get_league_game_log: {str(e)}")
+            return {"error": f"Error fetching game log: {str(e)}"}
         
     async def get_most_recent_game_date(self, lookback_days: int = 7) -> Dict[str, Any]:
         """
