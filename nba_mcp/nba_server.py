@@ -5,9 +5,11 @@ import sys
 import traceback
 from datetime import datetime
 from typing import Optional, List, Dict
-
+import pandas as pd
 from nba_api.stats.static import teams, players
-
+from api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
+                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
+                           )
 # Initialize FastMCP server with the name "nba"
 mcp = FastMCP("nba_mcp")
 
@@ -18,566 +20,221 @@ mcp = FastMCP("nba_mcp")
 #########################################
 
 
-def format_game(game: dict) -> str:
-    """
-    Format a game record into a readable string.
-    """
-    home_team = game["home_team"]["full_name"]
-    visitor_team = game["visitor_team"]["full_name"]
-    home_score = game["home_team_score"]
-    visitor_score = game["visitor_team_score"]
-    
-    # Add game status information
-    status_text = ""
-    if game.get("status") == 3:  # Finished game
-        status_text = " (Final)"
-    elif game.get("period") > 0:
-        period = game.get("period", 0)
-        time = game.get("time", "")
-        status_text = f" (Period {period}, {time})"
-    
-    return f"{home_team} vs {visitor_team} - Score: {home_score} to {visitor_score}{status_text}"
 
 #########################################
 # MCP Tools
 #########################################
 
-@mcp.tool()
-async def get_game_scores(date: str) -> str:
-    """
-    Get NBA game scores for the specified date (in YYYY-MM-DD format).
-
-    Args:
-        date: The date of the games, e.g. "2022-12-25"
-    """
-    print(f"DEBUG: Attempting to get game scores for date: {date}", file=sys.stderr)
-    client = NBAApiClient()
     
-    # Load API documentation at the beginning
-    await client.get_api_documentation()
-    
-    try:
-        data = await client.get_games_by_date(date)
-        
-        # Include the query date in the response for context
-        query_date = data.get("query_date", date)
-        formatted_date = ""
-        try:
-            # Try to format the date nicely (April 15, 2025)
-            date_obj = datetime.strptime(query_date, "%Y-%m-%d").date()
-            formatted_date = date_obj.strftime("%B %d, %Y")
-        except ValueError:
-            formatted_date = query_date
-        
-        # Check for custom message first
-        if "message" in data:
-            return f"Date: {formatted_date}\n{data['message']}"
-            
-        if "error" in data:
-            error_msg = data['error']
-            print(
-                "ERROR: Failed to get game scores: "
-                f"{error_msg}", 
-                file=sys.stderr
-            )
-            return f"Error for {formatted_date}: {error_msg}"
-
-        if not data.get("data"):
-            print(
-                "DEBUG: No games found for date: "
-                f"{query_date}", 
-                file=sys.stderr
-            )
-            return f"No games found for {formatted_date}."
-
-        games = data["data"]
-        print(
-            "DEBUG: Successfully found "
-            f"{len(games)} games for date: {query_date}", 
-            file=sys.stderr
-        )
-        formatted_games = [format_game(game) for game in games]
-        
-        # Include the date in the response header
-        return f"NBA Games for {formatted_date}:\n" + "\n---\n".join(formatted_games)
-    except Exception as e:
-        error_msg = f"Unexpected error in get_game_scores: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
-
-@mcp.tool() 
-async def get_player_stats(player: str) -> str:
-    """
-    Get season averages for an NBA player by their name.
-
-    Args:
-        player: The name of the player (e.g. "LeBron James")
-    """
-    print(f"DEBUG: Attempting to get player stats for: {player}", file=sys.stderr)
-    client = NBAApiClient()
-    
-    # Load API documentation at the beginning
-    await client.get_api_documentation()
-    
-    try:
-        # First check if we can find the player
-        player_id = get_player_id(player)
-        if not player_id:
-            return f"Error: No player found matching '{player}'"
-            
-        result = await client.get_player_stats(player)
-
-        if "error" in result:
-            print(f"ERROR: Failed to get player stats: {result['error']}", file=sys.stderr)
-            return f"Error: {result['error']}"
-
-        player_name = result["player"]
-        season = result["season"]
-        stats = result["stats"]
-
-        if not stats:
-            print(f"DEBUG: No stats found for player: {player_name}", file=sys.stderr)
-            return f"No stats found for {player_name} for season {season}."
-        
-        print(f"DEBUG: Successfully retrieved stats for {player_name}", file=sys.stderr)
-        # Format stats based on available fields
-        stats_text = f"""
-Player: {player_name}
-Season: {season}
-"""
-        
-        # Add stats fields if they exist in the response
-        stats_fields = {
-            "games_played": "Games Played",
-            "pts": "Points Per Game",
-            "reb": "Rebounds Per Game",
-            "ast": "Assists Per Game",
-            "stl": "Steals Per Game",
-            "blk": "Blocks Per Game",
-            "fg_pct": "Field Goal %",
-            "fg3_pct": "3-Point %",
-            "ft_pct": "Free Throw %"
-        }
-        
-        for field_key, field_name in stats_fields.items():
-            field_key_lower = field_key.lower()
-            if field_key_lower in stats:
-                stats_text += f"{field_name}: {stats.get(field_key_lower, 'N/A')}\n"
-        
-        return stats_text
-    except Exception as e:
-        error_msg = f"Unexpected error in get_player_stats: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
 
 @mcp.tool()
-async def get_league_leaders(stat_category: str = "PTS", season: Optional[str] = None) -> str:
+async def get_player_career_information(
+    player_name: str,
+    season: Optional[str] = None
+) -> str:
     """
-    Get NBA league leaders for a specified stat category.
-
-    Args:
-        stat_category: Statistical category (PTS, AST, REB, STL, BLK, etc.). Defaults to points.
-        season: Season in format '2023-24'. If not provided, uses current season.
+    MCP tool: Return career stats for a player in a given season.
     """
-    print(f"DEBUG: Attempting to get league leaders for stat: {stat_category}", file=sys.stderr)
+    print(f"DEBUG: get_player_career_information('{player_name}', season={season})", file=sys.stderr)
     client = NBAApiClient()
-    
+    await client.get_api_documentation()
+
+    # Default to current season if not provided
+    season_str = season or client.get_season_string()
+
     try:
-        # Use client to fetch data - it will handle defaults for season
-        leaders_df = await client.get_league_leaders(
-            season=season, 
-            stat_category=stat_category,
+        result = await client.get_player_career_stats(
+            player_name,
+            season_str,
             as_dataframe=True
         )
 
-        # Check if we got an error response
-        if isinstance(leaders_df, dict) and "error" in leaders_df:
-            print(f"ERROR: Failed to get league leaders: {leaders_df['error']}", file=sys.stderr)
-            return f"Error: {leaders_df['error']}"
+        # If helper returned a message (no data or error), pass it through
+        if isinstance(result, str):
+            return result
 
-        # Check if we have data in the dataframe
-        if leaders_df.empty:
-            print(f"DEBUG: No league leaders found for stat: {stat_category}", file=sys.stderr)
-            return f"No league leaders found for {stat_category}."
+        df: pd.DataFrame = result
+        # Safety check
+        if df.empty:
+            return f"No career stats found for '{player_name}' in {season_str}."
 
-        # Get the actual season that was used (for display)
-        used_season = season if season else "current season"
+        # Pick first (and only) row
+        row = df.iloc[0]
+        # Format the key stats
+        lines = [
+            f"Player: {player_name}",
+            f"Season: {season_str}",
+            f"Games Played: {row.get('GP', 'N/A')}",
+            f"Points Per Game: {row.get('PTS', 'N/A')}",
+            f"Rebounds Per Game: {row.get('REB', 'N/A')}",
+            f"Assists Per Game: {row.get('AST', 'N/A')}",
+            f"Field Goal %: {row.get('FG_PCT', 'N/A')}",
+        ]
+        return "\n".join(lines)
 
-        # Format the top 5 leaders
-        formatted_leaders = []
-        
-        # Take top 5 rows
-        top_leaders = leaders_df.head(5)
-        
-        # Format each leader
-        for i, (_, row) in enumerate(top_leaders.iterrows()):
-            # Extract player name and team - with fallbacks
-            player_name = row.get('PLAYER_NAME', row.get('PLAYER', 'Unknown'))
-            team = row.get('TEAM', row.get('TEAM_ABBREVIATION', ''))
-            
-            # Look for the stat value - normalize column names
-            stat_cols = [col for col in row.index if stat_category.upper() in col]
-            if stat_cols:
-                stat_value = row[stat_cols[0]]
-            else:
-                # Fallback to looking for a VALUE column
-                stat_value = row.get('VALUE', row.get('STAT_VALUE', 0))
-            
-            formatted_leaders.append(f"{i+1}. {player_name} ({team}): {stat_value}")
-        
-        return f"Top 5 {stat_category.upper()} Leaders ({used_season}):\n" + "\n".join(formatted_leaders)
-    
     except Exception as e:
-        error_msg = f"Unexpected error in get_league_leaders: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
+        msg = f"Unexpected error in get_player_career_information: {e}"
+        print(f"ERROR: {msg}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
-
-@mcp.tool()
-async def get_live_scores() -> str:
-    """
-    Get live NBA game scores for today.
-    """
-    print(f"DEBUG: Attempting to get live game scores", file=sys.stderr)
-    try:
-        client = NBAApiClient()
-        
-        # Load API documentation at the beginning
-        await client.get_api_documentation()
-        
-        games_df = await client.get_live_scoreboard(as_dataframe=True)
-        
-        if games_df.empty:
-            print("DEBUG: No live games found today", file=sys.stderr)
-            return "No live games found today."
-        
-        formatted_games = []
-        for _, game in games_df.iterrows():
-            home_team = game.get("homeTeam", {}).get("teamName", "Unknown")
-            away_team = game.get("awayTeam", {}).get("teamName", "Unknown")
-            home_score = game.get("homeTeam", {}).get("score", 0)
-            away_score = game.get("awayTeam", {}).get("score", 0)
-            
-            game_status = game.get("gameStatus", 0)
-            period = game.get("period", 0)
-            game_clock = game.get("gameClock", "")
-            
-            status_text = ""
-            if game_status == 3:  # Finished game
-                status_text = " (Final)"
-            elif game_status == 2:  # In progress
-                status_text = f" (Period {period}, {game_clock})"
-            elif game_status == 1:  # Not started
-                status_text = f" (Not started)"
-            
-            formatted_games.append(f"{home_team} vs {away_team} - Score: {home_score} to {away_score}{status_text}")
-        
-        return "\n---\n".join(formatted_games)
-    except Exception as e:
-        error_msg = f"Unexpected error in get_live_scores: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
-
-@mcp.tool()
-async def get_player_career_information(player_name: str) -> str:
-    """
-    Get career statistics for an NBA player by their name.
-
-    Args:
-        player_name: The name of the player (e.g. "LeBron James")
-    """
-    print(f"DEBUG: Attempting to get career stats for: {player_name}", file=sys.stderr)
-    try:
-        client = NBAApiClient()
-        
-        # Load API documentation at the beginning
-        await client.get_api_documentation()
-        
-        # First check if we can find the player
-        player_id = get_player_id(player_name)
-        if not player_id:
-            return f"Error: No player found matching '{player_name}'"
-            
-        # Get the career stats using the client function
-        player_stats_df = await client.get_player_career_stats(player_name, as_dataframe=True)
-        
-        if player_stats_df.empty:
-            print(f"DEBUG: No career stats found for player: {player_name}", file=sys.stderr)
-            return f"No career stats found for {player_name}."
-        
-        # Extract the most recent season stats
-        recent_stats = player_stats_df.iloc[-1]
-        
-        # Format the response
-        stats_text = f"""
-Player: {player_name}
-Seasons: {player_stats_df.iloc[0]['SEASON_ID']} to {recent_stats['SEASON_ID']}
-Career Games: {recent_stats['GP']}
-Career Stats:
-- Points Per Game: {recent_stats.get('PTS', 'N/A')}
-- Rebounds Per Game: {recent_stats.get('REB', 'N/A')}
-- Assists Per Game: {recent_stats.get('AST', 'N/A')}
-- Field Goal %: {recent_stats.get('FG_PCT', 'N/A')}
-- 3-Point %: {recent_stats.get('FG3_PCT', 'N/A')}
-- Free Throw %: {recent_stats.get('FT_PCT', 'N/A')}
-"""
-        return stats_text
-        
-    except ValueError as e:
-        error_msg = str(e)
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        return f"Error: {error_msg}"
-    except Exception as e:
-        error_msg = f"Unexpected error in get_player_career_information: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
-
+        return msg
 
 
 @mcp.tool()
-async def get_team_game_log(team_name: str, season: str = "2023-24") -> str:
+async def get_league_leaders_info(
+    season: Optional[str] = None,
+    stat_category: str = "PTS",
+    per_mode: str = "Totals"
+) -> str:
     """
-    Get game log for a specific NBA team in the given season.
+    MCP tool: Return the top 5 league leaders for a stat in a given season.
+    """
+    print(f"DEBUG: get_league_leaders_info(season={season}, stat={stat_category}, mode={per_mode})", file=sys.stderr)
+    client = NBAApiClient()
+    await client.get_api_documentation()
 
-    Args:
-        team_name: Name of the team (e.g. "Lakers" or "Los Angeles Lakers")
-        season: Season in format 'YYYY-YY' (e.g., '2023-24')
-    """
-    print(f"DEBUG: Attempting to get game log for team: {team_name} in season {season}", file=sys.stderr)
-    try:
-        client = NBAApiClient()
-        
-        # Load API documentation at the beginning
-        await client.get_api_documentation()
-        
-        # First check if we can find the team
-        team_id = get_team_id(team_name)
-        if not team_id:
-            return f"Error: No team found matching '{team_name}'"
-            
-        # Get the game log using the client function
-        game_log_df = await client.get_league_game_log(season=season, team_name_or_id=str(team_id), as_dataframe=True)
-        
-        if game_log_df.empty:
-            print(f"DEBUG: No game log found for team: {team_name}", file=sys.stderr)
-            return f"No game log found for {team_name} in the {season} season."
-        
-        # Format the last 5 games
-        formatted_games = []
-        for i, (_, game) in enumerate(game_log_df.head(5).iterrows()):
-            game_date = game.get('GAME_DATE', 'Unknown Date')
-            matchup = game.get('MATCHUP', 'Unknown Matchup')
-            result = game.get('WL', '')
-            pts = game.get('PTS', 0)
-            
-            # Check if PTS_OPP exists in the dataframe columns
-            if 'PTS_OPP' in game_log_df.columns:
-                opp_pts = game.get('PTS_OPP', 0)
-            else:
-                # If we don't have opponent points directly, try to infer from other data
-                # (In some versions of the NBA API, this isn't returned directly)
-                opp_pts = "N/A"
-            
-            formatted_games.append(f"{game_date}: {matchup} - Result: {result} ({pts}-{opp_pts})")
-        
-        return f"Recent Games for {team_name} in {season} Season:\n" + "\n".join(formatted_games)
-    except ValueError as e:
-        error_msg = str(e)
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        return f"Error: {error_msg}"
-    except Exception as e:
-        error_msg = f"Unexpected error in get_team_game_log: {str(e)}"
-        print(f"ERROR: {error_msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
+    season_str = season or client.get_season_string()
 
-@mcp.tool()
-async def get_nba_games(date: Optional[str] = None, 
-                        lookback_days: Optional[int] = None) -> str:
-    """
-    Get NBA games for a specific date or over a range of past days.
-    
-    Args:
-        date: Date in format 'YYYY-MM-DD', defaults to today if not provided
-        lookback_days: Number of days to look back (including the specified date)
-    """
-    print(
-        f"DEBUG: Attempting to get NBA games for date:{date}, "
-        f"lookback:{lookback_days}", 
-        file=sys.stderr
-    )
     try:
-        client = NBAApiClient()
-        
-        # Load API documentation at the beginning
-        await client.get_api_documentation()
-        
-        result = await client.get_games_by_date(
-            date=date, 
-            lookback_days=lookback_days
+        result = await client.get_league_leaders(
+            season=season_str,
+            stat_category=stat_category,
+            per_mode=per_mode,
+            as_dataframe=True
         )
-        
-        if "error" in result:
-            print(
-                f"ERROR: Failed to get NBA games: {result['error']}", 
-                file=sys.stderr
-            )
-            return f"Error: {result['error']}"
-        
-        if not result["games"]:
-            date_str = result["date"] if "date" in result else date or "today"
-            return f"No games found for {date_str}."
-        
-        # Format the output as a string
-        output_lines = []
-        
-        if "date_range" in result:
-            output_lines.append(f"NBA Games ({result['date_range']}):")
-        else:
-            output_lines.append(f"NBA Games for {result['date']}:")
-        
-        for game in result["games"]:
-            # Get team IDs from names if needed
-            home_team = game["home_team"]
-            away_team = game["away_team"]
-            
-            status = game["status"]
-            
-            if status == "Final":
-                home_score = game["home_score"]
-                away_score = game["away_score"]
-                
-                # Format winner and add markers
-                if home_score > away_score:
-                    home_team = f"{home_team} ✓"
-                elif away_score > home_score:
-                    away_team = f"{away_team} ✓"
-                
-                game_str = (
-                    f"{away_team} {away_score} @ "
-                    f"{home_team} {home_score} (Final)"
-                )
-            elif (
-                status.startswith("Q") 
-                or "Half" in status 
-                or "Start" in status
-            ):
-                home_score = game["home_score"]
-                away_score = game["away_score"]
-                game_str = (
-                    f"{away_team} {away_score} @ "
-                    f"{home_team} {home_score} ({status})"
-                )
-            else:
-                # For scheduled games
-                game_time = game.get("game_time", "")
-                game_str = (
-                    f"{away_team} @ {home_team} "
-                    f"({game_time})"
-                )
-                
-            output_lines.append(game_str)
-        
-        return "\n".join(output_lines)
+
+        if isinstance(result, str):
+            return result
+
+        df: pd.DataFrame = result
+        if df.empty:
+            return f"No leaders found for '{stat_category}' in season {season_str}."
+
+        # Build a Top 5 summary
+        summary = [f"Top 5 {stat_category.upper()} Leaders ({season_str}):"]
+        for i, (_, row) in enumerate(df.head(5).iterrows(), start=1):
+            name = row.get("PLAYER_NAME", "Unknown")
+            team = row.get("TEAM_NAME", row.get("TEAM_ABBREVIATION", ""))
+            # find the first column containing our category
+            val_cols = [c for c in row.index if stat_category.upper() in c]
+            value = row[val_cols[0]] if val_cols else row.get("STAT_VALUE", "N/A")
+            summary.append(f"{i}. {name} ({team}): {value}")
+
+        return "\n".join(summary)
+
     except Exception as e:
-        error_msg = f"Error retrieving NBA games: {str(e)}"
+        msg = f"Unexpected error in get_league_leaders_info: {e}"
+        print(f"ERROR: {msg}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+        return msg
+
+
+@mcp.tool()
+async def get_live_scores(target_date: Optional[str] = None) -> str:
+    """
+    Get live (or by-date) NBA game scores using the ScoreboardV2 helper.
+    """
+    print(f"DEBUG: Attempting to get live game scores for date: {target_date}", file=sys.stderr)
+    client = NBAApiClient()
+
+    # Default to today if nothing provided
+    today = datetime.now().strftime("%Y-%m-%d")
+    if not target_date:
+        target_date = today
+
+    # Preload docs (optional)
+    await client.get_api_documentation()
+
+    try:
+        result = await client.get_live_scoreboard(
+            target_date=target_date,
+            as_dataframe=True
+        )
+
+        # If the client returned an error string (no games or handler message), just pass it through
+        if isinstance(result, str):
+            return result
+
+        df: pd.DataFrame = result
+        if df.empty:
+            return f"No games found for {target_date}."
+
+        # Otherwise format each row
+        formatted = []
+        for _, row in df.iterrows():
+            # you have home_team, away_team, home_pts, away_pts, status
+            home = row.get("home_team", "Unknown")
+            away = row.get("away_team", "Unknown")
+            pts_h = row.get("home_pts", 0)
+            pts_a = row.get("away_pts", 0)
+            status = row.get("status", "")
+            # e.g. "Lakers vs Suns – 102-99 (Final)"
+            formatted.append(f"{home} vs {away} – {pts_h}-{pts_a} ({status})")
+
+        header = f"NBA Games for {target_date}:\n"
+        return header + "\n".join(formatted)
+
+    except Exception as e:
+        error_msg = f"Unexpected error in get_live_scores: {e}"
         print(f"ERROR: {error_msg}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         return error_msg
 
 @mcp.tool()
-async def get_player_multi_season_stats(player: str, seasons: Optional[List[int]] = None) -> str:
+async def get_team_game_log(
+    season: str,
+    team: str,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None
+) -> str:
     """
-    Get player stats for multiple seasons with a tabular format.
-
+    Get an NBA team's game log for a season, optionally between two dates.
+    
     Args:
-        player: The name of the player (e.g. "LeBron James")
-        seasons: Optional list of season years (e.g. [2023, 2022, 2021])
+        season:     Season string 'YYYY-YY'.
+        team:       Full or partial team name.
+        date_from:  Start date 'YYYY-MM-DD'.
+        date_to:    End date 'YYYY-MM-DD'.
     """
-    print(f"DEBUG: Attempting to get multi-season stats for: {player}", file=sys.stderr)
+    print(f"DEBUG: get_team_game_log(season={season}, team={team}, "
+          f"from={date_from}, to={date_to})", file=sys.stderr)
     client = NBAApiClient()
-    
-    # Load API documentation at the beginning
     await client.get_api_documentation()
-    
     try:
-        result = await client.get_player_stats_bulk(player, seasons)
+        result = await client.get_league_game_log(
+            season=season,
+            team_name=team,
+            date_from=date_from,
+            date_to=date_to,
+            as_dataframe=True
+        )
+        # Pass through messages or errors
+        if isinstance(result, str):
+            return result
 
-        if "error" in result:
-            print(f"ERROR: Failed to get player stats: {result['error']}", file=sys.stderr)
-            return f"Error: {result['error']}"
+        df: pd.DataFrame = result
+        if df.empty:
+            return f"No games found for {team} in {season} between {date_from or 'start'} and {date_to or 'end'}."
 
-        player_name = result["player"]
-        
-        if not result.get("season_stats"):
-            print(f"DEBUG: No stats found for player: {player_name}", file=sys.stderr)
-            return f"No stats found for {player_name}."
-        
-        # Define the stats we want to show in the table
-        stats_to_show = {
-            "pts": "PPG",
-            "reb": "RPG", 
-            "ast": "APG",
-            "stl": "SPG",
-            "blk": "BPG",
-            "fg_pct": "FG%",
-            "fg3_pct": "3P%",
-            "ft_pct": "FT%"
-        }
-        
-        # Create a header for the table
-        seasons_found = result.get("seasons_found", [])
-        
-        print(f"DEBUG: Successfully retrieved stats for {player_name}, {len(seasons_found)} seasons", file=sys.stderr)
-        
-        # Start building the response
-        response = f"Stats for {player_name} (Last {len(seasons_found)} Seasons):\n\n"
-        
-        # Build the table
-        # Header row with season years
-        header_row = "Stat      "  # Padding for stat name column
-        for season in seasons_found:
-            season_str = f"{season}-{str(season+1)[-2:]}"
-            header_row += f" | {season_str:>7}"
-        response += header_row + "\n"
-        
-        # Add a separator row
-        separator = "-" * len(header_row)
-        response += separator + "\n"
-        
-        # Add each stat row
-        for stat_key, stat_name in stats_to_show.items():
-            stat_row = f"{stat_name:<10}"
-            
-            for season_data in result["season_stats"]:
-                # Get the stat value, format as string with appropriate precision
-                stat_value = season_data["stats"].get(stat_key.upper())
-                if stat_key.endswith('_pct'):  # It's a percentage
-                    if stat_value is not None:
-                        # Format as percentage with 1 decimal
-                        formatted_value = f"{float(stat_value) * 100:.1f}%"
-                    else:
-                        formatted_value = "N/A"
-                else:  # It's a regular number
-                    if stat_value is not None:
-                        # Format as number with 1 decimal
-                        formatted_value = f"{float(stat_value):.1f}"
-                    else:
-                        formatted_value = "N/A"
-                
-                stat_row += f" | {formatted_value:>7}"
-            
-            response += stat_row + "\n"
-        
-        return response
+        # Format a few columns into human‐readable lines
+        lines = []
+        for _, row in df.iterrows():
+            d = row.get("GAME_DATE", row.get("GAME_DATE_EST", "Unknown"))
+            matchup = row.get("MATCHUP", "")
+            pts = row.get("PTS", 0)
+            wl  = row.get("WL", "")
+            lines.append(f"{d}: {matchup} – {wl} ({pts} pts)")
+
+        header = f"Game log for {team} ({season}):\n"
+        return header + "\n".join(lines)
+
     except Exception as e:
-        error_msg = f"Unexpected error in get_player_multi_season_stats: {str(e)}"
+        error_msg = f"Unexpected error in get_team_game_log: {e}"
         print(f"ERROR: {error_msg}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
-        return f"Error: {error_msg}"
+        return error_msg
+
+
+
 
 #########################################
 # Running the Server
