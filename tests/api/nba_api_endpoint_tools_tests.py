@@ -16,6 +16,12 @@ and for the player career stats it also shows how to fetch a JSON snippet.
 Ensure you have Python 3.7+ installed.
 """
 
+import sys
+import os
+from pathlib import Path
+import inspect
+import json
+from datetime import datetime
 from typing import Optional, Dict
 import pandas as pd
 from nba_api.live.nba.endpoints import scoreboard
@@ -28,7 +34,7 @@ from nba_api.stats.endpoints import (
 from datetime import date, timedelta
 from nba_api.stats.endpoints import scoreboardv2
 from nba_api.stats.static import teams, players
-
+from nba_api.stats.endpoints import LeagueLeaders
 
 # ---------------------------------------------------
 # Load static lookups once and create reverse lookups
@@ -44,11 +50,11 @@ _PLAYER_LOOKUP: Dict[int, str] = {
 _TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
 _PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
 
-print("Static lookups loaded.")
-print("team list================", _TEAM_LOOKUP)
-print("player list================", _PLAYER_LOOKUP)
-print("team list keys ================", _TEAM_LOOKUP.keys())
-print("player list keys ================", _PLAYER_LOOKUP.keys())
+# print("Static lookups loaded.")
+# print("team list================", _TEAM_LOOKUP)
+# print("player list================", _PLAYER_LOOKUP)
+# print("team list keys ================", _TEAM_LOOKUP.keys())
+# print("player list keys ================", _PLAYER_LOOKUP.keys())
 
 
 def get_player_id(player_name: str) -> Optional[int]:
@@ -120,6 +126,52 @@ def get_static_lookup_schema() -> Dict:
     }
 
 
+def normalize_stat_category(stat_category: str) -> str:
+    """
+    Normalize various string formats of a stat category to the NBA API's expected abbreviation.
+    
+    For example:
+      - "pts" or "points" -> "PTS"
+      - "reb", "rebound", or "rebounds" -> "REB"
+    
+    Adjust or extend the mapping as needed.
+    """
+    # Mapping: API abbreviation -> list of possible variants (all in lower-case without spaces)
+    mapping = {
+        "PTS": ["pts", "points"],
+        "REB": ["reb", "rebound", "rebounds", "rebs"],
+        "AST": ["ast", "assist", "assists", "asist"],
+        "STL": ["stl", "steal", "steals", "stls"],
+        "BLK": ["blk", "block", "blocks", "blks"],
+        "FGM": ["fgm", "fieldgoalsmade", "fgms"],
+        "FGA": ["fga", "fieldgoalattempts", "fgas"],
+        "FG_PCT": ["fg_pct", "fieldgoalpercentage", "fgpercentage", "fgpct"],
+        "FG3M": ["fg3m", "threepointsmade", "3pm", "3pms"],
+        "FG3A": ["fg3a", "threepointsattempted", "3pa", "3pas"],
+        "FG3_PCT": ["fg3_pct", "threepointpercentage", "3ppct", "3ppcts"],
+        "FTM": ["ftm", "freethrowsmade", "ftms"],
+        "FTA": ["fta", "freethrowsattempted", "ftas"],
+        "FT_PCT": ["ft_pct", "freethrowpercentage", "ftpct", "ftpcts"],
+        "OREB": ["oreb", "offensiverebounds", "orebs"],
+        "DREB": ["dreb", "defensiverebounds", "drebs"],
+        "EFF": ["eff", "efficiency", "effs"],
+        "AST_TOV": ["ast_tov", "assistturnover", "asttov"],
+        "STL_TOV": ["stl_tov", "stealturnover", "stlttov"],
+    }
+    
+    # Build a reverse lookup: each synonym maps to the proper abbreviation.
+    synonym_lookup = {}
+    for abbr, synonyms in mapping.items():
+        for syn in synonyms:
+            synonym_lookup[syn] = abbr
+
+    # Normalize the input: trim, lowercase, and remove extra spaces
+    normalized_key = stat_category.strip().lower().replace(" ", "")
+    
+    if normalized_key in synonym_lookup:
+        return synonym_lookup[normalized_key]
+    else:
+        raise ValueError(f"Unsupported stat category: {stat_category}")
 
 
 
@@ -247,13 +299,29 @@ def get_player_career_stats(player_name: str) -> playercareerstats.PlayerCareerS
     return playercareerstats.PlayerCareerStats(player_id=player_id)
 
 
-def get_league_leaders(season: str) -> LeagueLeaders:
-    """Retrieve league leaders for a specified season.
-    
-    Season is passed as a string, e.g. '2024-25'
+
+
+
+def get_league_leaders(season: str, stat_category: str) -> LeagueLeaders:
     """
-    leaders = LeagueLeaders(season=season)
-    return leaders
+    Retrieve league leaders for a specified season and statistical category.
+    """
+    # Normalize the stat_category input to the expected abbreviation.
+    normalized_stat = normalize_stat_category(stat_category)
+    
+    params = {
+        "league_id": "00",
+        "per_mode48": "Totals",
+        "scope": "S",
+        "season": season,
+        "season_type_all_star": "Regular Season",
+        "stat_category_abbreviation": normalized_stat,
+        "active_flag_nullable": ""
+    }
+    
+    return LeagueLeaders(**params)
+
+
 
 
 def get_league_game_log(
@@ -321,57 +389,59 @@ def get_league_game_log(
 
 def main() -> None:
         
-    # ------------------------------
-    # Example 1: NBA Live Data – Scoreboard
-    # ------------------------------
-    try:
-        live_score = get_live_scoreboard()
-        # Retrieve the live scoreboard data as JSON or dict
-        live_data = live_score.get_dict() 
+    # # ------------------------------
+    # # Example 1: NBA Live Data – Scoreboard
+    # # ------------------------------
+    # try:
+    #     live_score = get_live_scoreboard()
+    #     # Retrieve the live scoreboard data as JSON or dict
+    #     live_data = live_score.get_dict() 
         
-        print("\nLive Scoreboard JSON data snippet:")
-        # Convert to string before slicing for preview
-        import json
-        json_preview = json.dumps(live_data, indent=2)[:500]
-        print(json_preview)
+    #     print("\nLive Scoreboard JSON data snippet:")
+    #     # Convert to string before slicing for preview
+    #     import json
+    #     json_preview = json.dumps(live_data, indent=2)[:500]
+    #     print(json_preview)
 
-        if "scoreboard" in live_data and "games" in live_data["scoreboard"]:
-            live_games_df = pd.DataFrame(live_data["scoreboard"]["games"])
-            print("\nLive Scoreboard DataFrame (first 5 rows):")
-            print(live_games_df.head())
-        else:
-            print("Key 'games' not found in the live scoreboard JSON data.")
+    #     if "scoreboard" in live_data and "games" in live_data["scoreboard"]:
+    #         live_games_df = pd.DataFrame(live_data["scoreboard"]["games"])
+    #         print("\nLive Scoreboard DataFrame (first 5 rows):")
+    #         print(live_games_df.head())
+    #     else:
+    #         print("Key 'games' not found in the live scoreboard JSON data.")
 
 
-    except Exception as e:
-        print("Error retrieving live scoreboard data:", str(e))
+    # except Exception as e:
+    #     print("Error retrieving live scoreboard data:", str(e))
 
     
-    # ------------------------------
-    # Example 2: NBA Official Stats – Player Career Stats
-    # ------------------------------
-    # Update examples to use names instead of IDs
-    print("\nFetching player career stats for Nikola Jokić:")
-    try:
-        career = get_player_career_stats('Nikola Jokić')
-        career_df = career.get_data_frames()[0]
-        print("Player Career Stats DataFrame (first 5 rows):")
-        print(career_df.head())
+    # # ------------------------------
+    # # Example 2: NBA Official Stats – Player Career Stats
+    # # ------------------------------
+    # # Update examples to use names instead of IDs
+    # print("\nFetching player career stats for Nikola Jokić:")
+    # try:
+    #     career = get_player_career_stats('Nikola Jokić')
+    #     career_df = career.get_data_frames()[0]
+    #     print("Player Career Stats DataFrame (first 5 rows):")
+    #     print(career_df.head())
 
-        # Also demonstrate how to get the JSON output (print a snippet)
-        career_json = career.get_json()
-        print("\nPlayer Career Stats JSON snippet (first 500 characters):")
-        print(career_json[:500])
-    except Exception as e:
-        print("Error retrieving player career stats:", e)
+    #     # Also demonstrate how to get the JSON output (print a snippet)
+    #     career_json = career.get_json()
+    #     print("\nPlayer Career Stats JSON snippet (first 500 characters):")
+    #     print(career_json[:500])
+    # except Exception as e:
+    #     print("Error retrieving player career stats:", e)
     
     # ------------------------------
     # Example 3: NBA Official Stats – League Leaders
     # ------------------------------
-    season = "2024-25"
-    print(f"\nFetching league leaders for season {season}:")
+    season = "2023-24"
+    stat_category = "assists"
+
+    print(f"\nFetching league leaders for season {season}, stat {stat_category}:")
     try:
-        leaders = get_league_leaders(season)
+        leaders = get_league_leaders(season, stat_category)   # capture return
         leaders_df = leaders.get_data_frames()[0]
         print("League Leaders DataFrame (first 5 rows):")
         print(leaders_df.head())
@@ -379,54 +449,54 @@ def main() -> None:
         print("Error retrieving league leaders:", e)
     
 
-    # ------------------------------
-    # Example 4: NBA Official Stats – League Game Log
-    # ------------------------------
-    # Example with team name
-    print("\nFetching game log for Boston Celtics:")
-    try:
-        game_log = get_league_game_log("2024-25", "Boston Celtics")
-        game_log_df = game_log.get_data_frames()[0]
-        print("Game Log DataFrame (first 5 rows):")
-        print(game_log_df.head())
+    # # ------------------------------
+    # # Example 4: NBA Official Stats – League Game Log
+    # # ------------------------------
+    # # Example with team name
+    # print("\nFetching game log for Boston Celtics:")
+    # try:
+    #     game_log = get_league_game_log("2024-25", "Boston Celtics")
+    #     game_log_df = game_log.get_data_frames()[0]
+    #     print("Game Log DataFrame (first 5 rows):")
+    #     print(game_log_df.head())
         
         
-        # 1) Full season, no filters
-        full_log = get_league_game_log("2024-25")
-        print(full_log.get_data_frames()[0].shape)  # e.g. (2460, ...)
+    #     # 1) Full season, no filters
+    #     full_log = get_league_game_log("2024-25")
+    #     print(full_log.get_data_frames()[0].shape)  # e.g. (2460, ...)
 
-        # 2) Date‐range only
-        april_log = get_league_game_log("2024-25", date_from="04/01/2025", date_to="04/15/2025")
-        print(april_log.get_data_frames()[0]['GAME_DATE'].unique())
+    #     # 2) Date‐range only
+    #     april_log = get_league_game_log("2024-25", date_from="04/01/2025", date_to="04/15/2025")
+    #     print(april_log.get_data_frames()[0]['GAME_DATE'].unique())
 
-        # 3) Team + date range
-        celtics_april = get_league_game_log(
-            "2024-25",
-            team_name="Boston Celtics",
-            date_from="04/01/2025",
-            date_to="04/15/2025"
-        )
-        df3 = celtics_april.get_data_frames()[0]
-        print(df3.shape)           # e.g. (5, ...)
-        print(df3['MATCHUP'].tolist())
+    #     # 3) Team + date range
+    #     celtics_april = get_league_game_log(
+    #         "2024-25",
+    #         team_name="Boston Celtics",
+    #         date_from="04/01/2025",
+    #         date_to="04/15/2025"
+    #     )
+    #     df3 = celtics_april.get_data_frames()[0]
+    #     print(df3.shape)           # e.g. (5, ...)
+    #     print(df3['MATCHUP'].tolist())
 
-        # 4) Nonexistent team → empty
-        empty_log = get_league_game_log("2024-25", team_name="NotATeam")
-        print(empty_log.get_data_frames()[0].empty)  # True
+    #     # 4) Nonexistent team → empty
+    #     empty_log = get_league_game_log("2024-25", team_name="NotATeam")
+    #     print(empty_log.get_data_frames()[0].empty)  # True
 
-    except Exception as e:
-        print("Error retrieving game log:", e)
+    # except Exception as e:
+    #     print("Error retrieving game log:", e)
 
 
 if __name__ == '__main__':
     main()
     
-    # Try today:
-    df_today = get_games_by_date()
-    print("Today's (or most recent) games:")
-    print(df_today)
+    # # Try today:
+    # df_today = get_games_by_date()
+    # print("Today's (or most recent) games:")
+    # print(df_today)
 
-    # Or for a specific date:
-    df_april10 = get_games_by_date(date(2025, 4, 10))
-    print("\nGames on 2025-04-10:")
-    print(df_april10)
+    # # Or for a specific date:
+    # df_april10 = get_games_by_date(date(2025, 4, 10))
+    # print("\nGames on 2025-04-10:")
+    # print(df_april10)

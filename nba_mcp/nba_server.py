@@ -17,6 +17,7 @@ mcp = FastMCP("nba_mcp")
 # Formatting functions
 #########################################
 
+
 def format_game(game: dict) -> str:
     """
     Format a game record into a readable string.
@@ -51,6 +52,10 @@ async def get_game_scores(date: str) -> str:
     """
     print(f"DEBUG: Attempting to get game scores for date: {date}", file=sys.stderr)
     client = NBAApiClient()
+    
+    # Load API documentation at the beginning
+    await client.get_api_documentation()
+    
     try:
         data = await client.get_games_by_date(date)
         
@@ -101,7 +106,7 @@ async def get_game_scores(date: str) -> str:
         traceback.print_exc(file=sys.stderr)
         return f"Error: {error_msg}"
 
-@mcp.tool()
+@mcp.tool() 
 async def get_player_stats(player: str) -> str:
     """
     Get season averages for an NBA player by their name.
@@ -111,6 +116,10 @@ async def get_player_stats(player: str) -> str:
     """
     print(f"DEBUG: Attempting to get player stats for: {player}", file=sys.stderr)
     client = NBAApiClient()
+    
+    # Load API documentation at the beginning
+    await client.get_api_documentation()
+    
     try:
         # First check if we can find the player
         player_id = get_player_id(player)
@@ -173,6 +182,10 @@ async def get_league_leaders(season: str = "2024-25", stat_category: str = "PTS"
     """
     print(f"DEBUG: Attempting to get league leaders for stat: {stat_category}", file=sys.stderr)
     client = NBAApiClient()
+    
+    # Load API documentation at the beginning
+    await client.get_api_documentation()
+    
     try:
         result = await client.get_league_leaders(season=season, stat_category=stat_category)
 
@@ -242,6 +255,10 @@ async def get_live_scores() -> str:
     print(f"DEBUG: Attempting to get live game scores", file=sys.stderr)
     try:
         client = NBAApiClient()
+        
+        # Load API documentation at the beginning
+        await client.get_api_documentation()
+        
         games_df = await client.get_live_scoreboard(as_dataframe=True)
         
         if games_df.empty:
@@ -286,12 +303,16 @@ async def get_player_career_information(player_name: str) -> str:
     """
     print(f"DEBUG: Attempting to get career stats for: {player_name}", file=sys.stderr)
     try:
+        client = NBAApiClient()
+        
+        # Load API documentation at the beginning
+        await client.get_api_documentation()
+        
         # First check if we can find the player
         player_id = get_player_id(player_name)
         if not player_id:
             return f"Error: No player found matching '{player_name}'"
             
-        client = NBAApiClient()
         # Get the career stats using the client function
         player_stats_df = await client.get_player_career_stats(player_name, as_dataframe=True)
         
@@ -340,12 +361,16 @@ async def get_team_game_log(team_name: str, season: str = "2023-24") -> str:
     """
     print(f"DEBUG: Attempting to get game log for team: {team_name} in season {season}", file=sys.stderr)
     try:
+        client = NBAApiClient()
+        
+        # Load API documentation at the beginning
+        await client.get_api_documentation()
+        
         # First check if we can find the team
         team_id = get_team_id(team_name)
         if not team_id:
             return f"Error: No team found matching '{team_name}'"
             
-        client = NBAApiClient()
         # Get the game log using the client function
         game_log_df = await client.get_league_game_log(season=season, team_name_or_id=str(team_id), as_dataframe=True)
         
@@ -399,6 +424,9 @@ async def get_nba_games(date: Optional[str] = None,
     )
     try:
         client = NBAApiClient()
+        
+        # Load API documentation at the beginning
+        await client.get_api_documentation()
         
         result = await client.get_games_by_date(
             date=date, 
@@ -483,6 +511,10 @@ async def get_player_multi_season_stats(player: str, seasons: Optional[List[int]
     """
     print(f"DEBUG: Attempting to get multi-season stats for: {player}", file=sys.stderr)
     client = NBAApiClient()
+    
+    # Load API documentation at the beginning
+    await client.get_api_documentation()
+    
     try:
         result = await client.get_player_stats_bulk(player, seasons)
 

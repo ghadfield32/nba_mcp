@@ -8,6 +8,8 @@ import re
 import asyncio
 import pandas as pd
 import logging
+import json
+from pathlib import Path
 
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
@@ -76,6 +78,55 @@ def get_team_id(team_name: str) -> Optional[int]:
     
     return None
 
+
+def normalize_stat_category(stat_category: str) -> str:
+    """
+    Normalize various string formats of a stat category to the NBA API's expected abbreviation.
+    
+    For example:
+      - "pts", "points" -> "PTS"
+      - "reb", "rebound", or "rebounds" -> "REB"
+    
+    Extend the mapping as needed.
+    """
+    # Mapping from API abbreviation to a list of acceptable synonyms (all in lower case, spaces removed)
+    mapping = {
+        "PTS": ["pts", "points"],
+        "REB": ["reb", "rebound", "rebounds"],
+        "AST": ["ast", "assist", "assists"],
+        "STL": ["stl", "steal", "steals"],
+        "BLK": ["blk", "block", "blocks"],
+        "FGM": ["fgm", "fieldgoalsmade"],
+        "FGA": ["fga", "fieldgoalattempts"],
+        "FG_PCT": ["fg_pct", "fieldgoalpercentage", "fgpercentage"],
+        "FG3M": ["fg3m", "threepointsmade", "3pm"],
+        "FG3A": ["fg3a", "threepointsattempted", "3pa"],
+        "FG3_PCT": ["fg3_pct", "threepointpercentage", "3ppct"],
+        "FTM": ["ftm", "freethrowsmade"],
+        "FTA": ["fta", "freethrowsattempted"],
+        "FT_PCT": ["ft_pct", "freethrowpercentage"],
+        "OREB": ["oreb", "offensiverebounds"],
+        "DREB": ["dreb", "defensiverebounds"],
+        "EFF": ["eff", "efficiency"],
+        "AST_TOV": ["ast_tov", "assistturnover"],
+        "STL_TOV": ["stl_tov", "stealturnover"]
+    }
+    
+    # Build a reverse lookup dictionary from each synonym to its API abbreviation.
+    synonym_lookup = {}
+    for abbr, synonyms in mapping.items():
+        for syn in synonyms:
+            synonym_lookup[syn] = abbr
+
+    # Normalize the input by trimming whitespace, lowering case, and removing spaces.
+    normalized_key = stat_category.strip().lower().replace(" ", "")
+    if normalized_key in synonym_lookup:
+        return synonym_lookup[normalized_key]
+    else:
+        raise ValueError(f"Unsupported stat category: {stat_category}")
+
+
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -95,6 +146,38 @@ class NBAApiClient:
             "status_code": getattr(e, "status_code", None)
         }
 
+    async def get_api_documentation(self) -> Dict[str, Any]:
+        """
+        Retrieve the NBA API documentation using the local api_documentation module.
+        This method calls the analyze_api_structure function to generate a guide of endpoints,
+        required parameters, available datasets, and static data.
+        
+        Returns:
+            A dictionary containing the API documentation.
+        """ 
+        try:
+            # Define the documentation file path
+            docs_path = Path('nba_mcp/api_documentation/endpoints.json')
+            
+            if docs_path.exists():
+                logger.info("Loading API documentation from saved file.")
+                with open(docs_path, 'r') as f:
+                    docs = json.load(f)
+                return docs
+            else:
+                logger.info("Saved API documentation not found, generating documentation.")
+                # Import functions from our local api_documentation.py module.
+                from tools.api_documentation import analyze_api_structure
+                docs = analyze_api_structure()
+                # Save the generated documentation for future use
+                docs_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(docs_path, 'w') as f:
+                    json.dump(docs, f, indent=2)
+                return docs
+        except Exception as e:
+            logger.error(f"Error in get_api_documentation: {str(e)}")
+            return {"error": f"Failed to load API documentation: {str(e)}"}
+        
     async def get_games_by_date(
         target_date: Optional[date] = None,
         max_days_back: int = 7
@@ -482,32 +565,47 @@ class NBAApiClient:
             logger.error(f"Error in get_player_career_stats: {str(e)}")
             return {"error": f"Error fetching career stats: {str(e)}"}
 
-    async def get_league_leaders(self, season: str, stat_category: str = "PTS", as_dataframe: bool = True) -> Union[Dict[str, Any], pd.DataFrame]:
+    async def get_league_leaders(
+        self, 
+        season: str, 
+        stat_category: str = "PTS", 
+        as_dataframe: bool = True
+    ) -> Union[Dict[str, Any], pd.DataFrame]:
         """
         Retrieve league leaders for a specified season and statistical category.
         
         Args:
             season: Season string in the format 'YYYY-YY' (e.g. '2024-25').
-            stat_category: Statistical category such as "PTS", "AST", etc.
+            stat_category: Statistical category such as "PTS", "AST", etc. Accepts various synonyms.
             as_dataframe: If True, returns a pandas DataFrame; otherwise, returns raw dict data.
             
         Returns:
             League leaders data in the desired format.
         """
         try:
-            leaders = LeagueLeaders(season=season, stat_category_simple=stat_category)
+            # Normalize the input stat_category
+            normalized_stat = normalize_stat_category(stat_category)
+            
+            # Create the parameters expected by the NBA API endpoint
+            leaders = LeagueLeaders(
+                league_id="00",
+                per_mode48="Totals",
+                scope="S",
+                season=season,
+                season_type_all_star="Regular Season",
+                stat_category_abbreviation=normalized_stat,
+                active_flag_nullable=""
+            )
+            
             if as_dataframe:
                 df = leaders.get_data_frames()[0]
-                logger.info(f"Retrieved league leaders for season {season}, category {stat_category}")
+                logger.info(f"Retrieved league leaders for season {season}, category {normalized_stat}")
                 return df
             else:
                 return leaders.get_dict()
         except Exception as e:
             logger.error(f"Error in get_league_leaders: {str(e)}")
             return {"error": f"Error fetching league leaders: {str(e)}"}
-            
-        except Exception as e:
-            return self._handle_response_error(e, "get_league_leaders")
 
     async def get_league_game_log(self, 
         season: str,
@@ -710,5 +808,6 @@ class NBAApiClient:
                 
         except Exception as e:
             return self._handle_response_error(e, "get_player_stats_bulk")
+        
 
 

@@ -1,4 +1,4 @@
-#api_documentation.py
+#tools.api_documentation.py
 import sys
 import os
 from pathlib import Path
@@ -242,16 +242,17 @@ if __name__ == "__main__":
     print(f"Total endpoints documented: {len(api_docs['endpoints'])}")
     print(f"Total teams in static data: {len(api_docs['static_data']['teams'])}")
     print(f"Total players in static data: {len(api_docs['static_data']['players'])}")
+    print(api_docs['endpoints'])
 
     # Save to files for quick later retrieval
     save_documentation(api_docs)
 
 
     # Display first endpoint details
-    if api_docs['endpoints']:
-        first_endpoint = next(iter(api_docs['endpoints']))
-        print(f"\nSample endpoint ({first_endpoint}):")
-        print(json.dumps(api_docs['endpoints'][first_endpoint], indent=2))
+    # if api_docs['endpoints']:
+    #     first_endpoint = next(iter(api_docs['endpoints']))
+    #     print(f"\nSample endpoint ({first_endpoint}):")
+    #     print(json.dumps(api_docs['endpoints'][first_endpoint], indent=2))
 
 
 
