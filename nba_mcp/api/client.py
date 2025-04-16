@@ -11,6 +11,7 @@ import logging
 import json
 from pathlib import Path
 
+
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.endpoints import (
@@ -23,16 +24,18 @@ from nba_api.stats.endpoints import (
     scoreboardv2
 )
 from nba_api.stats.static import players, teams
-from tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
-                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
-                           )
-
-from tools.scoreboardv2tools import fetch_scoreboard_v2_full
-from tools.playercareerstats_leagueleaders_tools import (
-    get_player_career_stats as _fetch_player_career_stats,
-    get_league_leaders       as _fetch_league_leaders
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id, get_team_id, get_team_name, get_player_name,
+    get_static_lookup_schema, normalize_stat_category, normalize_per_mode, 
+    normalize_season, normalize_date, format_game, normalize_season_type
 )
-from tools.leaguegamelog_tools import fetch_league_game_log
+
+from .tools.scoreboardv2tools import fetch_scoreboard_v2_full
+from .tools.playercareerstats_leagueleaders_tools import (
+    get_player_career_stats as _fetch_player_career_stats,
+    get_league_leaders as _fetch_league_leaders
+)
+from .tools.leaguegamelog_tools import fetch_league_game_log
 
 
 # ---------------------------------------------------
@@ -239,7 +242,7 @@ class NBAApiClient:
             else:
                 logger.info("Saved API documentation not found, generating documentation.")
                 # Import functions from our local api_documentation.py module.
-                from tools.api_documentation import analyze_api_structure
+                from .tools.api_documentation import analyze_api_structure
                 docs = analyze_api_structure()
                 # Save the generated documentation for future use
                 docs_path.parent.mkdir(parents=True, exist_ok=True)
@@ -515,159 +518,4 @@ class NBAApiClient:
 
         except Exception as e:
             return self._handle_response_error(e, "get_league_game_log")
-
-        
-    async def get_most_recent_game_date(self, lookback_days: int = 7) -> Dict[str, Any]:
-        """
-        Find the most recent date that had NBA games, looking back up to lookback_days.
-
-        Args:
-            lookback_days: Maximum number of days to look back (default: 7)
-
-        Returns:
-            Dictionary containing either:
-              - date:        "YYYY-MM-DD"
-              - formatted_date: "Month DD, YYYY"
-              - games:       [ ... list of game dicts ... ]
-            or, on failure:
-              - error:       error message
-        """
-        print(f"DEBUG: Looking for most recent games (up to {lookback_days} days back)", file=sys.stderr)
-
-        today = date.today()
-
-        for days_back in range(lookback_days):
-            check_date = today - timedelta(days=days_back)
-            date_str = check_date.strftime("%Y-%m-%d")
-
-            print(f"DEBUG: Checking for games on {date_str}", file=sys.stderr)
-            result = await self.get_games_by_date(date_str)
-
-            # If the API returned an error, skip this date
-            if "error" in result:
-                print(f"DEBUG: Error checking {date_str}: {result['error']}", file=sys.stderr)
-                continue
-
-            # If we found non-empty data, return it immediately
-            if result.get("data"):
-                print(f"DEBUG: Found games on {date_str}", file=sys.stderr)
-                return {
-                    "date": date_str,
-                    "formatted_date": check_date.strftime("%B %d, %Y"),
-                    "games": result["data"]
-                }
-
-        # No games found in the lookback window
-        return {
-            "error": f"No games found in the last {lookback_days} days"
-        }
-
-    async def get_player_stats_bulk(self, player_name: str, seasons: Optional[List[int]] = None) -> Dict[str, Any]:
-        """
-        Get player stats for multiple seasons efficiently.
-        
-        Args:
-            player_name: Name of the player
-            seasons: List of season years (e.g., [2023, 2022, 2021] for recent seasons)
-                    If None, returns the last 5 seasons
-                    
-        Returns:
-            Dictionary with player stats for multiple seasons
-        """
-        try:
-            # Find the player once for all seasons
-            print(f"DEBUG: Starting bulk player stats lookup for '{player_name}'", file=sys.stderr)
-            player = self.find_player_by_name(player_name)
-            
-            if not player:
-                error_msg = f"No player found matching '{player_name}'"
-                print(f"ERROR: {error_msg}", file=sys.stderr)
-                return {"error": error_msg}
-            
-            # If no seasons provided, use the last 5 seasons
-            current_season_year = int(self.get_season_string().split('-')[0])
-            
-            if not seasons:
-                # Default to the last 5 seasons
-                seasons = list(range(current_season_year, current_season_year - 5, -1))
-                print(f"DEBUG: No seasons specified, using last 5 seasons: {seasons}", file=sys.stderr)
-            
-            # Get player career stats - this gives us all seasons in one request
-            player_id = player["id"]
-            print(f"DEBUG: Fetching career stats for player ID {player_id} ({player['first_name']} {player['last_name']})", file=sys.stderr)
-            
-            try:
-                # Use PlayerCareerStats to get stats for all seasons at once
-                career = playercareerstats.PlayerCareerStats(player_id=player_id, per_mode36="PerGame")
-                
-                # Extract the stats from the response
-                career_data = career.get_dict()
-                
-                if "resultSets" not in career_data or len(career_data["resultSets"]) == 0:
-                    return {
-                        "error": "No career data available for this player",
-                        "player": f"{player['first_name']} {player['last_name']}",
-                        "seasons": seasons
-                    }
-                
-                # Find regular season totals in the result sets
-                season_stats_list = []
-                
-                # Look for the season totals in the result sets
-                for result_set in career_data["resultSets"]:
-                    if result_set.get("name") == "SeasonTotalsRegularSeason":
-                        headers = result_set["headers"]
-                        rows = result_set["rowSet"]
-                        
-                        # Find index of SEASON_ID column
-                        season_id_index = headers.index("SEASON_ID") if "SEASON_ID" in headers else -1
-                        
-                        if season_id_index == -1:
-                            print(f"WARNING: Could not find SEASON_ID column in headers", file=sys.stderr)
-                            continue
-                        
-                        # Process all rows in the result set
-                        for row in rows:
-                            # Convert season_id to year (e.g., "2023-24" -> 2023)
-                            season_id = row[season_id_index]
-                            try:
-                                season_year = int(season_id.split('-')[0])
-                                
-                                # Skip seasons we don't want
-                                if seasons and season_year not in seasons:
-                                    continue
-                                    
-                                # Create a dictionary with stats for this season
-                                season_stats = {
-                                    "season_id": season_id,
-                                    "season_year": season_year,
-                                    "stats": {header.lower(): value for header, value in zip(headers, row)}
-                                }
-                                season_stats_list.append(season_stats)
-                            except (ValueError, IndexError, AttributeError) as e:
-                                print(f"WARNING: Error processing season {season_id}: {str(e)}", file=sys.stderr)
-                                continue
-                
-                # Sort seasons by year (newest first)
-                season_stats_list.sort(key=lambda x: x["season_year"], reverse=True)
-                
-                # Return the stats
-                return {
-                    "player": f"{player['first_name']} {player['last_name']}",
-                    "seasons_requested": seasons,
-                    "seasons_found": [s["season_year"] for s in season_stats_list],
-                    "season_stats": season_stats_list
-                }
-                
-            except Exception as e:
-                return {
-                    "error": f"Error fetching stats for {player['first_name']} {player['last_name']}: {str(e)}",
-                    "player": f"{player['first_name']} {player['last_name']}",
-                    "seasons": seasons
-                }
-                
-        except Exception as e:
-            return self._handle_response_error(e, "get_player_stats_bulk")
-        
-
 

@@ -24,7 +24,7 @@ _PLAYER_LOOKUP: Dict[int, str] = {
 
 # Create reverse lookups (name -> id)
 _TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
-_PLAYER_NAME_TO_ID = {name: id for name, id in _PLAYER_LOOKUP.items()}
+_PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
 
 def get_player_id(player_name: str) -> Optional[int]:
     """Convert player name to ID, with case-insensitive partial matching."""

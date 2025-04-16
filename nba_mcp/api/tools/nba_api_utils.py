@@ -4,8 +4,8 @@ import os
 from pathlib import Path
 import inspect
 import json
-from datetime import datetime
-from typing import Optional, Dict, Union
+from datetime import datetime, date
+from typing import Optional, Dict, Union, Any
 import pandas as pd
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.endpoints import (
@@ -14,34 +14,64 @@ from nba_api.stats.endpoints import (
     LeagueGameLog,
     scoreboardv2
 )
-from datetime import date, timedelta
+from datetime import timedelta
 from nba_api.stats.static import teams, players
 from dateutil.parser import parse  # Make sure to install python-dateutil if not already installed
+import logging
 
-
-
-
-
+# Create explicit exports for these utility functions
+__all__ = [
+    'get_player_id', 
+    'get_team_id', 
+    'get_team_name', 
+    'get_player_name',
+    'get_static_lookup_schema', 
+    'normalize_stat_category', 
+    'normalize_per_mode', 
+    'normalize_season', 
+    'normalize_date',
+    'normalize_season_type',
+    'format_game'
+]
 
 # ---------------------------------------------------
 # Load static lookups once and create reverse lookups
 # ---------------------------------------------------
-_TEAM_LOOKUP: Dict[int, str] = {
-    t["id"]: t["full_name"] for t in teams.get_teams()
-}
-_PLAYER_LOOKUP: Dict[int, str] = {
-    p["id"]: f"{p['first_name']} {p['last_name']}" for p in players.get_players()
-}
+# Handle encoding issues by replacing problematic characters in player names
+_PLAYER_LOOKUP = {}
+_TEAM_LOOKUP = {}
 
-# Create reverse lookups (name -> id)
-_TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
-_PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
+# Pre-load all team and player data for fast lookups
+for p in players.get_players():
+    try:
+        # Use ASCII-compatible representation for player names with special characters
+        player_name = f"{p['first_name']} {p['last_name']}"
+        _PLAYER_LOOKUP[p["id"]] = player_name.encode('ascii', 'replace').decode('ascii')
+    except Exception:
+        # Fallback to a safe representation if there are encoding issues
+        _PLAYER_LOOKUP[p["id"]] = f"Player {p['id']}"
 
-# print("Static lookups loaded.")
-# print("team list================", _TEAM_LOOKUP)
-# print("player list================", _PLAYER_LOOKUP)
-# print("team list keys ================", _TEAM_LOOKUP.keys())
-# print("player list keys ================", _PLAYER_LOOKUP.keys())
+for t in teams.get_teams():
+    _TEAM_LOOKUP[t["id"]] = t["full_name"]
+
+# Create reverse lookups for ID retrieval
+_PLAYER_REVLOOKUP = {}
+_TEAM_REVLOOKUP = {}
+
+for pid, name in _PLAYER_LOOKUP.items():
+    _PLAYER_REVLOOKUP[name.lower()] = pid
+
+for tid, name in _TEAM_LOOKUP.items():
+    _TEAM_REVLOOKUP[name.lower()] = tid
+
+# Clean up these debug prints that might cause JSON parsing issues
+# Instead log them properly if needed
+logger = logging.getLogger(__name__)
+logger.debug("Static lookups loaded")
+# If needed to examine contents, use proper JSON formatting:
+# import json
+# logger.debug(f"Team lookup: {json.dumps(list(_TEAM_LOOKUP.items())[:5])}")
+# logger.debug(f"Player lookup: {json.dumps(list(_PLAYER_LOOKUP.items())[:5])}")
 
 
 def format_game(game: dict) -> str:
@@ -71,13 +101,13 @@ def get_player_id(player_name: str) -> Optional[int]:
     
     player_name_lower = player_name.lower()
     # Try exact match first
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if name.lower() == player_name_lower:
+    for name, id in _PLAYER_REVLOOKUP.items():
+        if name == player_name_lower:
             return id
     
     # Try partial match
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if player_name_lower in name.lower():
+    for name, id in _PLAYER_REVLOOKUP.items():
+        if player_name_lower in name:
             return id
     
     return None
@@ -93,13 +123,13 @@ def get_team_id(team_name: str) -> Optional[int]:
     
     team_name_lower = team_name.lower()
     # Try exact match first
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if name.lower() == team_name_lower:
+    for name, id in _TEAM_REVLOOKUP.items():
+        if name == team_name_lower:
             return id
     
     # Try partial match
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if team_name_lower in name.lower():
+    for name, id in _TEAM_REVLOOKUP.items():
+        if team_name_lower in name:
             return id
     
     return None
@@ -140,6 +170,7 @@ def get_static_lookup_schema() -> Dict:
             "players": _PLAYER_LOOKUP
         }
     }
+
 
 
 

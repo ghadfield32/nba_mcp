@@ -6,9 +6,10 @@ from typing import Optional, Union
 import pandas as pd
 
 from nba_api.stats.endpoints import scoreboardv2, leaguegamelog
-from nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
-                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
-                           )
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id, get_team_id, get_team_name, get_player_name, get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
+)
+
 
 
 def fetch_scoreboard_v2_full(

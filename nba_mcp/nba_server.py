@@ -7,17 +7,11 @@ from datetime import datetime
 from typing import Optional, List, Dict
 import pandas as pd
 from nba_api.stats.static import teams, players
-from api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
+from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
                            , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
                            )
-# Initialize FastMCP server with the name "nba"
+
 mcp = FastMCP("nba_mcp")
-
-
-
-#########################################
-# Formatting functions
-#########################################
 
 
 
@@ -135,6 +129,7 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
     """
     print(f"DEBUG: Attempting to get live game scores for date: {target_date}", file=sys.stderr)
     client = NBAApiClient()
+
 
     # Default to today if nothing provided
     today = datetime.now().strftime("%Y-%m-%d")

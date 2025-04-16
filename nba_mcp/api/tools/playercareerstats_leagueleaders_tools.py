@@ -16,30 +16,14 @@ and for the player career stats it also shows how to fetch a JSON snippet.
 Ensure you have Python 3.7+ installed.
 """
 
-import sys
-import os
-from pathlib import Path
-import inspect
-import json
-from datetime import datetime
-from typing import Optional, Dict, Union
 import pandas as pd
-from nba_api.live.nba.endpoints import scoreboard
-from nba_api.stats.endpoints import (
-    playercareerstats,
-    LeagueLeaders,
-    LeagueGameLog,
-    scoreboardv2
+from nba_api.stats.endpoints import playercareerstats, LeagueLeaders
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id, normalize_stat_category, normalize_per_mode, normalize_season
 )
-from datetime import date, timedelta
-from nba_api.stats.static import teams, players
-from dateutil.parser import parse  # Make sure to install python-dateutil if not already installed
-from nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
-                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
-                           )
 
 
-def get_player_career_stats(player_name: str, season: str) -> playercareerstats.PlayerCareerStats:
+def get_player_career_stats(player_name: str, season: str) -> pd.DataFrame:
     """Retrieve career stats for a specific player by name."""
     season = normalize_season(season)
     player_id = get_player_id(player_name)
@@ -52,10 +36,7 @@ def get_player_career_stats(player_name: str, season: str) -> playercareerstats.
     return career_df
 
 
-
-
-
-def get_league_leaders(season: str, stat_category: str, per_mode: str = "Totals") -> LeagueLeaders:
+def get_league_leaders(season: str, stat_category: str, per_mode: str = "Totals") -> pd.DataFrame:
     """
     Retrieve league leaders for a specified season and statistical category.
     
@@ -90,10 +71,8 @@ def get_league_leaders(season: str, stat_category: str, per_mode: str = "Totals"
     return leaders_df
 
 
-
-
 def main() -> None:
-
+    """Run example queries for player career stats and league leaders."""
     # ------------------------------
     # Example : NBA Official Stats – Player Career Stats
     # ------------------------------
@@ -118,14 +97,14 @@ def main() -> None:
     print(f"\nFetching league leaders for season {season}, stat {stat_category}:")
     try:
         leaders = get_league_leaders(season, stat_category, per_mode)
-
         
         # Display without duplicates
         print("League Leaders DataFrame (first 5 rows):")
         print(leaders.head())
     except Exception as e:
         print("Error retrieving league leaders:", e)
-    
+
+
 if __name__ == '__main__':
     main()
 

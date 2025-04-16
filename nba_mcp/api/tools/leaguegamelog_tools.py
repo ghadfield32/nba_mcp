@@ -2,22 +2,17 @@
 """
 Example Script for Pulling NBA Data Using nba_api
 
-This script demonstrates how to use two different kinds of endpoints:
-
+This script demonstrates how to use endpoints for retrieving game log data.
 """
 
-
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Optional, Union
 import pandas as pd
 
-from nba_api.stats.endpoints import scoreboardv2, leaguegamelog
-from nba_api.stats.static import teams
-
-
-from nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
-                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, normalize_season_type
-                           )
+from nba_api.stats.endpoints import leaguegamelog
+from nba_mcp.api.tools.nba_api_utils import (
+    get_team_id, normalize_season, normalize_date, normalize_season_type
+)
 
 
 
@@ -52,7 +47,7 @@ def fetch_league_game_log(
     season_type = normalize_season_type(season_type)
 
     df_from = normalize_date(date_from) if date_from else None
-    df_to   = normalize_date(date_to)     if date_to   else None
+    df_to = normalize_date(date_to) if date_to else None
 
     lg = leaguegamelog.LeagueGameLog(
         counter=0,
@@ -63,7 +58,7 @@ def fetch_league_game_log(
         season_type_all_star=season_type,
         sorter=sorter,
         date_from_nullable=(df_from.strftime("%Y-%m-%d") if df_from else ""),
-        date_to_nullable=(df_to.strftime("%Y-%m-%d")   if df_to   else "")
+        date_to_nullable=(df_to.strftime("%Y-%m-%d") if df_to else "")
     )
     df = lg.get_data_frames()[0]
 
@@ -108,7 +103,7 @@ if __name__ == "__main__":
         date_from="2025-04-01",
         date_to="2025-04-15"
     )
-    #sort by GAME_DATE
+    # sort by GAME_DATE
     april_df = april_df.sort_values(by='GAME_DATE', ascending=False)
     print(f"\n📆 Games from 2025-04-01 to 2025-04-15: {april_df.shape[0]} rows")
     print(april_df.head())
