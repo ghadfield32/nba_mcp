@@ -173,74 +173,62 @@ Season: {season}
         return f"Error: {error_msg}"
 
 @mcp.tool()
-async def get_league_leaders(season: str = "2024-25", stat_category: str = "PTS") -> str:
+async def get_league_leaders(stat_category: str = "PTS", season: Optional[str] = None) -> str:
     """
     Get NBA league leaders for a specified stat category.
 
     Args:
-        stat_category: Statistical category (PTS, AST, REB, STL, BLK, etc.)
+        stat_category: Statistical category (PTS, AST, REB, STL, BLK, etc.). Defaults to points.
+        season: Season in format '2023-24'. If not provided, uses current season.
     """
     print(f"DEBUG: Attempting to get league leaders for stat: {stat_category}", file=sys.stderr)
     client = NBAApiClient()
     
-    # Load API documentation at the beginning
-    await client.get_api_documentation()
-    
     try:
-        result = await client.get_league_leaders(season=season, stat_category=stat_category)
+        # Use client to fetch data - it will handle defaults for season
+        leaders_df = await client.get_league_leaders(
+            season=season, 
+            stat_category=stat_category,
+            as_dataframe=True
+        )
 
-        if "error" in result:
-            print(f"ERROR: Failed to get league leaders: {result['error']}", file=sys.stderr)
-            return f"Error: {result['error']}"
+        # Check if we got an error response
+        if isinstance(leaders_df, dict) and "error" in leaders_df:
+            print(f"ERROR: Failed to get league leaders: {leaders_df['error']}", file=sys.stderr)
+            return f"Error: {leaders_df['error']}"
 
-        # Check if we have leader data
-        if (
-            "resultSet" not in result 
-            or "rowSet" not in result["resultSet"] 
-            or not result["resultSet"]["rowSet"]
-        ):
-            print(
-                "DEBUG: No league leaders found for stat: "
-                f"{stat_category}", 
-                file=sys.stderr
-            )
+        # Check if we have data in the dataframe
+        if leaders_df.empty:
+            print(f"DEBUG: No league leaders found for stat: {stat_category}", file=sys.stderr)
             return f"No league leaders found for {stat_category}."
 
+        # Get the actual season that was used (for display)
+        used_season = season if season else "current season"
+
         # Format the top 5 leaders
-        headers = result["resultSet"]["headers"]
-        rows = result["resultSet"]["rowSet"]
-        
-        player_idx = headers.index("PLAYER") if "PLAYER" in headers else -1
-        team_idx = headers.index("TEAM") if "TEAM" in headers else -1
-        stat_idx = (
-            headers.index(stat_category) 
-            if stat_category in headers else -1
-        )
-        
-        if player_idx < 0 or stat_idx < 0:
-            error_str = (
-                f"Could not find {stat_category} data in the response."
-            )
-            print(
-                f"ERROR: {error_str}",
-                file=sys.stderr
-            )
-            return error_str
-        
-        print(
-            "DEBUG: Successfully retrieved "
-            f"{len(rows)} league leaders", 
-            file=sys.stderr
-        )
         formatted_leaders = []
-        for i, row in enumerate(rows[:5]):
-            player_name = row[player_idx] if player_idx >= 0 else "Unknown"
-            team = row[team_idx] if team_idx >= 0 else ""
-            stat_value = row[stat_idx] if stat_idx >= 0 else 0
+        
+        # Take top 5 rows
+        top_leaders = leaders_df.head(5)
+        
+        # Format each leader
+        for i, (_, row) in enumerate(top_leaders.iterrows()):
+            # Extract player name and team - with fallbacks
+            player_name = row.get('PLAYER_NAME', row.get('PLAYER', 'Unknown'))
+            team = row.get('TEAM', row.get('TEAM_ABBREVIATION', ''))
+            
+            # Look for the stat value - normalize column names
+            stat_cols = [col for col in row.index if stat_category.upper() in col]
+            if stat_cols:
+                stat_value = row[stat_cols[0]]
+            else:
+                # Fallback to looking for a VALUE column
+                stat_value = row.get('VALUE', row.get('STAT_VALUE', 0))
             
             formatted_leaders.append(f"{i+1}. {player_name} ({team}): {stat_value}")
         
-        return f"Top 5 {stat_category} Leaders:\n" + "\n".join(formatted_leaders)
+        return f"Top 5 {stat_category.upper()} Leaders ({used_season}):\n" + "\n".join(formatted_leaders)
+    
     except Exception as e:
         error_msg = f"Unexpected error in get_league_leaders: {str(e)}"
         print(f"ERROR: {error_msg}", file=sys.stderr)

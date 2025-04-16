@@ -567,7 +567,7 @@ class NBAApiClient:
 
     async def get_league_leaders(
         self, 
-        season: str, 
+        season: Optional[str] = None,
         stat_category: str = "PTS", 
         as_dataframe: bool = True
     ) -> Union[Dict[str, Any], pd.DataFrame]:
@@ -575,7 +575,7 @@ class NBAApiClient:
         Retrieve league leaders for a specified season and statistical category.
         
         Args:
-            season: Season string in the format 'YYYY-YY' (e.g. '2024-25').
+            season: Season string in the format 'YYYY-YY' (e.g. '2024-25'). Defaults to current season.
             stat_category: Statistical category such as "PTS", "AST", etc. Accepts various synonyms.
             as_dataframe: If True, returns a pandas DataFrame; otherwise, returns raw dict data.
             
@@ -583,6 +583,11 @@ class NBAApiClient:
             League leaders data in the desired format.
         """
         try:
+            # Use current season if none provided
+            if season is None:
+                season = self.get_season_string()
+                logger.info(f"Using current season: {season}")
+            
             # Normalize the input stat_category
             normalized_stat = normalize_stat_category(stat_category)
             
