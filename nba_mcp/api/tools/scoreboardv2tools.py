@@ -174,6 +174,6 @@ if __name__ == "__main__":
     # print("\n🕒 Yesterday:")
     # print(df_yest.head())
 
-    # df_hist = fetch_scoreboard_v2_full("2025-04-15")
-    # print("\n📅 April 15, 2025:")
-    # print(df_hist.head())
+    df_hist = fetch_scoreboard_v2_full("2025-04-15")
+    print("\n📅 April 15, 2025:")
+    print(df_hist.head())

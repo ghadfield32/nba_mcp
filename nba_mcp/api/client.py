@@ -32,177 +32,15 @@ from nba_mcp.api.tools.nba_api_utils import (
 
 
 from .tools.scoreboardv2tools import fetch_scoreboard_v2_full
+from .tools.live_nba_endpoints import fetch_live_boxsc_odds_playbyplaydelayed_livescores
 from .tools.playercareerstats_leagueleaders_tools import (
     get_player_career_stats as _fetch_player_career_stats,
     get_league_leaders as _fetch_league_leaders
 )
 from .tools.leaguegamelog_tools import fetch_league_game_log
-from .tools.playbyplayv3_or_realtime import GameStream
+from .tools.playbyplayv3_or_realtime import get_today_games, GameStream
+from .tools.playbyplayv3_or_realtime import PastGamesPlaybyPlay
 
-# ---------------------------------------------------
-# Load static lookups once and create reverse lookups
-# ---------------------------------------------------
-_TEAM_LOOKUP: Dict[int, str] = {
-    t["id"]: t["full_name"] 
-    for t in teams.get_teams()
-}
-_PLAYER_LOOKUP: Dict[int, str] = {
-    p["id"]: f"{p['first_name']} {p['last_name']}" 
-    for p in players.get_players()
-}
-
-# Create reverse lookups (name -> id)
-_TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
-_PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
-
-
-def get_player_id(player_name: str) -> Optional[int]:
-    """Convert player name to ID, with case-insensitive partial matching."""
-    if not player_name:
-        return None
-    
-    player_name_lower = player_name.lower()
-    # Try exact match first
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if name.lower() == player_name_lower:
-            return id
-    
-    # Try partial match
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if player_name_lower in name.lower():
-            return id
-    
-    return None
-
-def get_team_id(team_name: str) -> Optional[int]:
-    """Convert team name to ID, with case-insensitive partial matching."""
-    if not team_name:
-        return None
-    
-    team_name_lower = team_name.lower()
-    # Try exact match first
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if name.lower() == team_name_lower:
-            return id
-    
-    # Try partial match
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if team_name_lower in name.lower():
-            return id
-    
-    return None
-
-
-def normalize_stat_category(stat_category: str) -> str:
-    """
-    Normalize various string formats of a stat category to the NBA API's expected abbreviation.
-    
-    For example:
-      - "pts", "points" -> "PTS"
-      - "reb", "rebound", or "rebounds" -> "REB"
-    
-    Extend the mapping as needed.
-    """
-    # Mapping from API abbreviation to a list of acceptable synonyms (all in lower case, spaces removed)
-    mapping = {
-        "PTS": ["pts", "points"],
-        "REB": ["reb", "rebound", "rebounds"],
-        "AST": ["ast", "assist", "assists"],
-        "STL": ["stl", "steal", "steals"],
-        "BLK": ["blk", "block", "blocks"],
-        "FGM": ["fgm", "fieldgoalsmade"],
-        "FGA": ["fga", "fieldgoalattempts"],
-        "FG_PCT": ["fg_pct", "fieldgoalpercentage", "fgpercentage"],
-        "FG3M": ["fg3m", "threepointsmade", "3pm"],
-        "FG3A": ["fg3a", "threepointsattempted", "3pa"],
-        "FG3_PCT": ["fg3_pct", "threepointpercentage", "3ppct"],
-        "FTM": ["ftm", "freethrowsmade"],
-        "FTA": ["fta", "freethrowsattempted"],
-        "FT_PCT": ["ft_pct", "freethrowpercentage"],
-        "OREB": ["oreb", "offensiverebounds"],
-        "DREB": ["dreb", "defensiverebounds"],
-        "EFF": ["eff", "efficiency"],
-        "AST_TOV": ["ast_tov", "assistturnover"],
-        "STL_TOV": ["stl_tov", "stealturnover"]
-    }
-    
-    # Build a reverse lookup dictionary from each synonym to its API abbreviation.
-    synonym_lookup = {}
-    for abbr, synonyms in mapping.items():
-        for syn in synonyms:
-            synonym_lookup[syn] = abbr
-
-    # Normalize the input by trimming whitespace, lowering case, and removing spaces.
-    normalized_key = stat_category.strip().lower().replace(" ", "")
-    if normalized_key in synonym_lookup:
-        return synonym_lookup[normalized_key]
-    else:
-        raise ValueError(f"Unsupported stat category: {stat_category}")
-
-def normalize_per_mode(per_mode: str) -> str:
-    """
-    Normalize the per_mode parameter to one of the allowed values:
-    "Totals", "PerGame", or "Per48".
-    
-    Accepts variations such as lower or upper case, and common synonyms.
-    """
-    normalized = per_mode.strip().lower()
-    if normalized in ["totals", "total", "total stats", "total per season", "total per game"]:
-        return "Totals"
-    elif normalized in ["avg", "average", "pergame", "per game", "per game average", "per game average stats", "per game per season"]:
-        return "PerGame"
-    elif normalized in ["per48", "per 48", "per 48 average", "per 48 average stats", "per 48 per season", "per 48 minutes"]:
-        return "Per48"
-    else:
-        raise ValueError(f"Unsupported per_mode value: {per_mode}")
-
-
-def normalize_season(season: str) -> str:
-    """
-    Normalize the season parameter to the expected format:
-    "YYYY-YY" (e.g. "2024-25").
-    
-    Handles various inputs:
-    - 2-digit year (e.g., "24") - interpreted as 2000s for values < 59
-    - 4-digit year (e.g., "2024")
-    - Already formatted "YYYY-YY" season
-    """
-    # Strip any whitespace
-    season = season.strip()
-    season = season.replace("'", "").replace("_", "")
-    
-    # Handle 2-digit year (e.g., "24")
-    if len(season) == 2 and season.isdigit():
-        year = int(season)
-        # Interpret years below 59 as 2000s, otherwise as 1900s
-        full_year = 2000 + year if year < 59 else 1900 + year
-        next_year = str(full_year + 1)[2:]
-        return f"{full_year}-{next_year}"
-    
-    # Handle 4-digit year (e.g., "2024")
-    elif len(season) == 4 and season.isdigit():
-        year = int(season)
-        next_year = str(year + 1)[2:]
-        return f"{year}-{next_year}"
-    
-    # Handle already formatted season (e.g., "2024-25" or "24-25")
-    elif "-" in season and len(season.split("-")) == 2:
-        parts = season.split("-")
-        
-        # If it's a short format like "24-25", convert to "2024-25"
-        if len(parts[0]) == 2 and parts[0].isdigit():
-            year = int(parts[0])
-            full_year = 2000 + year if year < 59 else 1900 + year
-            return f"{full_year}-{parts[1]}"
-        
-        # If it's already in "YYYY-YY" format, return as is
-        return season
-    
-    # Unsupported format
-    else:
-        raise ValueError(f"Unsupported season value: {season}")
-    
-    
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -424,46 +262,51 @@ class NBAApiClient:
     async def get_live_scoreboard(
         self,
         target_date: Optional[Union[str, date, datetime]] = None,
-        day_offset: int = 0,
-        league_id: str = "00",
+        day_offset: int = 0,              # no longer used by fetch_all_games
+        league_id: str = "00",            # ditto
         as_dataframe: bool = True
     ) -> Union[pd.DataFrame, List[Dict[str, Any]], str]:
         """
-        Fetch the NBA scoreboard (live or any specific date) using the
-        full-featured ScoreboardV2 helper.
-        
-        Args:
-            target_date: Date for which to fetch games (string, date, datetime).
-            day_offset: Day offset (e.g. -1 for yesterday).
-            league_id: League code ("00" for NBA).
-            as_dataframe: If False, returns a list of dicts; if True, returns DataFrame or message.
-        
-        Returns:
-            DataFrame of game records, a list of dicts, or a user-friendly message.
+        Fetch NBA games (live or by-date) using our unified fetch_all_games helper.
         """
         try:
-            # Delegate to synchronous fetcher in a background thread
-            df = await asyncio.to_thread(
-                fetch_scoreboard_v2_full,
-                target_date,
-                day_offset,
-                league_id
+            # 1) Delegate to our synchronous fetch_all_games
+            payload = await asyncio.to_thread(
+                fetch_live_boxsc_odds_playbyplaydelayed_livescores,
+                target_date and str(target_date) or None
             )
-
-            # Return raw records if requested
+            games = payload["games"]  # list of game‐dicts
             if not as_dataframe:
-                return df.to_dict("records")
+                return games
 
-            # If no games found, notify user
+            # 2) Build a flat DataFrame of summary fields
+            records = []
+            for g in games:
+                # pick either live summary or historical snapshot
+                summary = g.get("scoreBoardSummary") or g.get("scoreBoardSnapshot")
+                # flatten out the teams and scores
+                home = summary["homeTeam"]
+                away = summary["awayTeam"]
+                records.append({
+                    "gameId": summary["gameId"],
+                    "date": payload["date"],
+                    "home_team": home.get("teamName") or home.get("TEAM_NAME"),
+                    "away_team": away.get("teamName") or away.get("TEAM_NAME"),
+                    "home_pts": home.get("score") or home.get("PTS"),
+                    "away_pts": away.get("score") or away.get("PTS"),
+                    "status": summary.get("gameStatusText") or summary.get("gameStatus"),
+                    "period": summary.get("period"),
+                    "clock": summary.get("gameClock")
+                })
+
+            df = pd.DataFrame(records)
             if df.empty:
                 return "No games found for that date."
-
-            # Otherwise, return the DataFrame
             return df
 
         except Exception as e:
-            # Route through your standard error‐handler for consistency
             return self._handle_response_error(e, "get_live_scoreboard")
+
         
         
 
@@ -568,3 +411,56 @@ class NBAApiClient:
         except Exception as e:
             return self._handle_response_error(e, "get_game_stream")
         
+        
+    async def get_past_play_by_play(
+        self,
+        *,
+        game_id: Optional[str] = None,
+        game_date: Optional[str] = None,
+        team: Optional[str] = None,
+        start_period: int = 1,
+        end_period: int = 4,
+        start_clock: Optional[str] = None,
+        as_records: bool = True,
+        timeout: float = 10.0
+    ) -> dict[str, Any] | str:
+        """
+        Fetch historical play-by-play for a past game.
+
+        You may supply **either**:
+          • `game_id` (10‑digit NBA game code), or
+          • `game_date` (YYYY‑MM‑DD) + `team` name/abbr.
+
+        Optional:
+          • `start_period`, `end_period` to limit quarters,
+          • `start_clock` to begin mid‑quarter.
+
+        Returns a dict with keys:
+          • "AvailableVideo": list of video records  
+          • "PlayByPlay"    : list of play records  
+
+        Note: Play‑by‑play is available back to the 1996–97 NBA season.
+        """
+        try:
+            # 1) build the helper (normalizes IDs and dates under the hood)
+            pbp = PastGamesPlaybyPlay.from_game_id(
+                game_id=game_id,
+                game_date=game_date,
+                team=team,
+                start_period=start_period,
+                start_clock=start_clock,
+                show_choices=False,
+                timeout=timeout
+            )
+
+            # 2) fetch the data
+            data = pbp.get_pbp(
+                start_period=start_period,
+                end_period=end_period,
+                as_records=as_records,
+                timeout=timeout
+            )
+            return data
+        except Exception as e:
+            logger.error(f"Error in get_past_play_by_play: {e}")
+            return {"error": str(e)}

@@ -1,4 +1,5 @@
 # nba_api_utils.py
+import unicodedata
 import sys
 import os
 from pathlib import Path
@@ -31,7 +32,8 @@ __all__ = [
     'normalize_season', 
     'normalize_date',
     'normalize_season_type',
-    'format_game'
+    'format_game',
+    'get_team_id_from_abbr'
 ]
 
 # ---------------------------------------------------
@@ -94,11 +96,16 @@ def format_game(game: dict) -> str:
     
     return f"{home_team} vs {visitor_team} - Score: {home_score} to {visitor_score}{status_text}"
 
-# Build lookups directly from the nba_api’s static players list
-_PLAYER_LOOKUP: Dict[int, str] = {
-    p["id"]: f"{p['first_name']} {p['last_name']}"
-    for p in players.get_players()
-}
+# Build lookups directly from the nba_api's static players list
+_PLAYER_LOOKUP: Dict[int, str] = {}
+for p in players.get_players():
+    name = p.get("first_name", "").strip()
+    if p.get("last_name"):
+        name += " " + p["last_name"].strip()
+    if p.get("last_suffix"):
+        name += " " + p["last_suffix"].strip()
+    _PLAYER_LOOKUP[p["id"]] = name or f"Player {p['id']}"
+
 _PLAYER_NAME_TO_ID = { name: pid for pid, name in _PLAYER_LOOKUP.items() }
 
 def get_player_id(player_name: str) -> Optional[int]:
@@ -322,31 +329,134 @@ def normalize_season(season: str) -> str:
     else:
         raise ValueError(f"Unsupported season value: {season}")
 
-def normalize_date(target_date: Optional[Union[str, date, datetime]]) -> date:
+
+
+
+# ---------------------------------------------------------------------------
+# Any dash‑like character we want to recognise as a hyphen
+# (list is not exhaustive – add more if you encounter them)
+_DASHES = {
+    "\u2010",  # HYPHEN
+    "\u2011",  # NO‑BREAK HYPHEN  ← your bug
+    "\u2012",  # FIGURE DASH
+    "\u2013",  # EN DASH
+    "\u2014",  # EM DASH
+    "\u2212",  # MINUS
+}
+def _clean_date_string(s: str) -> str:
     """
-    Normalize an input date into a datetime.date object.
-    
-    Parameters:
-      target_date: A date, datetime, or string representing the date.
-                   If None, returns today's date.
-                   
-    Returns:
-      A date object.
-      
-    Raises:
-      ValueError: If the input string cannot be parsed.
-      TypeError: If the input is not a string, datetime, or date.
+    Convert all fancy dash variants to ASCII '-' and strip weird spaces.
     """
+    cleaned = []
+    for ch in s:
+        if ch in _DASHES:
+            cleaned.append("-")
+        elif unicodedata.category(ch) in {"Zs", "Cf"}:  # space / format chars
+            cleaned.append(" ")
+        else:
+            cleaned.append(ch)
+    return "".join(cleaned).strip()
+
+def normalize_date(
+    target_date: Optional[Union[str, date, datetime]]
+) -> date:
+    """
+    Normalise an input into a `datetime.date`.
+
+    * Accepts `date`, `datetime`, or string (almost any human format).
+    * Cleans Unicode dashes so strings like '2024‑12‑25' parse correctly.
+    * Passing `None` returns **today**.
+    """
+    # --- 1. Short‑circuits for non‑string types ----------------------------
     if target_date is None:
         return date.today()
-    elif isinstance(target_date, str):
-        try:
-            return parse(target_date).date()
-        except Exception as e:
-            raise ValueError(f"Unable to parse target_date string: {target_date}") from e
-    elif isinstance(target_date, datetime):
+    if isinstance(target_date, datetime):
         return target_date.date()
-    elif isinstance(target_date, date):
+    if isinstance(target_date, date):
         return target_date
-    else:
-        raise TypeError("target_date must be a string, datetime, or date")
+
+    # --- 2. Sanity‑check string input --------------------------------------
+    if not isinstance(target_date, str):
+        raise TypeError("target_date must be str, datetime, date or None")
+
+    cleaned = _clean_date_string(target_date)
+
+    try:
+        return parse(cleaned, fuzzy=True).date()
+    except Exception as e:
+        raise ValueError(
+            f"Unable to parse target_date string after cleaning: {target_date!r}"
+        ) from e
+
+def get_team_id_from_abbr(abbr: str) -> Optional[int]:
+    """
+    Convert a team abbreviation (e.g., 'LAL', 'NYK') to a team ID.
+    Handles common NBA team abbreviations.
+    
+    Returns None if the abbreviation isn't recognized.
+    """
+    if not abbr:
+        return None
+    
+    # Common NBA team abbreviations to ID mapping
+    abbr_to_id = {
+        "ATL": 1610612737,  # Atlanta Hawks
+        "BOS": 1610612738,  # Boston Celtics
+        "BKN": 1610612751,  # Brooklyn Nets
+        "CHA": 1610612766,  # Charlotte Hornets
+        "CHI": 1610612741,  # Chicago Bulls
+        "CLE": 1610612739,  # Cleveland Cavaliers
+        "DAL": 1610612742,  # Dallas Mavericks
+        "DEN": 1610612743,  # Denver Nuggets
+        "DET": 1610612765,  # Detroit Pistons
+        "GSW": 1610612744,  # Golden State Warriors
+        "HOU": 1610612745,  # Houston Rockets
+        "IND": 1610612754,  # Indiana Pacers
+        "LAC": 1610612746,  # Los Angeles Clippers
+        "LAL": 1610612747,  # Los Angeles Lakers
+        "MEM": 1610612763,  # Memphis Grizzlies
+        "MIA": 1610612748,  # Miami Heat
+        "MIL": 1610612749,  # Milwaukee Bucks
+        "MIN": 1610612750,  # Minnesota Timberwolves
+        "NOP": 1610612740,  # New Orleans Pelicans
+        "NYK": 1610612752,  # New York Knicks
+        "OKC": 1610612760,  # Oklahoma City Thunder
+        "ORL": 1610612753,  # Orlando Magic
+        "PHI": 1610612755,  # Philadelphia 76ers
+        "PHX": 1610612756,  # Phoenix Suns
+        "POR": 1610612757,  # Portland Trail Blazers
+        "SAC": 1610612758,  # Sacramento Kings
+        "SAS": 1610612759,  # San Antonio Spurs
+        "TOR": 1610612761,  # Toronto Raptors
+        "UTA": 1610612762,  # Utah Jazz
+        "WAS": 1610612764,  # Washington Wizards
+    }
+    
+    # Try exact match with uppercase
+    upper_abbr = abbr.upper()
+    if upper_abbr in abbr_to_id:
+        return abbr_to_id[upper_abbr]
+    
+    return None
+
+
+
+# ---------------------------------------------------------------------------
+# ──  SMALL HELPER (outside the class — tiny, pure)                        ──
+# ---------------------------------------------------------------------------
+
+def _resolve_team_ids(label: str) -> set[int]:
+    """
+    Return every team‑ID that matches an abbreviation or fuzzy name.
+    """
+    ids: set[int] = set()
+
+    tid = get_team_id_from_abbr(label)
+    if tid:
+        ids.add(int(tid))
+
+    tid2 = get_team_id(label)
+    if tid2:
+        ids.add(int(tid2))
+
+    return ids
