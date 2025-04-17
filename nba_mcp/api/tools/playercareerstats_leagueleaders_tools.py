@@ -16,6 +16,7 @@ and for the player career stats it also shows how to fetch a JSON snippet.
 Ensure you have Python 3.7+ installed.
 """
 
+
 import pandas as pd
 from nba_api.stats.endpoints import playercareerstats, LeagueLeaders
 from nba_mcp.api.tools.nba_api_utils import (
@@ -79,7 +80,7 @@ def main() -> None:
     # Update examples to use names instead of IDs
     print("\nFetching player career stats for Nikola Jokić:")
     try:
-        season = "21"
+        season = "2024"
         career_df = get_player_career_stats('Nikola Jokić', season)
 
         print("Player Career Stats DataFrame (first 5 rows):")

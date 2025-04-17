@@ -30,13 +30,14 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_season, normalize_date, format_game, normalize_season_type
 )
 
+
 from .tools.scoreboardv2tools import fetch_scoreboard_v2_full
 from .tools.playercareerstats_leagueleaders_tools import (
     get_player_career_stats as _fetch_player_career_stats,
     get_league_leaders as _fetch_league_leaders
 )
 from .tools.leaguegamelog_tools import fetch_league_game_log
-
+from .tools.playbyplayv3_or_realtime import GameStream
 
 # ---------------------------------------------------
 # Load static lookups once and create reverse lookups
@@ -519,3 +520,51 @@ class NBAApiClient:
         except Exception as e:
             return self._handle_response_error(e, "get_league_game_log")
 
+
+
+    async def get_today_games(self, as_dataframe: bool = True) -> Union[pd.DataFrame, List[Dict[str, Any]], str]:
+        try:
+            games = await asyncio.to_thread(get_today_games)
+
+            # Explicit type handling for robustness
+            if not isinstance(games, list):
+                # Return clearly if games is dict or unexpected type
+                return "Unexpected data format received for today's games."
+
+            if not games:  # Empty list scenario
+                return "No NBA games scheduled today."
+
+            df = pd.DataFrame(games)
+            return df if as_dataframe else games
+
+        except Exception as e:
+            return self._handle_response_error(e, "get_today_games")
+
+
+    async def get_game_stream(
+        self,
+        game_id: str
+    ) -> Union[Dict[str, Any], str]:
+        """
+        Returns either:
+          • dict: {
+              "gameId": …,
+              "markdown": …,
+              "snapshot": …,
+              "events": …
+            }
+          • str: an error message
+        """
+        try:
+            # instantiate on background thread
+            stream = await asyncio.to_thread(GameStream, game_id)
+
+            # fetch today’s games once (to build the "1. Today’s Games" block)
+            games_today = await asyncio.to_thread(GameStream.get_today_games)
+
+            # build the combined payload
+            return stream.build_payload(games_today)
+
+        except Exception as e:
+            return self._handle_response_error(e, "get_game_stream")
+        

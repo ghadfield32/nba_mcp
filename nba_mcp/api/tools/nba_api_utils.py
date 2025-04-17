@@ -94,23 +94,25 @@ def format_game(game: dict) -> str:
     
     return f"{home_team} vs {visitor_team} - Score: {home_score} to {visitor_score}{status_text}"
 
+# Build lookups directly from the nba_api’s static players list
+_PLAYER_LOOKUP: Dict[int, str] = {
+    p["id"]: f"{p['first_name']} {p['last_name']}"
+    for p in players.get_players()
+}
+_PLAYER_NAME_TO_ID = { name: pid for pid, name in _PLAYER_LOOKUP.items() }
+
 def get_player_id(player_name: str) -> Optional[int]:
-    """Convert player name to ID, with case-insensitive partial matching."""
-    if not player_name:
-        return None
-    
-    player_name_lower = player_name.lower()
-    # Try exact match first
-    for name, id in _PLAYER_REVLOOKUP.items():
-        if name == player_name_lower:
-            return id
-    
-    # Try partial match
-    for name, id in _PLAYER_REVLOOKUP.items():
-        if player_name_lower in name:
-            return id
-    
+    key = player_name.lower()
+    # exact match
+    for name, pid in _PLAYER_NAME_TO_ID.items():
+        if name.lower() == key:
+            return pid
+    # partial match
+    for name, pid in _PLAYER_NAME_TO_ID.items():
+        if key in name.lower():
+            return pid
     return None
+
 
 def get_player_name(player_id: Union[int, str]) -> Optional[str]:
     """Convert player ID to name, using a centralized lookup."""

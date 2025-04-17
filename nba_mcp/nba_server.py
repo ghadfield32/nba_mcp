@@ -3,23 +3,56 @@ from mcp.server.fastmcp import FastMCP
 from nba_mcp.api.client import NBAApiClient
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict
 import pandas as pd
 from nba_api.stats.static import teams, players
 from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
                            , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
                            )
+import json
+# nba_server.py (add near the top)
+from pydantic import BaseModel, Field
 
 mcp = FastMCP("nba_mcp")
 
 
 
+# --- PARAMETER SCHEMAS ---
+class PlayerCareerParams(BaseModel):
+    player_name: str = Field(..., description="Full or partial player name")
+    season: str | None = Field(None, description="Season in YYYY-YY format; defaults to current season")
+
+class LeagueLeadersParams(BaseModel):
+    season: str | None = Field(None, description="Season in YYYY-YY format; defaults to current season")
+    stat_category: str = Field("PTS", description="Stat category (e.g. PTS, AST, REB)")
+    per_mode: str = Field("Totals", description="Aggregation mode: Totals, PerGame, or Per48")
+
+class LiveScoresParams(BaseModel):
+    target_date: str | None = Field(None, description="Date YYYY-MM-DD; defaults to today")
+
+class TeamLogParams(BaseModel):
+    season: str = Field(..., description="Season in YYYY-YY format")
+    team: str = Field(..., description="Full or partial team name")
+    date_from: str | None = Field(None, description="Start date YYYY-MM-DD")
+    date_to: str | None = Field(None, description="End date YYYY-MM-DD")
+
+#########################################
+# MCP Resources
+#########################################
+@mcp.resource("api-docs://openapi.json")
+async def get_openapi_spec() -> str:
+    """
+    MCP Resource: Serve the full NBA API documentation JSON
+    so the LLM can consult it when generating tool calls.
+    """
+    docs = await NBAApiClient().get_api_documentation()
+    # Return as a JSON string for the LLM’s context
+    return json.dumps(docs)
+
 #########################################
 # MCP Tools
 #########################################
-
-    
 
 @mcp.tool()
 async def get_player_career_information(
@@ -31,7 +64,6 @@ async def get_player_career_information(
     """
     print(f"DEBUG: get_player_career_information('{player_name}', season={season})", file=sys.stderr)
     client = NBAApiClient()
-    await client.get_api_documentation()
 
     # Default to current season if not provided
     season_str = season or client.get_season_string()
@@ -84,7 +116,6 @@ async def get_league_leaders_info(
     """
     print(f"DEBUG: get_league_leaders_info(season={season}, stat={stat_category}, mode={per_mode})", file=sys.stderr)
     client = NBAApiClient()
-    await client.get_api_documentation()
 
     season_str = season or client.get_season_string()
 
@@ -136,8 +167,6 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
     if not target_date:
         target_date = today
 
-    # Preload docs (optional)
-    await client.get_api_documentation()
 
     try:
         result = await client.get_live_scoreboard(
@@ -193,7 +222,6 @@ async def get_team_game_log(
     print(f"DEBUG: get_team_game_log(season={season}, team={team}, "
           f"from={date_from}, to={date_to})", file=sys.stderr)
     client = NBAApiClient()
-    await client.get_api_documentation()
     try:
         result = await client.get_league_game_log(
             season=season,
@@ -227,6 +255,34 @@ async def get_team_game_log(
         print(f"ERROR: {error_msg}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         return error_msg
+
+@mcp.tool()
+async def play_by_play_info_for_current_games() -> str:
+    client = NBAApiClient()
+    games_df = await client.get_today_games(as_dataframe=True)
+
+    # ── guardrails ──────────────────────────────────────────────
+    if isinstance(games_df, str):
+        return games_df
+    if not isinstance(games_df, pd.DataFrame) or games_df.empty:
+        return "No NBA games scheduled today."
+
+    all_payloads = []
+    for _, row in games_df.iterrows():
+        gid = row["gameId"]
+        result = await client.get_game_stream(gid)
+        if isinstance(result, str):
+            # error for this game
+            all_payloads.append({ "gameId": gid, "error": result })
+        else:
+            all_payloads.append(result)
+
+    # one big combined JSON
+    combined = {
+        "fetchedAt": datetime.now(timezone.utc).isoformat(),
+        "games": all_payloads
+    }
+    return json.dumps(combined, indent=2)
 
 
 
