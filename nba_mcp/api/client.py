@@ -213,49 +213,57 @@ class NBAApiClient:
             return self._handle_response_error(e, "get_player_career_stats")
 
 
+
     async def get_league_leaders(
         self,
-        season: Optional[str] = None,
+        season: Optional[Union[str, List[str]]] = None,
         stat_category: str = "PTS",
         per_mode: str = "Totals",
         as_dataframe: bool = True
     ) -> Union[pd.DataFrame, List[Dict[str, Any]], str]:
         """
-        Fetch top league leaders for a season and stat category.
-
+        Fetch top league leaders for one or more seasons.
         Args:
-            season:      Season string 'YYYY-YY'. Defaults to current season.
+            season:      Season string 'YYYY-YY' or list of such. Defaults to current season.
             stat_category: e.g. "PTS", "REB", "AST" (synonyms allowed).
             per_mode:    "Totals", "PerGame", or "Per48" (synonyms allowed).
             as_dataframe: If False, returns list of dicts; if True, returns DataFrame or message.
-
-        Returns:
-            DataFrame of leader rows, or list‑of‑dicts, or a user-friendly message.
         """
-        try:
-            # Use current season if none provided
-            season_str = season or self.get_season_string()
+        # 1) Handle None or single-string: build a list
+        seasons = season or self.get_season_string()
+        if isinstance(seasons, str):
+            seasons = [seasons]
+        results = []
 
+        # 2) Loop through seasons
+        for s in seasons:
             df: pd.DataFrame = await asyncio.to_thread(
                 _fetch_league_leaders,
-                season_str,
+                s,
                 stat_category,
                 per_mode
             )
-
-            if not as_dataframe:
-                return df.to_dict("records")
-
             if df.empty:
-                return (
-                    f"No league leaders found for stat '{stat_category}' "
-                    f"in season {season_str}."
-                )
+                continue
+            # Ensure player names
+            if "PLAYER_NAME" not in df.columns and "PLAYER_ID" in df.columns:
+                from nba_mcp.api.tools.nba_api_utils import get_player_name
+                df["PLAYER_NAME"] = df["PLAYER_ID"].map(get_player_name)
+            df["SEASON"] = s
+            results.append(df)
 
-            return df
+        # 3) Aggregate or return message
+        if not results:
+            msg = f"No league leaders found for stat '{stat_category}' in seasons: {seasons}."
+            return msg if as_dataframe else []
 
-        except Exception as e:
-            return self._handle_response_error(e, "get_league_leaders")
+        full_df = pd.concat(results, ignore_index=True)
+
+        if not as_dataframe:
+            return full_df.to_dict("records")
+
+        return full_df
+
 
 
 

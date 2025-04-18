@@ -4,7 +4,7 @@ from nba_mcp.api.client import NBAApiClient
 import sys
 import traceback
 from datetime import datetime, timezone
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 import pandas as pd
 from nba_api.stats.static import teams, players
 from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
@@ -94,60 +94,49 @@ async def get_player_career_information(
         return msg
 
 
+
+
 @mcp_server.tool()
 async def get_league_leaders_info(
-    season: Optional[str] = None,
+    season: Optional[Union[str, List[str]]] = None,
     stat_category: str = "PTS",
     per_mode: str = "Totals"
 ) -> str:
     """
-    Retrieves the top 10 NBA league leaders for a specified statistic.
-
-    Parameters:
-        season (Optional[str]): Season in 'YYYY-YY'; defaults to current season.
-        stat_category (str): Statistic abbreviation (e.g., 'PTS', 'REB', 'AST').
-        per_mode (str): Aggregation mode (Totals, PerGame, Per48).
-
-    Returns:
-        str: A numbered list of the top 10 leaders with player name, team, and value.
+    Retrieves the top 10 NBA league leaders for one or more seasons.
     """
-    print(f"DEBUG: get_league_leaders_info(season={season}, stat={stat_category}, mode={per_mode})", file=sys.stderr)
     client = NBAApiClient()
+    # Pass through to client
+    result = await client.get_league_leaders(
+        season=season,
+        stat_category=stat_category,
+        per_mode=per_mode,
+        as_dataframe=True
+    )
+    # If error message
+    if isinstance(result, str):
+        return result
 
-    season_str = season or client.get_season_string()
+    df: pd.DataFrame = result
+    if df.empty:
+        return f"No leaders found for '{stat_category}' in season(s) {season}."
 
-    try:
-        result = await client.get_league_leaders(
-            season=season_str,
-            stat_category=stat_category,
-            per_mode=per_mode,
-            as_dataframe=True
-        )
-
-        if isinstance(result, str):
-            return result
-
-        df: pd.DataFrame = result
-        if df.empty:
-            return f"No leaders found for '{stat_category}' in season {season_str}."
-
-        # Build a Top 10 summary
-        summary = [f"Top 10 {stat_category.upper()} Leaders ({season_str}):"]
-        for i, (_, row) in enumerate(df.head(10).iterrows(), start=1):
-            name = row.get("PLAYER_NAME", "Unknown")
+    # Build summaries grouped by season
+    summaries: List[str] = []
+    for s, group in df.groupby("SEASON"):
+        summaries.append(f"Top 10 {stat_category.upper()} Leaders ({s}):")
+        top10 = group.head(10)
+        for i, (_, row) in enumerate(top10.iterrows(), start=1):
+            name = row["PLAYER_NAME"]
             team = row.get("TEAM_NAME", row.get("TEAM_ABBREVIATION", ""))
-            # find the first column containing our category
+            # value column detection
             val_cols = [c for c in row.index if stat_category.upper() in c]
             value = row[val_cols[0]] if val_cols else row.get("STAT_VALUE", "N/A")
-            summary.append(f"{i}. {name} ({team}): {value}")
+            summaries.append(f"{i}. {name} ({team}): {value}")
+        summaries.append("")  # blank line between seasons
 
-        return "\n".join(summary)
+    return "\n".join(summaries).strip()
 
-    except Exception as e:
-        msg = f"Unexpected error in get_league_leaders_info: {e}"
-        print(f"ERROR: {msg}", file=sys.stderr)
-        traceback.print_exc(file=sys.stderr)
-        return msg
 
 
 @mcp_server.tool()
@@ -183,12 +172,26 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         lines = []
         for g in games:
             summary = g.get("scoreBoardSummary") or g.get("scoreBoardSnapshot")
-            home = summary["homeTeam"]["teamName"]
-            away = summary["awayTeam"]["teamName"]
-            pts_h = summary["homeTeam"]["score"]
-            pts_a = summary["awayTeam"]["score"]
+            home = summary["homeTeam"]
+            away = summary["awayTeam"]
+
+            # Real‑time if the live‑API gave us `teamName`+`score`
+            if "teamName" in home:
+                home_team = home["teamName"]
+                away_team = away["teamName"]
+                home_pts  = home["score"]
+                away_pts  = away["score"]
+
+            # Historical if we got uppercase keys from Stats API
+            else:
+                home_team = home.get("TEAM_ABBREVIATION") or get_team_name(home["TEAM_ID"])
+                away_team = away.get("TEAM_ABBREVIATION") or get_team_name(away["TEAM_ID"])
+                home_pts  = home.get("PTS")
+                away_pts  = away.get("PTS")
+
             status = summary.get("gameStatusText", "")
-            lines.append(f"{home} vs {away} – {pts_h}-{pts_a} ({status})")
+            lines.append(f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})")
+
 
         header = f"NBA Games for {target_date}:\n"
         return header + "\n".join(lines)
@@ -199,61 +202,108 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         return err
 
 
+
 @mcp_server.tool()
 async def get_date_range_game_log_or_team_game_log(
     season: str,
-    team: str,
+    season_type: str = "Regular Season",
+    team: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None
 ) -> str:
     """
-    Retrieves a game log for a given season, team or date range, with optional date filtering
-    
+    Retrieves a game log for a given season and season_type:
+      • If `team` is provided, returns that team's games (optionally date‑filtered).
+      • If `team` is omitted, returns all teams' games in the optional date range.
+      Supports any SeasonType ("Regular Season","Playoffs","Pre Season","All Star","All-Star").
+
     Parameters:
         season (str): Season in 'YYYY-YY'.
-        team (Optional[str]): Full or partial team name. If not provided, returns all games for the season.
+        season_type (str): One of "Regular Season","Playoffs","Pre Season","All Star","All-Star".
+        team (Optional[str]): Full/partial team name; if None, returns all teams.
         date_from (Optional[str]): Start date 'YYYY-MM-DD'.
         date_to (Optional[str]): End date 'YYYY-MM-DD'.
 
     Returns:
-        str: Lines summarizing each game date, matchup, win/loss, and points.
+        str: Lines summarizing each game with rich stats.
     """
-    print(f"DEBUG: get_date_range_game_log_or_team_game_log(season={season}, team={team}, "
-          f"from={date_from}, to={date_to})", file=sys.stderr)
+    print(f"DEBUG: get_date_range_game_log_or_team_game_log("
+          f"season={season!r}, season_type={season_type!r}, "
+          f"team={team!r}, from={date_from!r}, to={date_to!r})",
+          file=sys.stderr)
+
     client = NBAApiClient()
     try:
-        result = await client.get_league_game_log(
+        df = await client.get_league_game_log(
             season=season,
             team_name=team,
+            season_type=season_type,
             date_from=date_from,
             date_to=date_to,
             as_dataframe=True
         )
-        # Pass through messages or errors
-        if isinstance(result, str):
-            return result
-
-        df: pd.DataFrame = result
+        if isinstance(df, str):
+            return df
         if df.empty:
-            return f"No games found for {team} in {season} between {date_from or 'start'} and {date_to or 'end'}."
+            if team:
+                return (f"No games found for '{team}' in {season} "
+                        f"{season_type}{' between '+date_from if date_from else ''}"
+                        f"{' and '+date_to if date_to else ''}.")
+            else:
+                return (f"No games found in {season} {season_type}"
+                        f"{' between '+date_from if date_from else ''}"
+                        f"{' and '+date_to if date_to else ''}.")
 
-        # Format a few columns into human-readable lines
+        start = date_from or "season start"
+        end = date_to or "season end"
+        if team:
+            header = f"Game log for {team} ({season} {season_type}):\n"
+        else:
+            header = (f"Game log for all teams in {season} {season_type} "
+                      f"from {start} to {end}:\n")
+
         lines = []
         for _, row in df.iterrows():
-            d = row.get("GAME_DATE", row.get("GAME_DATE_EST", "Unknown"))
-            matchup = row.get("MATCHUP", "")
-            pts = row.get("PTS", 0)
-            wl  = row.get("WL", "")
-            lines.append(f"{d}: {matchup} – {wl} ({pts} pts)")
+            game_date = row.get("GAME_DATE") or row.get("GAME_DATE_EST", "Unknown")
+            matchup   = row.get("MATCHUP", "")
+            wl        = row.get("WL", "")
+            team_abbr = row.get("TEAM_ABBREVIATION", "")
+            pts       = row.get("PTS", 0)
+            mins      = row.get("MIN", "")
+            fgm, fga, fg_pct = row.get("FGM", 0), row.get("FGA", 0), row.get("FG_PCT", 0)
+            fg3m, fg3a, fg3_pct = row.get("FG3M", 0), row.get("FG3A", 0), row.get("FG3_PCT", 0)
+            ftm, fta, ft_pct = row.get("FTM", 0), row.get("FTA", 0), row.get("FT_PCT", 0)
+            reb = row.get("REB", 0)
+            ast = row.get("AST", 0)
+            stl = row.get("STL", 0)
+            blk = row.get("BLK", 0)
+            tov = row.get("TOV", 0)
+            pf  = row.get("PF", 0)
+            plus_minus = row.get("PLUS_MINUS", 0)
 
-        header = f"Game log for {team} ({season}):\n"
+            stats_str = (
+                f"{mins} min | "
+                f"FG {fgm}-{fga} ({fg_pct:.1f}%) | "
+                f"3P {fg3m}-{fg3a} ({fg3_pct:.1f}%) | "
+                f"FT {ftm}-{fta} ({ft_pct:.1f}%) | "
+                f"TRB {reb} | AST {ast} | STL {stl} | BLK {blk} | "
+                f"TOV {tov} | PF {pf} | ±{plus_minus}"
+            )
+
+            if team:
+                lines.append(f"{game_date}: {matchup} – {wl}, {pts} pts | {stats_str}")
+            else:
+                lines.append(f"{game_date} • {team_abbr} • {matchup} – {wl}, {pts} pts | {stats_str}")
+
         return header + "\n".join(lines)
 
     except Exception as e:
-        error_msg = f"Unexpected error in get_date_range_game_log_or_team_game_log: {e}"
+        error_msg = (f"Unexpected error in "
+                     f"get_date_range_game_log_or_team_game_log: {e}")
         print(f"ERROR: {error_msg}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         return error_msg
+
 
 @mcp_server.tool()
 async def play_by_play_info_for_current_games() -> str:
@@ -347,6 +397,16 @@ async def get_past_play_by_play(
 # Running the Server
 #########################################
 
+# nba_server.py (excerpt)
+
+import os
+import sys
+import traceback
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Union
+import pandas as pd
+import json
+
 def main():
     """Entry point for the NBA MCP server."""
     try:
@@ -361,8 +421,19 @@ def main():
         except (ImportError, AttributeError) as e:
             print(f"WARNING: Could not determine FastMCP version: {e}", file=sys.stderr)
         
-        print("Starting server with stdio transport...", file=sys.stderr)
-        mcp_server.run(transport="stdio")
+        # ── Set SSE binding via env vars ──────────────────────────────
+        os.environ.setdefault("FASTMCP_SSE_HOST", "0.0.0.0")
+        os.environ.setdefault("FASTMCP_SSE_PORT", "8000")
+        os.environ.setdefault("FASTMCP_SSE_PATH", "/sse")
+        print("Starting server with SSE transport on "
+              f"{os.environ['FASTMCP_SSE_HOST']}:"
+              f"{os.environ['FASTMCP_SSE_PORT']}"
+              f"{os.environ['FASTMCP_SSE_PATH']}",
+              file=sys.stderr)
+
+        # ── Only pass transport; host/port/path come from env ─────────
+        mcp_server.run(transport="sse")
+
         print("Server shutdown normally", file=sys.stderr)
     except ModuleNotFoundError as e:
         print(f"ERROR: Missing required module: {e}", file=sys.stderr)
@@ -373,7 +444,6 @@ def main():
         print(f"FATAL ERROR: Server crashed unexpectedly: {str(e)}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
