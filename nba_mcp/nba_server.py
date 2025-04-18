@@ -17,6 +17,29 @@ from pydantic import BaseModel, Field
 mcp_server = FastMCP("nba_mcp")
 
 
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class LeagueLeadersParams(BaseModel):
+    season: Optional[Union[str, List[str]]] = Field(
+        None,
+        description="Season in 'YYYY-YY' format or list thereof"
+    )
+    stat_category: Literal["PTS","REB","AST","STL","BLK","FG_PCT","FG3_PCT","FT_PCT"] = Field(
+        ...,
+        description="Stat code (e.g. 'AST')"
+    )
+    per_mode: Literal["Totals","PerGame","Per48"] = Field(
+        ...,
+        description="One of 'Totals', 'PerGame', or 'Per48'"
+    )
+
+
+
+
+
+
+
 #########################################
 # MCP Resources
 #########################################
@@ -98,22 +121,37 @@ async def get_player_career_information(
 
 @mcp_server.tool()
 async def get_league_leaders_info(
-    season: Optional[Union[str, List[str]]] = None,
-    stat_category: str = "PTS",
-    per_mode: str = "Totals"
+    season: Optional[Union[str, List[str]]],
+    stat_category: str,
+    per_mode: str
 ) -> str:
-    """
-    Retrieves the top 10 NBA league leaders for one or more seasons.
-    """
+    # ── QUICK NORMALIZATION ─────────────────────────────────────
+    raw_stat = stat_category.strip()
+    raw_mode = per_mode.strip()
+    if "PER GAME" in raw_stat.upper():
+        parts = raw_stat.upper().split()
+        stat_category = parts[0]         # e.g. "AST"
+        per_mode      = "PerGame"
+    else:
+        stat_category = raw_stat
+        per_mode      = raw_mode
+
+    print(
+        f"DEBUG: get_league_leaders_info("
+        f"season={season!r}, "
+        f"stat_category={stat_category!r}, "
+        f"per_mode={per_mode!r})",
+        file=sys.stderr
+    )
+    # ── /NORMALIZATION ───────────────────────────────────────────
+
     client = NBAApiClient()
-    # Pass through to client
     result = await client.get_league_leaders(
         season=season,
         stat_category=stat_category,
         per_mode=per_mode,
         as_dataframe=True
     )
-    # If error message
     if isinstance(result, str):
         return result
 
@@ -121,21 +159,18 @@ async def get_league_leaders_info(
     if df.empty:
         return f"No leaders found for '{stat_category}' in season(s) {season}."
 
-    # Build summaries grouped by season
     summaries: List[str] = []
     for s, group in df.groupby("SEASON"):
-        summaries.append(f"Top 10 {stat_category.upper()} Leaders ({s}):")
-        top10 = group.head(10)
-        for i, (_, row) in enumerate(top10.iterrows(), start=1):
+        summaries.append(f"Top 10 {stat_category} Leaders ({s}):")
+        for i, (_, row) in enumerate(group.head(10).iterrows(), start=1):
             name = row["PLAYER_NAME"]
             team = row.get("TEAM_NAME", row.get("TEAM_ABBREVIATION", ""))
-            # value column detection
-            val_cols = [c for c in row.index if stat_category.upper() in c]
-            value = row[val_cols[0]] if val_cols else row.get("STAT_VALUE", "N/A")
+            val_cols = [c for c in row.index if stat_category in c]
+            value    = row[val_cols[0]] if val_cols else row.get("STAT_VALUE","N/A")
             summaries.append(f"{i}. {name} ({team}): {value}")
-        summaries.append("")  # blank line between seasons
-
+        summaries.append("")
     return "\n".join(summaries).strip()
+
 
 
 
@@ -203,106 +238,129 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
 
 
 
+# Allowed season types per NBA API; we will always query all
+_ALLOWED_SEASON_TYPES = [
+    "Regular Season",
+    "Playoffs",
+    "Pre Season",
+    "All Star",
+    "All-Star"
+]
+
 @mcp_server.tool()
 async def get_date_range_game_log_or_team_game_log(
     season: str,
-    season_type: str = "Regular Season",
     team: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None
 ) -> str:
     """
-    Retrieves a game log for a given season and season_type:
+    Retrieves a game log for a given season across all season_types:
+      • Automatically queries every allowed season type
       • If `team` is provided, returns that team's games (optionally date‑filtered).
       • If `team` is omitted, returns all teams' games in the optional date range.
-      Supports any SeasonType ("Regular Season","Playoffs","Pre Season","All Star","All-Star").
 
     Parameters:
         season (str): Season in 'YYYY-YY'.
-        season_type (str): One of "Regular Season","Playoffs","Pre Season","All Star","All-Star".
         team (Optional[str]): Full/partial team name; if None, returns all teams.
         date_from (Optional[str]): Start date 'YYYY-MM-DD'.
         date_to (Optional[str]): End date 'YYYY-MM-DD'.
 
     Returns:
-        str: Lines summarizing each game with rich stats.
+        str: Lines summarizing each game with rich stats, grouped by season_type.
     """
-    print(f"DEBUG: get_date_range_game_log_or_team_game_log("
-          f"season={season!r}, season_type={season_type!r}, "
-          f"team={team!r}, from={date_from!r}, to={date_to!r})",
-          file=sys.stderr)
+    print(
+        f"DEBUG: get_date_range_game_log_or_team_game_log(season={season!r}, "
+        f"team={team!r}, from={date_from!r}, to={date_to!r})",
+        file=sys.stderr
+    )
 
     client = NBAApiClient()
+    all_lines: List[str] = []
+    start = date_from or "season start"
+    end = date_to or "season end"
+
     try:
-        df = await client.get_league_game_log(
-            season=season,
-            team_name=team,
-            season_type=season_type,
-            date_from=date_from,
-            date_to=date_to,
-            as_dataframe=True
-        )
-        if isinstance(df, str):
-            return df
-        if df.empty:
-            if team:
-                return (f"No games found for '{team}' in {season} "
-                        f"{season_type}{' between '+date_from if date_from else ''}"
-                        f"{' and '+date_to if date_to else ''}.")
-            else:
-                return (f"No games found in {season} {season_type}"
-                        f"{' between '+date_from if date_from else ''}"
-                        f"{' and '+date_to if date_to else ''}.")
-
-        start = date_from or "season start"
-        end = date_to or "season end"
-        if team:
-            header = f"Game log for {team} ({season} {season_type}):\n"
-        else:
-            header = (f"Game log for all teams in {season} {season_type} "
-                      f"from {start} to {end}:\n")
-
-        lines = []
-        for _, row in df.iterrows():
-            game_date = row.get("GAME_DATE") or row.get("GAME_DATE_EST", "Unknown")
-            matchup   = row.get("MATCHUP", "")
-            wl        = row.get("WL", "")
-            team_abbr = row.get("TEAM_ABBREVIATION", "")
-            pts       = row.get("PTS", 0)
-            mins      = row.get("MIN", "")
-            fgm, fga, fg_pct = row.get("FGM", 0), row.get("FGA", 0), row.get("FG_PCT", 0)
-            fg3m, fg3a, fg3_pct = row.get("FG3M", 0), row.get("FG3A", 0), row.get("FG3_PCT", 0)
-            ftm, fta, ft_pct = row.get("FTM", 0), row.get("FTA", 0), row.get("FT_PCT", 0)
-            reb = row.get("REB", 0)
-            ast = row.get("AST", 0)
-            stl = row.get("STL", 0)
-            blk = row.get("BLK", 0)
-            tov = row.get("TOV", 0)
-            pf  = row.get("PF", 0)
-            plus_minus = row.get("PLUS_MINUS", 0)
-
-            stats_str = (
-                f"{mins} min | "
-                f"FG {fgm}-{fga} ({fg_pct:.1f}%) | "
-                f"3P {fg3m}-{fg3a} ({fg3_pct:.1f}%) | "
-                f"FT {ftm}-{fta} ({ft_pct:.1f}%) | "
-                f"TRB {reb} | AST {ast} | STL {stl} | BLK {blk} | "
-                f"TOV {tov} | PF {pf} | ±{plus_minus}"
+        for st in _ALLOWED_SEASON_TYPES:
+            # Fetch for this season type
+            df = await client.get_league_game_log(
+                season=season,
+                team_name=team,
+                season_type=st,
+                date_from=date_from,
+                date_to=date_to,
+                as_dataframe=True
             )
+            # Propagate errors/messages
+            if isinstance(df, str):
+                all_lines.append(f"{st}: {df}")
+                continue
+            # Empty
+            if df.empty:
+                all_lines.append(
+                    f"{st}: No games found for "
+                    f"{team or 'all teams'} in {season} "
+                    f"{st} from {start} to {end}."
+                )
+                continue
 
-            if team:
-                lines.append(f"{game_date}: {matchup} – {wl}, {pts} pts | {stats_str}")
-            else:
-                lines.append(f"{game_date} • {team_abbr} • {matchup} – {wl}, {pts} pts | {stats_str}")
+            # Header for this block
+            block_header = (
+                f"Game log ({st}) for {team or 'all teams'} "
+                f"in {season} from {start} to {end}:"
+            )
+            all_lines.append(block_header)
 
-        return header + "\n".join(lines)
+            # Format stats rows
+            for _, row in df.iterrows():
+                game_date = row.get("GAME_DATE") or row.get("GAME_DATE_EST", "Unknown")
+                matchup   = row.get("MATCHUP", "")
+                wl        = row.get("WL", "")
+                team_abbr = row.get("TEAM_ABBREVIATION", "")
+                pts       = row.get("PTS", 0)
+                mins      = row.get("MIN", "")
+                # shooting splits
+                fgm, fga, fg_pct = row.get("FGM", 0), row.get("FGA", 0), row.get("FG_PCT", 0)
+                fg3m, fg3a, fg3_pct = row.get("FG3M", 0), row.get("FG3A", 0), row.get("FG3_PCT", 0)
+                ftm, fta, ft_pct   = row.get("FTM", 0), row.get("FTA", 0), row.get("FT_PCT", 0)
+                # other stats
+                reb = row.get("REB", 0)
+                ast = row.get("AST", 0)
+                stl = row.get("STL", 0)
+                blk = row.get("BLK", 0)
+                tov = row.get("TOV", 0)
+                pf  = row.get("PF", 0)
+                plus_minus = row.get("PLUS_MINUS", 0)
+
+                stats_str = (
+                    f"{mins} min | "
+                    f"FG {fgm}-{fga} ({fg_pct:.1f}%) | "
+                    f"3P {fg3m}-{fg3a} ({fg3_pct:.1f}%) | "
+                    f"FT {ftm}-{fta} ({ft_pct:.1f}%) | "
+                    f"TRB {reb} | AST {ast} | STL {stl} | BLK {blk} | "
+                    f"TOV {tov} | PF {pf} | ±{plus_minus}"
+                )
+                # line prefix: date and optional team for all-teams mode
+                prefix = (
+                    f"{game_date} • {team_abbr} •" if not team else f"{game_date}:"
+                )
+                all_lines.append(
+                    f"{prefix} {matchup} – {wl}, {pts} pts | {stats_str}"
+                )
+            # blank between blocks
+            all_lines.append("")
+
+        return "\n".join(all_lines).strip()
 
     except Exception as e:
-        error_msg = (f"Unexpected error in "
-                     f"get_date_range_game_log_or_team_game_log: {e}")
+        error_msg = (
+            f"Unexpected error in "
+            f"get_date_range_game_log_or_team_game_log: {e}"
+        )
         print(f"ERROR: {error_msg}", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         return error_msg
+
 
 
 @mcp_server.tool()

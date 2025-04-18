@@ -6,7 +6,7 @@ from pathlib import Path
 import inspect
 import json
 from datetime import datetime, date
-from typing import Optional, Dict, Union, Any
+from typing import Optional, Dict, Union, Any, List
 import pandas as pd
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.endpoints import (
@@ -275,59 +275,62 @@ def normalize_per_mode(per_mode: str) -> str:
     Accepts variations such as lower or upper case, and common synonyms.
     """
     normalized = per_mode.strip().lower()
-    if normalized in ["totals", "total", "total stats", "total per season"]:
+    if normalized in ["totals", "total", "total stats", "total per season", "total_per_season"]:
         return "Totals"
-    elif normalized in ["pergame", "per game", "per game average", "per game average stats", "per game per season"]:
+    elif normalized in ["pergame", "per game", "per game average", "per game average stats", "per game per season", "per_game"]:
         return "PerGame"
-    elif normalized in ["per48", "per 48", "per 48 average", "per 48 average stats", "per 48 per season"]:
+    elif normalized in ["per48", "per 48", "per 48 average", "per 48 average stats", "per 48 per season", "per_48"]:
         return "Per48"
     else:
         raise ValueError(f"Unsupported per_mode value: {per_mode}")
     
-def normalize_season(season: str) -> str:
+
+def normalize_single_season(season: str) -> str:
     """
-    Normalize the season parameter to the expected format:
-    "YYYY-YY" (e.g. "2024-25").
-    
-    Handles various inputs:
-    - 2-digit year (e.g., "24") - interpreted as 2000s for values < 59
-    - 4-digit year (e.g., "2024")
-    - Already formatted "YYYY-YY" season
+    Normalize one season string into 'YYYY-YY' format.
+    Handles unicode dashes by first cleaning them to ASCII '-'.
     """
-    # Strip any whitespace
-    season = season.strip()
-    season = season.replace("'", "").replace("_", "")
-    
-    # Handle 2-digit year (e.g., "24")
-    if len(season) == 2 and season.isdigit():
-        year = int(season)
-        # Interpret years below 59 as 2000s, otherwise as 1900s
-        full_year = 2000 + year if year < 59 else 1900 + year
-        next_year = str(full_year + 1)[2:]
-        return f"{full_year}-{next_year}"
-    
-    # Handle 4-digit year (e.g., "2024")
-    elif len(season) == 4 and season.isdigit():
-        year = int(season)
-        next_year = str(year + 1)[2:]
-        return f"{year}-{next_year}"
-    
-    # Handle already formatted season (e.g., "2024-25" or "24-25")
-    elif "-" in season and len(season.split("-")) == 2:
-        parts = season.split("-")
-        
-        # If it's a short format like "24-25", convert to "2024-25"
+    # 1) Clean any fancy dashes or spaces
+    s = _clean_date_string(season)
+    # 2) Remove quotes or underscores
+    s = s.replace("'", "").replace("_", "").strip()
+
+    # 3) Original logic
+    if len(s) == 2 and s.isdigit():
+        year = int(s)
+        full = 2000 + year if year < 59 else 1900 + year
+        return f"{full}-{str(full+1)[2:]}"
+    if len(s) == 4 and s.isdigit():
+        year = int(s)
+        return f"{year}-{str(year+1)[2:]}"
+    if "-" in s:
+        parts = s.split("-")
         if len(parts[0]) == 2 and parts[0].isdigit():
             year = int(parts[0])
-            full_year = 2000 + year if year < 59 else 1900 + year
-            return f"{full_year}-{parts[1]}"
-        
-        # If it's already in "YYYY-YY" format, return as is
-        return season
-    
-    # Unsupported format
+            full = 2000 + year if year < 59 else 1900 + year
+            return f"{full}-{parts[1]}"
+        return s
+    raise ValueError(f"Unsupported season format: {season!r}")
+
+def normalize_season(
+    season: Optional[Union[str, List[str]]]
+) -> Optional[List[str]]:
+    """
+    Normalize one or more seasons into a list of 'YYYY-YY' strings.
+    """
+    if season is None:
+        return None
+
+    # Turn comma‑separated string into a list, or accept existing list
+    if isinstance(season, list):
+        raw_list = season
     else:
-        raise ValueError(f"Unsupported season value: {season}")
+        raw_list = [part.strip() for part in season.split(",")]
+
+    normalized = []
+    for raw in raw_list:
+        normalized.append(normalize_single_season(raw))
+    return normalized
 
 
 
@@ -337,21 +340,23 @@ def normalize_season(season: str) -> str:
 # (list is not exhaustive – add more if you encounter them)
 _DASHES = {
     "\u2010",  # HYPHEN
-    "\u2011",  # NO‑BREAK HYPHEN  ← your bug
+    "\u2011",  # NO‑BREAK HYPHEN
     "\u2012",  # FIGURE DASH
     "\u2013",  # EN DASH
     "\u2014",  # EM DASH
     "\u2212",  # MINUS
 }
+
 def _clean_date_string(s: str) -> str:
     """
-    Convert all fancy dash variants to ASCII '-' and strip weird spaces.
+    Convert all fancy dash variants (and weird spaces) to ASCII '-' and regular spaces.
     """
+    import unicodedata
     cleaned = []
     for ch in s:
         if ch in _DASHES:
             cleaned.append("-")
-        elif unicodedata.category(ch) in {"Zs", "Cf"}:  # space / format chars
+        elif unicodedata.category(ch) in {"Zs", "Cf"}:
             cleaned.append(" ")
         else:
             cleaned.append(ch)
@@ -460,3 +465,19 @@ def _resolve_team_ids(label: str) -> set[int]:
         ids.add(int(tid2))
 
     return ids
+
+
+
+if __name__ == "__main__":
+    print(normalize_stat_category("pts"))
+    print(normalize_per_mode("pergame"))
+    print(normalize_season("2024-25"))
+    print(normalize_date("2024-12-25"))
+    print(get_team_id_from_abbr("LAL"))
+    print(normalize_single_season("2023-24"))       # → "2023-24"
+    print(normalize_single_season("2023‑24"))       # → "2023-24"  (no-break hyphen)
+    print(normalize_single_season("24-25"))         # → "2024-25"
+    print(normalize_season("21-22, 22‑23,2024"))    # → ["2021-22","2022-23","2024-25"]
+
+
+

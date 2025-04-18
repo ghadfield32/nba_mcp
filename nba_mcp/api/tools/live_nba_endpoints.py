@@ -7,7 +7,7 @@ from nba_api.live.nba.endpoints.odds import Odds
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 import json
 import pandas as pd
-
+from json import JSONDecodeError
 
 def fetch_game_live_data(
     game_id: str,
@@ -16,51 +16,60 @@ def fetch_game_live_data(
     timeout: int = 30
 ) -> dict:
     """
-    Fetch and assemble live data for a single game.
+    Fetch and assemble live data for a single game_id.
+    Skips games that have no boxscore yet.
     """
-    # 1. Box score details
-    box = BoxScore(
-        game_id=game_id,
-        proxy=proxy,
-        headers=headers,
-        timeout=timeout,
-        get_request=True
-    )
-    # 2. Play-by-play actions
-    pbp = PlayByPlay(
-        game_id=game_id,
-        proxy=proxy,
-        headers=headers,
-        timeout=timeout,
-        get_request=True
-    )
-    # 3. Odds feed for all games (we’ll filter to this game)
+    # 1) BOX SCORE
+    try:
+        box = BoxScore(
+            game_id=game_id,
+            proxy=proxy,
+            headers=headers,
+            timeout=timeout,
+            get_request=False,        # don’t auto-fetch twice
+        )
+        box.get_request()            # fetch exactly once
+        box_data = box.get_dict()['game']
+    except JSONDecodeError:
+        # No JSON body yet for this game → skip
+        print(f"[DEBUG] No boxscore JSON for game {game_id!r}, skipping.")
+        return {}
+
+    # 2) PLAY‑BY‑PLAY
+    try:
+        pbp = PlayByPlay(
+            game_id=game_id,
+            proxy=proxy,
+            headers=headers,
+            timeout=timeout,
+            get_request=False
+        )
+        pbp.get_request()
+        pbp_data = pbp.get_dict()['game']
+    except JSONDecodeError:
+        # no pbp yet? still include boxscore
+        pbp_data = {}
+
+    # 3) ODDS
     odds = Odds(
         proxy=proxy,
         headers=headers,
         timeout=timeout,
-        get_request=True
+        get_request=False
     )
+    odds.get_request()
+    # odds.get_dict() returns { "games": [ … ] }
+    all_odds = odds.get_dict().get('games', [])
+    odds_for_us = next((g for g in all_odds if g["gameId"] == game_id), {})
 
+    # 4) Assemble
     return {
         "gameId": game_id,
-        "boxScore": box.game_details.get_dict(),
-        "arena": box.arena.get_dict() if box.arena else None,
-        "officials": box.officials.get_dict() if box.officials else None,
-        "homeTeam": {
-            **box.home_team_stats.get_dict(),
-            "players": box.home_team_player_stats.get_dict()
-        },
-        "awayTeam": {
-            **box.away_team_stats.get_dict(),
-            "players": box.away_team_player_stats.get_dict()
-        },
-        "playByPlay": pbp.actions.get_dict(),
-        "odds": next(
-            (g for g in odds.games.get_dict() if g["gameId"] == game_id),
-            {}
-        )
+        "boxScore": box_data,
+        "playByPlay": pbp_data.get('actions', []),
+        "odds": odds_for_us
     }
+
 
 
 def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
