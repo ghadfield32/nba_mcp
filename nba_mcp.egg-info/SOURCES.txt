@@ -12,4 +12,3 @@ nba_mcp.egg-info/requires.txt
 nba_mcp.egg-info/top_level.txt
 nba_mcp/api/__init__.py
 nba_mcp/api/client.py
-nba_mcp/examples/__init__.py

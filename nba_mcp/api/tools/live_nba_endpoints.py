@@ -8,144 +8,146 @@ from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 import json
 import pandas as pd
 from json import JSONDecodeError
+# --------------------------------------------------------------------------- #
+# ──   HELPERS                                                               ──
+# --------------------------------------------------------------------------- #
+import logging
+logger = logging.getLogger(__name__)
+
 
 def fetch_game_live_data(
     game_id: str,
-    proxy: str = None,
-    headers: dict = None,
-    timeout: int = 30
+    proxy: str | None = None,
+    headers: dict | None = None,
+    timeout: int = 30,
 ) -> dict:
     """
-    Fetch and assemble live data for a single game_id.
-    Skips games that have no boxscore yet.
+    Fetch **live** box‑score, play‑by‑play and odds for a single game.
+
+    Always returns the same top‑level keys so that callers do not need to
+    branch on “data missing vs. data present”.
+
+    Keys:
+        * gameId       – the 10‑digit game code
+        * boxScore     – dict | None           (None when not yet available)
+        * playByPlay   – list[dict]            (empty list when not yet available)
+        * odds         – dict                  ({} when no odds for this game)
     """
-    # 1) BOX SCORE
+    # ---------- 1) Box‑score -------------------------------------------------
     try:
         box = BoxScore(
             game_id=game_id,
             proxy=proxy,
             headers=headers,
             timeout=timeout,
-            get_request=False,        # don’t auto-fetch twice
+            get_request=False,
         )
-        box.get_request()            # fetch exactly once
-        box_data = box.get_dict()['game']
+        box.get_request()
+        box_data: dict | None = box.get_dict()["game"]
     except JSONDecodeError:
-        # No JSON body yet for this game → skip
-        print(f"[DEBUG] No boxscore JSON for game {game_id!r}, skipping.")
-        return {}
+        # Endpoint has no body yet (game not started)
+        logger.debug("No box‑score JSON for game %s – tip‑off not reached.", game_id)
+        box_data = None  # explicit “missing” marker
 
-    # 2) PLAY‑BY‑PLAY
+    # ---------- 2) Play‑by‑play ---------------------------------------------
     try:
         pbp = PlayByPlay(
             game_id=game_id,
             proxy=proxy,
             headers=headers,
             timeout=timeout,
-            get_request=False
+            get_request=False,
         )
         pbp.get_request()
-        pbp_data = pbp.get_dict()['game']
+        pbp_actions: list[dict] = pbp.get_dict()["game"].get("actions", [])
     except JSONDecodeError:
-        # no pbp yet? still include boxscore
-        pbp_data = {}
+        pbp_actions = []  # same rationale as box‑score
 
-    # 3) ODDS
-    odds = Odds(
-        proxy=proxy,
-        headers=headers,
-        timeout=timeout,
-        get_request=False
-    )
-    odds.get_request()
-    # odds.get_dict() returns { "games": [ … ] }
-    all_odds = odds.get_dict().get('games', [])
-    odds_for_us = next((g for g in all_odds if g["gameId"] == game_id), {})
+    # ---------- 3) Odds ------------------------------------------------------
+    odds_ep = Odds(proxy=proxy, headers=headers, timeout=timeout, get_request=False)
+    odds_ep.get_request()
+    odds_all = odds_ep.get_dict().get("games", [])
+    odds_for_us = next((g for g in odds_all if g["gameId"] == game_id), {})
 
-    # 4) Assemble
+    # ---------- 4) Assemble --------------------------------------------------
     return {
         "gameId": game_id,
         "boxScore": box_data,
-        "playByPlay": pbp_data.get('actions', []),
-        "odds": odds_for_us
+        "playByPlay": pbp_actions,
+        "odds": odds_for_us,
     }
-
 
 
 def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
-    game_date: str = None,
-    proxy: str = None,
-    headers: dict = None,
-    timeout: int = 30
+    game_date: str | None = None,
+    proxy: str | None = None,
+    headers: dict | None = None,
+    timeout: int = 30,
 ) -> dict:
     """
-    Fetch live data for today's games or historical games for a specific date.
+    Wrapper returning *all* games for a date.
 
-    Args:
-        game_date: 'YYYY-MM-DD'. If provided, uses the Stats API (ScoreboardV2) to fetch a historical snapshot.
+    * When `game_date` is **None** → use Live API (today).
+    * When `game_date` is  'YYYY‑MM‑DD' → use historical ScoreboardV2 snapshot.
+
+    For **live** mode, each game dict now *always* contains:
+        - gameId, boxScore, playByPlay, odds, scoreBoardSummary
+    For **historical** mode, structure is unchanged (scoreBoardSnapshot only).
     """
-    # Determine game list
+    # ---------------- 1) Which API to hit? ----------------------------------
     if game_date:
-        # Historical snapshot via Stats API
-        sb2 = ScoreboardV2(day_offset=0, game_date=game_date, league_id='00')
+        sb2 = ScoreboardV2(day_offset=0, game_date=game_date, league_id="00")
         dfs = sb2.get_data_frames()
-        # Identify header and line score DataFrames dynamically
-        df_header = next(df for df in dfs if 'GAME_STATUS_TEXT' in df.columns)
-        df_line = next(df for df in dfs if 'TEAM_ID' in df.columns)
+        df_header = next(df for df in dfs if "GAME_STATUS_TEXT" in df.columns)
+        df_line   = next(df for df in dfs if "TEAM_ID"          in df.columns)
+        games_list: list[dict] = []
 
-        games_list = []
         for _, row in df_header.iterrows():
-            gid = row['GAME_ID']
-            # Extract home team line score, fallback to abbreviation if needed
-            try:
-                home_line = df_line[df_line['TEAM_ID'] == row['HOME_TEAM_ID']].iloc[0].to_dict()
-            except Exception:
-                # Fallback: match by team abbreviation
-                abbrev = row.get('HOME_TEAM_ABBREVIATION')
-                home_line = df_line[df_line['TEAM_ABBREVIATION'] == abbrev].iloc[0].to_dict()
-            # Extract away team line score
-            try:
-                away_line = df_line[df_line['TEAM_ID'] == row['VISITOR_TEAM_ID']].iloc[0].to_dict()
-            except Exception:
-                abbrev = row.get('VISITOR_TEAM_ABBREVIATION')
-                away_line = df_line[df_line['TEAM_ABBREVIATION'] == abbrev].iloc[0].to_dict()
+            gid = row["GAME_ID"]
 
-            games_list.append({
-                'gameId': gid,
-                'gameStatusText': row['GAME_STATUS_TEXT'],
-                'period': row.get('LIVE_PERIOD'),
-                'gameClock': row.get('LIVE_PC_TIME'),
-                'homeTeam': home_line,
-                'awayTeam': away_line
-            })
+            def _line_for(team_id_col: str, abbrev_col: str) -> dict:
+                try:
+                    return df_line[df_line["TEAM_ID"] == row[team_id_col]].iloc[0].to_dict()
+                except Exception:
+                    abbrev = row.get(abbrev_col)
+                    return df_line[df_line["TEAM_ABBREVIATION"] == abbrev].iloc[0].to_dict()
+
+            games_list.append(
+                {
+                    "gameId":      gid,
+                    "gameStatusText": row["GAME_STATUS_TEXT"],
+                    "period":         row.get("LIVE_PERIOD"),
+                    "gameClock":      row.get("LIVE_PC_TIME"),
+                    "homeTeam": _line_for("HOME_TEAM_ID", "HOME_TEAM_ABBREVIATION"),
+                    "awayTeam": _line_for("VISITOR_TEAM_ID", "VISITOR_TEAM_ABBREVIATION"),
+                }
+            )
         date_label = game_date
     else:
-        # Real-time via Live API
-        sb = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
-        games_list = sb.games.get_dict()
-        date_label = sb.score_board_date
+        sb          = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
+        games_list  = sb.games.get_dict()
+        date_label  = sb.score_board_date
 
-    # Assemble final payload
-    all_data = []
-    for game in games_list:
-        gid = game['gameId']
-        if not game_date:
-            details = fetch_game_live_data(
+    # ---------------- 2) Per‑game enrichment --------------------------------
+    all_data: list[dict] = []
+    for gmeta in games_list:
+        gid = gmeta["gameId"]
+        if game_date:
+            all_data.append({"scoreBoardSnapshot": gmeta})
+        else:
+            game_payload = fetch_game_live_data(
                 game_id=gid,
                 proxy=proxy,
                 headers=headers,
-                timeout=timeout
+                timeout=timeout,
             )
-            details['scoreBoardSummary'] = game
-        else:
-            # historical mode: only summary available
-            details = {'scoreBoardSnapshot': game}
-        all_data.append(details)
+            # Will *always* succeed because fetch_game_live_data never returns {}
+            game_payload["scoreBoardSummary"] = gmeta
+            all_data.append(game_payload)
 
-    return {
-        'date': date_label,
-        'games': all_data
-    }
+    # ---------------- 3) Return ---------------------------------------------
+    return {"date": date_label, "games": all_data}
+
 
 
 if __name__ == "__main__":

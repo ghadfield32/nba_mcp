@@ -24,7 +24,7 @@ from nba_api.stats.endpoints import (
     scoreboardv2
 )
 from nba_api.stats.static import players, teams
-from nba_mcp.api.tools.nba_api_utils import (
+from .tools.nba_api_utils import (
     get_player_id, get_team_id, get_team_name, get_player_name,
     get_static_lookup_schema, normalize_stat_category, normalize_per_mode, 
     normalize_season, normalize_date, format_game, normalize_season_type
@@ -97,65 +97,57 @@ class NBAApiClient:
     def find_player_by_name(self, player_name: str) -> Optional[Dict[str, Any]]:
         """
         Find a player by name using the NBA API's static players data.
-        
         Args:
             player_name: Full or partial player name
-            
         Returns:
             Player dictionary or None if not found
         """
         try:
-            print(f"DEBUG: Searching for player: '{player_name}'", file=sys.stderr)
-            
+            logger.debug("Searching for player: '%s'", player_name)
             if not player_name or not player_name.strip():
-                print(f"ERROR: Empty player name provided", file=sys.stderr)
+                logger.error("Empty player name provided")
                 return None
-                
-            # Get all players
-            print(f"DEBUG: Loading player roster data...", file=sys.stderr)
+
+            logger.debug("Loading player roster data...")
             all_players = players.get_players()
-            print(f"DEBUG: Loaded {len(all_players)} players from roster data", file=sys.stderr)
-            
-            # Try exact match first (case insensitive)
+            logger.debug("Loaded %d players from roster data", len(all_players))
+
             player_name_lower = player_name.lower().strip()
-            print(f"DEBUG: Attempting exact match for: '{player_name_lower}'", file=sys.stderr)
-            
+            logger.debug("Attempting exact match for: '%s'", player_name_lower)
+
+            # 1) Exact full‐name match
             for player in all_players:
                 full_name = f"{player['first_name']} {player['last_name']}".lower()
                 if player_name_lower == full_name:
-                    print(f"DEBUG: Found exact match for player: {player['first_name']} {player['last_name']} (ID: {player['id']})", file=sys.stderr)
+                    logger.debug("Found exact match: %s (ID: %s)", full_name, player['id'])
                     return player
-            
-            # Try matching last name only if no full name match
+
+            # 2) Exact last‑name match
             for player in all_players:
                 if player_name_lower == player['last_name'].lower():
-                    print(f"DEBUG: Found match by last name: {player['first_name']} {player['last_name']} (ID: {player['id']})", file=sys.stderr)
+                    logger.debug("Found by last name: %s %s (ID: %s)",
+                                 player['first_name'], player['last_name'], player['id'])
                     return player
-            
-            # If no exact match, try partial match
-            print(f"DEBUG: No exact match found, trying partial match...", file=sys.stderr)
-            matched_players = []
-            for player in all_players:
-                full_name = f"{player['first_name']} {player['last_name']}".lower()
-                if player_name_lower in full_name:
-                    matched_players.append(player)
-            
-            # Return the most likely match or None
-            if matched_players:
-                # Sort by name length (shorter names are more likely to be exact matches)
-                matched_players.sort(key=lambda p: len(f"{p['first_name']} {p['last_name']}"))
-                best_match = matched_players[0]
-                print(f"DEBUG: Found best partial match: {best_match['first_name']} {best_match['last_name']} (ID: {best_match['id']})", file=sys.stderr)
-                return best_match
-            
-            print(f"DEBUG: No player match found for '{player_name}'", file=sys.stderr)
+
+            # 3) Partial match
+            logger.debug("No exact match; trying partial match…")
+            matched = [p for p in all_players
+                       if player_name_lower in f"{p['first_name']} {p['last_name']}".lower()]
+
+            if matched:
+                matched.sort(key=lambda p: len(f"{p['first_name']} {p['last_name']}"))
+                best = matched[0]
+                logger.debug("Best partial match: %s %s (ID: %s)",
+                             best['first_name'], best['last_name'], best['id'])
+                return best
+
+            logger.debug("No player match found for '%s'", player_name)
             return None
-            
+
         except Exception as e:
-            print(f"ERROR: Exception while finding player: {str(e)}", file=sys.stderr)
-            traceback.print_exc(file=sys.stderr)
-            logger.error(f"Error finding player: {str(e)}")
+            logger.exception("Exception while finding player '%s'", player_name)
             return None
+
 
     def get_season_string(self, year: Optional[int] = None) -> str:
         """
@@ -403,7 +395,7 @@ class NBAApiClient:
             # instantiate on background thread
             stream = await asyncio.to_thread(GameStream, game_id)
 
-            # fetch today’s games once (to build the "1. Today’s Games" block)
+            # fetch today's games once (to build the "1. Today's Games" block)
             games_today = await asyncio.to_thread(GameStream.get_today_games)
 
             # build the combined payload
@@ -465,3 +457,82 @@ class NBAApiClient:
         except Exception as e:
             logger.error(f"Error in get_past_play_by_play: {e}")
             return {"error": str(e)}
+            
+    async def get_games_by_date(
+        self,
+        target_date: Optional[Union[str, date, datetime]] = None,
+        league_id: str = "00",
+        as_dataframe: bool = True
+    ) -> Union[pd.DataFrame, List[Dict[str, Any]], str]:
+        """
+        Fetch games for a specific date using ScoreboardV2.
+        
+        Args:
+            target_date: Date in 'YYYY-MM-DD' format, date object, or datetime
+            league_id: League ID ('00' for NBA)
+            as_dataframe: If True, returns DataFrame; otherwise list of dicts
+            
+        Returns:
+            DataFrame, list of game dictionaries, or error message
+        """
+        try:
+            # Normalize the date
+            norm_date = normalize_date(target_date)
+            date_str = norm_date.strftime("%Y-%m-%d")
+            
+            # Use scoreboardv2 with the correct parameter name
+            sb = await asyncio.to_thread(
+                scoreboardv2.ScoreboardV2,
+                game_date=date_str,
+                league_id=league_id
+            )
+            
+            # Get DataFrames
+            game_header = sb.game_header.get_data_frame()
+            
+            if game_header.empty:
+                return f"No games found for {date_str}."
+                
+            # Format the response
+            games = []
+            for _, row in game_header.iterrows():
+                home_team_id = row["HOME_TEAM_ID"]
+                visitor_team_id = row["VISITOR_TEAM_ID"]
+                
+                game_data = {
+                    "game_id": row["GAME_ID"],
+                    "game_date": row["GAME_DATE_EST"],
+                    "status": row["GAME_STATUS_TEXT"],
+                    "home_team": {
+                        "id": home_team_id,
+                        "full_name": get_team_name(home_team_id)
+                    },
+                    "visitor_team": {
+                        "id": visitor_team_id,
+                        "full_name": get_team_name(visitor_team_id)
+                    },
+                    "home_team_score": 0,  # Will be populated from line_score if available
+                    "visitor_team_score": 0
+                }
+                games.append(game_data)
+                
+            # Try to get scores from line_score if available
+            line_score = sb.line_score.get_data_frame()
+            if not line_score.empty:
+                for game in games:
+                    home_rows = line_score[line_score["TEAM_ID"] == game["home_team"]["id"]]
+                    away_rows = line_score[line_score["TEAM_ID"] == game["visitor_team"]["id"]]
+                    
+                    if not home_rows.empty:
+                        game["home_team_score"] = home_rows.iloc[0].get("PTS", 0)
+                    if not away_rows.empty:
+                        game["visitor_team_score"] = away_rows.iloc[0].get("PTS", 0)
+            
+            if not as_dataframe:
+                return {"data": games}
+            
+            # Convert to DataFrame
+            return pd.DataFrame(games)
+            
+        except Exception as e:
+            return self._handle_response_error(e, "get_games_by_date")

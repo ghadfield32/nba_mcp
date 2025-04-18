@@ -7,61 +7,17 @@ import json
 from datetime import datetime
 import pandas as pd
 from typing import Optional, Dict
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id, normalize_stat_category, normalize_per_mode, normalize_season,
+    get_team_id
+)
 
 # Import NBA API modules
 from nba_api.stats import endpoints
 from nba_api.stats.static import teams, players
+import logging
+logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------
-# Load static lookups once and create reverse lookups
-# ---------------------------------------------------
-_TEAM_LOOKUP: Dict[int, str] = {
-    t["id"]: t["full_name"] for t in teams.get_teams()
-}
-_PLAYER_LOOKUP: Dict[int, str] = {
-    p["id"]: f"{p['first_name']} {p['last_name']}" for p in players.get_players()
-}
-
-# Create reverse lookups (name -> id)
-_TEAM_NAME_TO_ID = {name: id for id, name in _TEAM_LOOKUP.items()}
-_PLAYER_NAME_TO_ID = {name: id for id, name in _PLAYER_LOOKUP.items()}
-
-def get_player_id(player_name: str) -> Optional[int]:
-    """Convert player name to ID, with case-insensitive partial matching."""
-    if not player_name:
-        return None
-
-    player_name_lower = player_name.lower()
-    # Try exact match first
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if name.lower() == player_name_lower:
-            return id
-
-    # Try partial match
-    for name, id in _PLAYER_NAME_TO_ID.items():
-        if player_name_lower in name.lower():
-            return id
-
-    return None
-
-
-def get_team_id(team_name: str) -> Optional[int]:
-    """Convert team name to ID, with case-insensitive partial matching."""
-    if not team_name:
-        return None
-
-    team_name_lower = team_name.lower()
-    # Try exact match first
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if name.lower() == team_name_lower:
-            return id
-
-    # Try partial match
-    for name, id in _TEAM_NAME_TO_ID.items():
-        if team_name_lower in name.lower():
-            return id
-
-    return None
 
 def get_endpoint_data_structure(endpoint_class):
     """Get the detailed data structure for an endpoint including metrics and column info.
@@ -118,17 +74,17 @@ def get_endpoint_data_structure(endpoint_class):
     except Exception as e:
         return {'error': str(e)}
 
-def analyze_api_structure():
-    """Analyze the NBA API structure and generate a quick guide for each endpoint.
-    The quick guide includes the endpoint URL, the parameters, and a short description
-    of what the endpoint is good for (derived from its datasets).
+def analyze_api_structure() -> dict:
     """
-    print("Analyzing NBA API structure...")
+    Analyze the NBA API structure and generate a quick guide for each endpoint.
+    The quick guide includes the endpoint URL, parameters, and datasets.
+    """
+    logger.info("Analyzing NBA API structure…")
 
     # Get all endpoint classes from the endpoints module
     endpoint_classes = inspect.getmembers(endpoints, inspect.isclass)
+    logger.info("Found %d potential endpoint classes", len(endpoint_classes))
 
-    # Initialize documentation structure
     api_docs = {
         'endpoints': {},
         'static_data': {
@@ -137,24 +93,21 @@ def analyze_api_structure():
         }
     }
 
-    print(f"Found {len(endpoint_classes)} potential endpoints")
-
-    # Document each endpoint
     for endpoint_name, endpoint_class in endpoint_classes:
         try:
-            # Only process those classes that declare an endpoint property
             if not hasattr(endpoint_class, 'endpoint'):
                 continue
 
-            # Generate the detailed data structure once
             detailed_data = get_endpoint_data_structure(endpoint_class)
 
-            # Create a quick description based on the datasets available.
-            dataset_names = []
-            if 'datasets' in detailed_data:
-                for ds in detailed_data['datasets'].values():
-                    dataset_names.append(ds['name'])
-            description = f"This endpoint returns data related to {', '.join(dataset_names)}." if dataset_names else "No dataset information available."
+            dataset_names = [
+                ds['name'] for ds in detailed_data.get('datasets', {}).values()
+            ]
+            description = (
+                f"This endpoint returns data related to {', '.join(dataset_names)}."
+                if dataset_names else
+                "No dataset information available."
+            )
 
             api_docs['endpoints'][endpoint_name] = {
                 'endpoint_url': endpoint_class.endpoint,
@@ -164,74 +117,87 @@ def analyze_api_structure():
                 'quick_description': description,
                 'data_structure': detailed_data
             }
-        except Exception as e:
-            print(f"Error processing endpoint {endpoint_name}: {str(e)}")
 
-    print(f"Successfully documented {len(api_docs['endpoints'])} endpoints")
+        except Exception as e:
+            logger.error("Error processing endpoint %s: %s", endpoint_name, e, exc_info=True)
+
+    logger.info("Successfully documented %d endpoints", len(api_docs['endpoints']))
     return api_docs
 
-def save_documentation(api_docs, output_dir='api_documentation'):
-    """Save the API documentation to files (both JSON and markdown).
-    This only happens once so that subsequent queries for documentation load quickly.
-    """
+def save_documentation(api_docs: dict, output_dir: str = 'api_documentation'):
+    """Save the API documentation to JSON and Markdown files."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    endpoints_file = output_path / 'endpoints.json'
-    with open(endpoints_file, 'w') as f:
-        json.dump(api_docs['endpoints'], f, indent=2)
+    # 1) Write JSON files as before
+    (output_path / 'endpoints.json').write_text(
+        json.dumps(api_docs['endpoints'], indent=2), encoding='utf-8'
+    )
+    (output_path / 'static_data.json').write_text(
+        json.dumps(api_docs['static_data'], indent=2), encoding='utf-8'
+    )
 
-    static_file = output_path / 'static_data.json'
-    with open(static_file, 'w') as f:
-        json.dump(api_docs['static_data'], f, indent=2)
+    # 2) Build the markdown_content
+    markdown_content = []
+    # Header
+    markdown_content.append(f"# NBA API Documentation Quick Guide\n")
+    markdown_content.append(f"**Generated on:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+    markdown_content.append("## Available Endpoints\n")
 
-    # Create markdown documentation for quick reference
-    markdown_content = f"""# NBA API Documentation Quick Guide
-        Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    # Each endpoint
+    for name, info in api_docs['endpoints'].items():
+        markdown_content.append(f"### {name}\n")
+        markdown_content.append(f"- **Endpoint URL:** `{info['endpoint_url']}`")
+        markdown_content.append(f"- **Quick Description:** {info['quick_description']}\n")
 
-        This guide provides a quick reference to available NBA API endpoints and what they are used for.
+        # Required parameters
+        if info['parameters']:
+            markdown_content.append("#### Required Parameters\n```json")
+            markdown_content.append(json.dumps(info['parameters'], indent=2))
+            markdown_content.append("```\n")
 
-        ## Available Endpoints
+        # Optional parameters
+        if info['optional_parameters']:
+            markdown_content.append("#### Optional Parameters\n```json")
+            markdown_content.append(json.dumps(info['optional_parameters'], indent=2))
+            markdown_content.append("```\n")
 
-"""
+        # Default parameters
+        if info['default_parameters']:
+            markdown_content.append("#### Default Parameters\n```json")
+            markdown_content.append(json.dumps(info['default_parameters'], indent=2))
+            markdown_content.append("```\n")
 
-    for endpoint_name, endpoint_info in api_docs['endpoints'].items():
-        markdown_content += f"\n### {endpoint_name}\n"
-        markdown_content += f"**Endpoint URL:** `{endpoint_info['endpoint_url']}`\n\n"
-        markdown_content += f"**Quick Description:** {endpoint_info['quick_description']}\n\n"
+        # Example parameters used
+        params_used = info['data_structure'].get('parameters_used', {})
+        if params_used:
+            markdown_content.append("#### Example Parameters Used\n```json")
+            markdown_content.append(json.dumps(params_used, indent=2))
+            markdown_content.append("```\n")
 
-        if endpoint_info['parameters']:
-            markdown_content += "#### Required Parameters:\n```python\n"
-            markdown_content += json.dumps(endpoint_info['parameters'], indent=2)
-            markdown_content += "\n```\n"
-        if endpoint_info['optional_parameters']:
-            markdown_content += "\n#### Optional Parameters:\n```python\n"
-            markdown_content += json.dumps(endpoint_info['optional_parameters'], indent=2)
-            markdown_content += "\n```\n"
-        markdown_content += "\n#### Example Parameters Used:\n```python\n"
-        markdown_content += json.dumps(endpoint_info['data_structure'].get('parameters_used', {}), indent=2)
-        markdown_content += "\n```\n"
+        # Datasets info
+        datasets = info['data_structure'].get('datasets', {})
+        if datasets:
+            markdown_content.append("#### Available Datasets\n")
+            for ds in datasets.values():
+                markdown_content.append(f"- **{ds['name']}** (Rows: {ds['row_count']})")
+                markdown_content.append("```json")
+                markdown_content.append(json.dumps({
+                    "headers": ds['headers'],
+                    "sample_data": ds['sample_data']
+                }, indent=2))
+                markdown_content.append("```\n")
 
-        # Add details about available datasets from this endpoint
-        if 'datasets' in endpoint_info['data_structure'] and endpoint_info['data_structure']['datasets']:
-            markdown_content += "\n#### Available Datasets:\n"
-            for ds in endpoint_info['data_structure']['datasets'].values():
-                markdown_content += f"\n**{ds['name']}** (Rows: {ds['row_count']})\n"
-                markdown_content += "Headers:\n```python\n"
-                markdown_content += json.dumps(ds['headers'], indent=2)
-                markdown_content += "\n```\n"
-                markdown_content += "Columns and Data Types:\n```python\n"
-                markdown_content += json.dumps(ds['dtypes'], indent=2)
-                markdown_content += "\n```\n"
-                markdown_content += "Sample Data:\n```python\n"
-                markdown_content += json.dumps(ds['sample_data'], indent=2)
-                markdown_content += "\n```\n"
+    # Join all parts into one string
+    markdown_str = "\n".join(markdown_content)
 
+    # 3) Write the markdown file
     markdown_file = output_path / 'api_documentation.md'
-    with open(markdown_file, 'w') as f:
-        f.write(markdown_content)
+    with open(markdown_file, 'w', encoding='utf-8') as f:
+        f.write(markdown_str)
 
-    print(f"Documentation saved in directory: {output_path}")
+    logger.info("Documentation saved in directory: %s", output_path)
+
 
 if __name__ == "__main__":
     # Generate the documentation quickly
@@ -253,9 +219,5 @@ if __name__ == "__main__":
     #     first_endpoint = next(iter(api_docs['endpoints']))
     #     print(f"\nSample endpoint ({first_endpoint}):")
     #     print(json.dumps(api_docs['endpoints'][first_endpoint], indent=2))
-
-
-
-
 
 

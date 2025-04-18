@@ -18,58 +18,66 @@ Ensure you have Python 3.7+ installed.
 
 
 import pandas as pd
+from typing import Union, List
 from nba_api.stats.endpoints import playercareerstats, LeagueLeaders
 from nba_mcp.api.tools.nba_api_utils import (
     get_player_id, normalize_stat_category, normalize_per_mode, normalize_season
 )
 
 
-def get_player_career_stats(player_name: str, season: str) -> pd.DataFrame:
+def get_player_career_stats(player_name: str, season: Union[str, List[str]]) -> pd.DataFrame:
     """Retrieve career stats for a specific player by name."""
-    season = normalize_season(season)
+    # 1) Normalize & inspect what normalize_season returns
+    season_norm = normalize_season(season)
+    print(f"DEBUG ▶ normalize_season({season!r}) → {season_norm!r} (type={type(season_norm)})")
+    
+    # 2) Look up the player ID
     player_id = get_player_id(player_name)
     if player_id is None:
-        raise ValueError(f"Player not found: {player_name}")
+        raise ValueError(f"Player not found: {player_name!r}")
+
+    # 3) Fetch the raw career DataFrame
     career = playercareerstats.PlayerCareerStats(player_id=player_id)
     career_df = career.get_data_frames()[0]
-    # filter for season_id 2024-25
-    career_df = career_df[career_df['SEASON_ID'] == season]
-    return career_df
+    
+    # 4) Log available seasons in the data
+    available = career_df['SEASON_ID'].unique().tolist()
+    print(f"DEBUG ▶ Available SEASON_IDs: {available}")
+
+    # 5) Apply filtering, choosing the right comparison
+    if isinstance(season_norm, (list, tuple, set)):
+        filtered = career_df[career_df['SEASON_ID'].isin(season_norm)]
+        print(f"DEBUG ▶ Filtering with .isin({season_norm!r}), result shape: {filtered.shape}")
+    else:
+        filtered = career_df[career_df['SEASON_ID'] == season_norm]
+        print(f"DEBUG ▶ Filtering with == {season_norm!r}, result shape: {filtered.shape}")
+
+    # 6) Return the filtered DataFrame
+    return filtered
 
 
 def get_league_leaders(season: str, stat_category: str, per_mode: str = "Totals") -> pd.DataFrame:
     """
     Retrieve league leaders for a specified season and statistical category.
-    
-    Args:
-        season: Season string (e.g. '2024-25').
-        stat_category: Statistical category such as "PTS", "AST", etc.
-        per_mode: Mode of statistic aggregation (e.g. "Totals", "PerGame", "Per48").
-                  Accepts various case variations or synonyms.
-    
-    Returns:
-        A LeagueLeaders instance (or its DataFrame via get_data_frames()[0]).
+    (Unchanged from before—kept here just for your reference.)
     """
-    season = normalize_season(season)
-    # Normalize the stat_category input to the expected abbreviation.
+    season_norm = normalize_season(season)
     normalized_stat = normalize_stat_category(stat_category)
-    # Normalize the per_mode parameter
     normalized_mode = normalize_per_mode(per_mode)
     
     params = {
         "league_id": "00",
         "per_mode48": normalized_mode,
         "scope": "S",
-        "season": season,
+        "season": season_norm,
         "season_type_all_star": "Regular Season",
         "stat_category_abbreviation": normalized_stat,
         "active_flag_nullable": ""
     }
     
     leaders = LeagueLeaders(**params)
-    leaders_df = leaders.get_data_frames()[0]
-                
-    return leaders_df
+    return leaders.get_data_frames()[0]
+
 
 
 def main() -> None:
