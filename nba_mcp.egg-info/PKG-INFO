@@ -33,13 +33,30 @@ NBA MCP (Message Control Protocol) server provides NBA data services via a netwo
 ## Getting Started
 
 ### Installation
+
+1. Create and activate a virtual environment using UV:
+```bash
+# Create virtual environment
+uv venv nbavenv
+
+# Activate the environment
+# On Windows:
+.\nbavenv\Scripts\activate
+# On Unix/MacOS:
+source nbavenv/bin/activate
+```
+
+2. Install the project:
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd nba_mcp
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies using UV
+uv pip install -r requirements.txt
+
+# For development installation
+uv pip install -e ".[dev]"
 ```
 
 ### Running the Server

@@ -1,18 +1,38 @@
 # NBA MCP Server
 
 ## Overview
-NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API.
+NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API. Built on top of the official [NBA API](https://github.com/swar/nba_api) and [FastMCP](https://github.com/fastmcp/fastmcp) framework, this server offers real-time and historical NBA data through a simple interface.
 
 ## Getting Started
 
 ### Installation
+
+1. Create and activate a virtual environment using UV:
+```bash
+# Install UV if you haven't already
+pip install uv
+
+# Create virtual environment
+uv venv nbavenv
+
+# Activate the environment
+# On Windows:
+.\nbavenv\Scripts\activate
+# On Unix/MacOS:
+source nbavenv/bin/activate
+```
+
+2. Install the project:
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd nba_mcp
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies using UV
+uv pip install -r requirements.txt
+
+# For development installation (includes testing tools)
+uv pip install -e ".[dev]"
 ```
 
 ### Running the Server
@@ -27,92 +47,14 @@ Using the launcher script with custom configuration:
 python run_nba_mcp.py --port 8080 --max-tries 5
 ```
 
-### Troubleshooting Port Binding Issues
-
-If you encounter error messages like:
-```
-[WinError 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
-```
-
-This means that the ports the server is trying to use (8000-8002 by default) are already in use by another process. 
-
-#### Port Diagnostic Tools
-
-We've included diagnostic tools to help you resolve port conflicts:
-
-1. **Check Available Ports**
-   ```bash
-   python run_nba_mcp.py --check-ports
-   ```
-
-2. **Identify Processes Using Specific Ports**
-   ```bash
-   python check_ports.py --check 8000 8001 8002
-   ```
-
-3. **Terminate Processes Using Specific Ports** (use with caution)
-   ```bash
-   python check_ports.py --kill 8000
-   ```
-
-4. **Check a Range of Ports**
-   ```bash
-   python check_ports.py --range 8000 8100
-   ```
-
-#### Solutions for Port Conflicts
-
-1. **Use a Different Port**
-   ```bash
-   # Set via environment variable
-   set NBA_MCP_PORT=9000
-   python -m nba_mcp
-   
-   # Or use the launcher script
-   python run_nba_mcp.py --port 9000
-   ```
-
-2. **Increase Port Range**
-   ```bash
-   # Try more ports if the defaults are in use
-   set NBA_MCP_MAX_PORT_TRIES=20
-   python -m nba_mcp
-   
-   # Or use the launcher script
-   python run_nba_mcp.py --max-tries 20
-   ```
-
-3. **Find and Close Conflicting Processes**
-   - On Windows: 
-     - Identify using `netstat -ano | findstr ":8000"`
-     - Terminate using Task Manager or `taskkill /F /PID <pid>`
-   - On Linux/macOS:
-     - Identify using `lsof -i :8000`
-     - Terminate using `kill -9 <pid>`
-
-## API Documentation
-
-[API documentation coming soon]
-
 ## Features
 
-- Retrieve NBA game scores by date
-- Get player season and career statistics
-- View top league leaders in various statistical categories
-- Access live scoreboard data for current games
-- View team game logs and historical data
-
-## Setup
-
-1. Create a virtual environment using UV:
-   ```
-   .\setup_uvenv.ps1
-   ```
-
-2. Install the package in development mode:
-   ```
-   pip install -e .
-   ```
+- Real-time NBA game scores and statistics
+- Historical game data and player statistics
+- League leaders and team performance metrics
+- Live scoreboard data for current games
+- Comprehensive play-by-play data
+- Team game logs and historical analysis
 
 ## Usage
 
@@ -121,16 +63,25 @@ We've included diagnostic tools to help you resolve port conflicts:
 You can run the NBA MCP server in two ways:
 
 1. Directly through the terminal:
-   ```
+   ```bash
    python -m nba_mcp
    ```
 
-2. Configure it in your MCP client's configuration file (e.g., for Claude/Cursor):
+2. Configure it in your MCP client's configuration file:
+   
+   Configuration file locations:
+   - VSCode: `%APPDATA%\Code\User\mcp.json` or `~/.config/Code/User/mcp.json`
+   - Cursor: `%APPDATA%\Cursor\User\mcp.json` or `~/.config/Cursor/User/mcp.json`
+   
    ```json
    {
-     "servers": {
+     "mcpServers": {
        "nba-mcp": {
-         "command": ["python", "-m", "nba_mcp"]
+         "command": ["python", "-m", "nba_mcp"],
+         "cwd": "${workspaceFolder}",
+         "env": {
+           "NBA_API_KEY": "your-api-key"
+         }
        }
      }
    }
@@ -138,61 +89,99 @@ You can run the NBA MCP server in two ways:
 
 ## Available MCP Tools
 
-The server provides the following tools through the Model Context Protocol:
-
 ### Game Information
 
-- `get_game_scores(date: str)`
-  - Get NBA game scores for a specific date
-  - Format: YYYY-MM-DD (e.g., "2022-12-25")
+#### Live Scores
+```python
+# Get current live scores
+await get_live_scores()
 
-- `get_live_scores()`
-  - Get live NBA game scores for today
+# Get scores for a specific date
+await get_live_scores(target_date="2024-03-15")
+```
 
-- `get_nba_games(date: Optional[str], lookback_days: Optional[int])`
-  - Get games for a specific date or range
-  - Optional date format: YYYY-MM-DD
-  - Optional lookback_days for historical data
+#### Game Scores by Date
+```python
+# Get scores for a specific date
+await get_game_scores(date="2024-03-15")
+```
+
+#### Game History
+```python
+# Get games with lookback
+await get_nba_games(date="2024-03-15", lookback_days=7)
+```
 
 ### Player Statistics
 
-- `get_player_stats(player: str)`
-  - Get current season averages for a player
-  - Example: "LeBron James"
+#### Current Season Stats
+```python
+# Get player's current season stats
+await get_player_stats(player="LeBron James")
+```
 
-- `get_player_career_information(player_name: str)`
-  - Get career statistics for a player
-  - Example: "LeBron James"
+#### Career Statistics
+```python
+# Get comprehensive career information
+await get_player_career_information(player_name="Stephen Curry")
+```
 
-- `get_player_multi_season_stats(player: str, seasons: Optional[List[int]])`
-  - Get stats across multiple seasons in tabular format
-  - Optional seasons list (e.g., [2023, 2022, 2021])
+#### Multi-Season Analysis
+```python
+# Get stats across multiple seasons
+await get_player_multi_season_stats(
+    player="Luka Doncic",
+    seasons=[2024, 2023, 2022]
+)
+```
 
 ### Team and League Data
 
-- `get_team_game_log(team_name: str, season: str)`
-  - Get game log for a specific team
-  - Team name: "Lakers" or "Los Angeles Lakers"
-  - Season format: "2023-24"
+#### Team Game Logs
+```python
+# Get team's game history
+await get_team_game_log(
+    team_name="Lakers",
+    season="2023-24"
+)
+```
 
-- `get_league_leaders(stat_category: str)`
-  - View top league leaders by statistical category
-  - Categories: PTS, AST, REB, STL, BLK, etc.
+#### League Leaders
+```python
+# Get scoring leaders
+await get_league_leaders(stat_category="PTS")
+
+# Get assist leaders
+await get_league_leaders(stat_category="AST")
+```
 
 ## Testing
 
-Run the test scripts to verify the API functionality:
+Run the comprehensive test suite:
 
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test categories
+pytest tests/test_api_client.py
+pytest tests/test_nba_api_with_error_handling.py
+pytest tests/api/test_live_scores.py
+pytest tests/api/test_player_stats.py
 ```
-python tests/test_api_client.py
-python tests/test_nba_api_with_error_handling.py
+
+Run integration tests with NBA API:
+```bash
+pytest tests/integration/test_nba_api_integration.py
 ```
 
 ## Dependencies
 
 - Python ≥ 3.10
-- nba_api ≥ 1.2.1
-- fastmcp
+- nba_api ≥ 1.9.0
+- fastmcp ≥ 2.2.0
+- pandas ≥ 2.2.3
+- pydantic ≥ 2.11.3
 
 ## Error Handling
 
@@ -203,14 +192,42 @@ The API includes comprehensive error handling for:
 - API rate limiting
 - Missing or incomplete data
 
+### Common Error Solutions
+
+1. Rate Limiting:
+   ```python
+   # Add delay between requests
+   await get_player_stats(player="LeBron James", delay=1.5)
+   ```
+
+2. Network Issues:
+   ```python
+   # Increase timeout and retries
+   await get_live_scores(timeout=30, max_retries=3)
+   ```
+
 ## Troubleshooting
 
-If you encounter issues:
+1. Verify your environment:
+   ```bash
+   # Check Python version
+   python --version
+   
+   # Verify dependencies
+   uv pip list
+   ```
 
-1. Verify your API key is correctly set
-2. Ensure you're using Python 3.10 or higher
-3. Check that all dependencies are installed
-4. For specific endpoint errors, see the error messages for detailed information
+2. Test API connectivity:
+   ```bash
+   python tests/utils/test_api_connection.py
+   ```
+
+3. Check logs:
+   ```bash
+   # Enable debug logging
+   export NBA_MCP_LOG_LEVEL=DEBUG
+   python -m nba_mcp
+   ```
 
 ## License
 
