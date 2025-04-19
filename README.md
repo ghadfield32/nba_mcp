@@ -1,7 +1,18 @@
+
+https://github.com/user-attachments/assets/c73aacf1-018a-427a-9e1c-8290b1a99963
 # NBA MCP Server
 
 ## Overview
 NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API. Built on top of the official [NBA API](https://github.com/swar/nba_api) and [FastMCP](https://github.com/fastmcp/fastmcp) framework, this server offers real-time and historical NBA data through a simple interface.
+
+# Example Real Time Data Pull:
+   It pulls in:
+      - live scores ahead of the broadcast
+      - live play by play ahead of nba.com
+      - assist leaders back to 1996 to compare to todays 
+
+https://github.com/user-attachments/assets/297eca7e-398b-4061-9fbb-7611a02b453c
+
 
 ## Getting Started
 
