@@ -1,5 +1,4 @@
 
-https://github.com/user-attachments/assets/c73aacf1-018a-427a-9e1c-8290b1a99963
 # NBA MCP Server
 
 ## Overview
