@@ -17,17 +17,39 @@ from pydantic import BaseModel, Field
 # import logger
 import logging
 logger = logging.getLogger(__name__)
-# 1) Read once, at import time:
-HOST = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
-BASE_PORT = int(os.getenv("NBA_MCP_PORT", os.getenv("FASTMCP_SSE_PORT", "8888")))
-PATH = os.getenv("FASTMCP_SSE_PATH", "/sse")
 
+
+# ── 1) Read configuration up‑front ────────────────────────
+HOST      = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
+BASE_PORT = int(os.getenv("NBA_MCP_PORT", os.getenv("FASTMCP_SSE_PORT", "8000")))
+PATH      = os.getenv("FASTMCP_SSE_PATH", "/sse")
+
+# ── 2) Create the global server instance for decorator registration ──
 mcp_server = FastMCP(
-  name="nba_mcp",
-  host=HOST,
-  port=BASE_PORT,
-  path=PATH
+    name="nba_mcp",
+    host=HOST,
+    port=BASE_PORT,
+    path=PATH
 )
+
+
+import socket
+
+def port_available(port: int, host: str = HOST) -> bool:
+    """
+    Return True if no other process is listening on (host, port).
+    We set SO_REUSEADDR so that ports in TIME_WAIT on Windows are
+    treated as unavailable—just like the real server socket.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        # Mirror Uvicorn's reuse flags on Windows
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((host, port))
+            return True
+        except OSError:
+            return False
+
 
 
 
@@ -51,23 +73,67 @@ class LeagueLeadersParams(BaseModel):
 
 
 
+# ── 3) Load & cache both JSON files once ───────────────────
+from pathlib import Path
+
+# Possible locations for documentation files:
+_project_root = Path(__file__).resolve().parents[1]
+_root_docs    = _project_root / "api_documentation"
+_pkg_docs     = Path(__file__).resolve().parent / "api_documentation"
+
+def _load_cached(filename: str) -> str:
+    for base in (_root_docs, _pkg_docs):
+        candidate = base / filename
+        if candidate.is_file():
+            try:
+                text = candidate.read_text(encoding="utf-8")
+                # quick validation
+                json.loads(text)
+                logger.info("Loaded %s from %s", filename, candidate)
+                return text
+            except Exception as e:
+                logger.error("Error parsing %s: %s", candidate, e)
+                break
+    logger.error(
+        "Failed to load %s from either %s or %s",
+        filename, _root_docs, _pkg_docs
+    )
+    sys.exit(1)
+
+_CACHED_OPENAPI = _load_cached("endpoints.json")
+_CACHED_STATIC  = _load_cached("static_data.json")
 
 
+from fastmcp.prompts.base import UserMessage, AssistantMessage
+
+@mcp_server.prompt()
+def ask_review(code_snippet: str) -> str:
+    """Generates a standard code review request."""
+    return f"Please review the following code snippet for potential bugs and style issues:\n```python\n{code_snippet}\n```"
+
+@mcp_server.prompt()
+def debug_session_start(error_message: str) -> list[Message]:
+    """Initiates a debugging help session."""
+    return [
+        UserMessage(f"I encountered an error:\n{error_message}"),
+        AssistantMessage("Okay, I can help with that. Can you provide the full traceback and tell me what you were trying to do?")
+    ]
 
 #########################################
 # MCP Resources
 #########################################
+# ── 4) Serve endpoints.json as the OpenAPI spec ────────────
 @mcp_server.resource("api-docs://openapi.json")
 async def get_openapi_spec() -> str:
-    """
-    Retrieve the complete OpenAPI specification for the NBA API.
+    # Use logger.debug instead of printing to stderr
+    logger.debug("Serving cached OpenAPI endpoints.json")
+    return _CACHED_OPENAPI
 
-    Returns:
-        str: JSON string of the OpenAPI spec, consumed by the LLM for tool invocation context.
-    """
-    docs = await NBAApiClient().get_api_documentation()
-    # Return as a JSON string for the LLM's context
-    return json.dumps(docs)
+@mcp_server.resource("api-docs://static_data.json")
+async def get_static_data() -> str:
+    logger.debug("Serving cached static_data.json")
+    return _CACHED_STATIC
+
 
 #########################################
 # MCP Tools
@@ -456,44 +522,83 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Union
 import pandas as pd
 import json
+class PortBindingError(RuntimeError):
+    """Raised when FastMCP cannot bind to any candidate port."""
+# --- Add near other helpers ---
+
+def _pid_of_listener(port: int, host: str = HOST) -> str | None:
+    """
+    Return 'pid:exe' of a listening process on (host, port) using psutil,
+    or None if unavailable.
+    """
+    try:
+        import psutil
+        for c in psutil.net_connections(kind="inet"):
+            if c.laddr.port == port and c.status == psutil.CONN_LISTEN:
+                proc = psutil.Process(c.pid)
+                return f"{c.pid}:{proc.name()}"
+    except Exception:
+        pass
+    return None
 
 # nba_server.py (update the main() function)
-def main():
-    """Entry point for the NBA MCP server."""
-    global mcp_server
+# --- Replace ENTIRE main() ---
+# ---------------------------------------------------------------------
+# nba_server.py  (replace the entire end‑of‑file main function)
+def main() -> None:
     logger.info("NBA MCP server starting…")
-    
+    host, path = HOST, PATH
     max_tries = int(os.getenv("NBA_MCP_MAX_PORT_TRIES", "10"))
-    for offset in range(max_tries):
-        port = BASE_PORT + offset
-        logger.info("Binding SSE on %s:%s%s", HOST, port, PATH)
-        logger.info("Attempting to bind to port %s...", port)
 
-        try:
-            # Directly pass the port value to run()
-            mcp_server.run(transport="sse", host=HOST, port=port, path=PATH)
-            logger.info("Server shut down normally on port %s", port)
-            return
+    if rng := os.getenv("NBA_MCP_PORT_RANGE"):
+        start, end = map(int, rng.split("-", 1))
+        ports = list(range(start, end + 1))
+    elif (p := os.getenv("NBA_MCP_PORT")) is not None:
+        base = int(p)
+        ports = list(range(base, base + max_tries))
+    else:
+        ports = list(range(BASE_PORT, BASE_PORT + max_tries))
 
-        except OSError as oe:
-            if oe.errno == 10048 and offset < max_tries - 1:
-                logger.warning("Port %s in use, retrying on %s", port, port + 1)
-                continue
-            logger.exception("Fatal OSError binding port %s", port)
-            sys.exit(1)
+    logger.debug("Candidate ports: %s", ports)
 
-        except SystemExit as se:
-            # Often uvicorn calls sys.exit(1) on bind failure
-            if se.code == 1 and offset < max_tries - 1:
-                logger.warning("Bind exited on port %s, retrying on %s", port, port + 1)
-                continue
-            raise
+    # Use the global server instance directly
+    global mcp_server
+    
+    # Try each port in order
+    for idx, port in enumerate(ports, start=1):
+        logger.info("🔌  Attempt %d/%d — port %d", idx, len(ports), port)
+        if not port_available(port):
+            logger.warning("Port %d busy, skipping.", port)
+            continue
 
-    logger.error(
-        "Could not bind to any port in range %s–%s",
-        BASE_PORT, BASE_PORT + max_tries - 1
-    )
-    sys.exit(1)
+        # safe to bind here
+        mcp_server.port = port
+        logger.info("Starting NBA MCP server on port %d", port)
+        mcp_server.run(transport="sse")
+        logger.info("✅  Serving on http://%s:%d%s", host, port, path)
+        return
+
+
+    # ---- no success, use random free port ----------------------------
+    hint = f" – first listener {_pid_of_listener(ports[0])}" or ""
+    logger.warning("All preferred ports busy%s. Falling back to OS‑assigned port.", hint)
+
+    # Update to use port 0 (OS-assigned)
+    mcp_server.port = 0
+    
+    # Start the server
+    logger.info("Starting NBA MCP server on random port")
+    mcp_server.run(transport="sse")
+    
+    # Get the actual port assigned by the OS - may need to be adjusted based on FastMCP's API
+    # This line may need modification based on how FastMCP exposes the actual port
+    try:
+        actual = mcp_server._server.servers[0].sockets[0].getsockname()[1]
+        logger.info("✅  Serving on http://%s:%d%s", host, actual, path)
+    except (AttributeError, IndexError):
+        logger.info("✅  Serving on http://%s:[DYNAMIC_PORT]%s", host, path)
+
+
 
 
 
