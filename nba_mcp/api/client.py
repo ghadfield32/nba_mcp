@@ -379,32 +379,28 @@ class NBAApiClient:
 
     async def get_game_stream(
         self,
-        game_id: str
-    ) -> Union[Dict[str, Any], str]:
+        game_id: str,
+        recent_n: int = 5,
+        max_events: int = 200
+    ) -> Union[str, Dict[str, Any]]:
         """
-        Returns either:
-          • dict: {
-              "gameId": …,
-              "markdown": …,
-              "snapshot": …,
-              "events": …
-            }
-          • str: an error message
+        Fetch the live GameStream for `game_id` and return
+        a Markdown summary (sections 1–6) truncated to at most
+        `max_events` lines, showing the last `recent_n` plays.
         """
         try:
-            # instantiate on background thread
-            stream = await asyncio.to_thread(GameStream, game_id)
+            def build_md():
+                stream = GameStream(game_id)
+                # Use our new to_markdown helper
+                return stream.gamestream_to_markdown(recent_n=recent_n, max_events=max_events)
 
-            # fetch today's games once (to build the "1. Today's Games" block)
-            games_today = await asyncio.to_thread(GameStream.get_today_games)
-
-            # build the combined payload
-            return stream.build_payload(games_today)
-
+            md = await asyncio.to_thread(build_md)
+            return md
         except Exception as e:
+            # Return structured error if something goes wrong
             return self._handle_response_error(e, "get_game_stream")
-        
-        
+
+
     async def get_past_play_by_play(
         self,
         *,
@@ -414,28 +410,17 @@ class NBAApiClient:
         start_period: int = 1,
         end_period: int = 4,
         start_clock: Optional[str] = None,
-        as_records: bool = True,
+        max_lines: int = 200,
+        batch_size: int = 1,
         timeout: float = 10.0
-    ) -> dict[str, Any] | str:
+    ) -> Union[str, Dict[str, Any]]:
         """
-        Fetch historical play-by-play for a past game.
-
-        You may supply **either**:
-          • `game_id` (10‑digit NBA game code), or
-          • `game_date` (YYYY‑MM‑DD) + `team` name/abbr.
-
-        Optional:
-          • `start_period`, `end_period` to limit quarters,
-          • `start_clock` to begin mid‑quarter.
-
-        Returns a dict with keys:
-          • "AvailableVideo": list of video records  
-          • "PlayByPlay"    : list of play records  
-
-        Note: Play‑by‑play is available back to the 1996–97 NBA season.
+        Fetch historical play-by-play via PastGamesPlaybyPlay and
+        return a line-by-line Markdown summary truncated to at most
+        `max_lines` lines, streaming in batches of `batch_size`.
         """
         try:
-            # 1) build the helper (normalizes IDs and dates under the hood)
+            # Build helper (normalizes IDs/dates)
             pbp = PastGamesPlaybyPlay.from_game_id(
                 game_id=game_id,
                 game_date=game_date,
@@ -446,17 +431,14 @@ class NBAApiClient:
                 timeout=timeout
             )
 
-            # 2) fetch the data
-            data = pbp.get_pbp(
-                start_period=start_period,
-                end_period=end_period,
-                as_records=as_records,
-                timeout=timeout
-            )
-            return data
+            def build_md():
+                return pbp.playbyplay_to_markdown(max_lines=max_lines, batch_size=batch_size)
+
+            md = await asyncio.to_thread(build_md)
+            return md
         except Exception as e:
-            logger.error(f"Error in get_past_play_by_play: {e}")
-            return {"error": str(e)}
+            return self._handle_response_error(e, "get_past_play_by_play")
+
             
     async def get_games_by_date(
         self,

@@ -1,9 +1,244 @@
 Metadata-Version: 2.4
 Name: nba-mcp
-Version: 0.2.0
+Version: 0.4.0
 Summary: NBA MCP Server
 Requires-Python: >=3.10
-Requires-Dist: fastmcp>=0.1.0
-Requires-Dist: pandas
-Requires-Dist: nba_api>=1.2.1
+Description-Content-Type: text/markdown
+Requires-Dist: fastmcp>=2.2.0
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: nba_api>=1.9.0
+Requires-Dist: pandas>=2.2.3
+Requires-Dist: pydantic>=2.11.3
+Requires-Dist: python-dotenv>=1.1.0
+Requires-Dist: langchain-mcp-adapters>=0.0.9
+Requires-Dist: langchain-ollama>=0.3.2
+Requires-Dist: langgraph>=0.3.31
+Requires-Dist: ollama>=0.4.8
+Requires-Dist: jupyter>=1.1.1
+Requires-Dist: streamlit>=1.37.1
+Requires-Dist: rich<14,>=10.14.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.0.0; extra == "dev"
 Dynamic: requires-python
+
+# NBA MCP Server
+
+## Overview
+NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API.
+
+## Getting Started
+
+### Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd nba_mcp
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Running the Server
+
+The simplest way to run the server:
+```bash
+python -m nba_mcp
+```
+
+Using the launcher script with custom configuration:
+```bash
+python run_nba_mcp.py --port 8080 --max-tries 5
+```
+
+### Troubleshooting Port Binding Issues
+
+If you encounter error messages like:
+```
+[WinError 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+```
+
+This means that the ports the server is trying to use (8000-8002 by default) are already in use by another process. 
+
+#### Port Diagnostic Tools
+
+We've included diagnostic tools to help you resolve port conflicts:
+
+1. **Check Available Ports**
+   ```bash
+   python run_nba_mcp.py --check-ports
+   ```
+
+2. **Identify Processes Using Specific Ports**
+   ```bash
+   python check_ports.py --check 8000 8001 8002
+   ```
+
+3. **Terminate Processes Using Specific Ports** (use with caution)
+   ```bash
+   python check_ports.py --kill 8000
+   ```
+
+4. **Check a Range of Ports**
+   ```bash
+   python check_ports.py --range 8000 8100
+   ```
+
+#### Solutions for Port Conflicts
+
+1. **Use a Different Port**
+   ```bash
+   # Set via environment variable
+   set NBA_MCP_PORT=9000
+   python -m nba_mcp
+   
+   # Or use the launcher script
+   python run_nba_mcp.py --port 9000
+   ```
+
+2. **Increase Port Range**
+   ```bash
+   # Try more ports if the defaults are in use
+   set NBA_MCP_MAX_PORT_TRIES=20
+   python -m nba_mcp
+   
+   # Or use the launcher script
+   python run_nba_mcp.py --max-tries 20
+   ```
+
+3. **Find and Close Conflicting Processes**
+   - On Windows: 
+     - Identify using `netstat -ano | findstr ":8000"`
+     - Terminate using Task Manager or `taskkill /F /PID <pid>`
+   - On Linux/macOS:
+     - Identify using `lsof -i :8000`
+     - Terminate using `kill -9 <pid>`
+
+## API Documentation
+
+[API documentation coming soon]
+
+## Features
+
+- Retrieve NBA game scores by date
+- Get player season and career statistics
+- View top league leaders in various statistical categories
+- Access live scoreboard data for current games
+- View team game logs and historical data
+
+## Setup
+
+1. Create a virtual environment using UV:
+   ```
+   .\setup_uvenv.ps1
+   ```
+
+2. Install the package in development mode:
+   ```
+   pip install -e .
+   ```
+
+## Usage
+
+### Running the Server
+
+You can run the NBA MCP server in two ways:
+
+1. Directly through the terminal:
+   ```
+   python -m nba_mcp
+   ```
+
+2. Configure it in your MCP client's configuration file (e.g., for Claude/Cursor):
+   ```json
+   {
+     "servers": {
+       "nba-mcp": {
+         "command": ["python", "-m", "nba_mcp"]
+       }
+     }
+   }
+   ```
+
+## Available MCP Tools
+
+The server provides the following tools through the Model Context Protocol:
+
+### Game Information
+
+- `get_game_scores(date: str)`
+  - Get NBA game scores for a specific date
+  - Format: YYYY-MM-DD (e.g., "2022-12-25")
+
+- `get_live_scores()`
+  - Get live NBA game scores for today
+
+- `get_nba_games(date: Optional[str], lookback_days: Optional[int])`
+  - Get games for a specific date or range
+  - Optional date format: YYYY-MM-DD
+  - Optional lookback_days for historical data
+
+### Player Statistics
+
+- `get_player_stats(player: str)`
+  - Get current season averages for a player
+  - Example: "LeBron James"
+
+- `get_player_career_information(player_name: str)`
+  - Get career statistics for a player
+  - Example: "LeBron James"
+
+- `get_player_multi_season_stats(player: str, seasons: Optional[List[int]])`
+  - Get stats across multiple seasons in tabular format
+  - Optional seasons list (e.g., [2023, 2022, 2021])
+
+### Team and League Data
+
+- `get_team_game_log(team_name: str, season: str)`
+  - Get game log for a specific team
+  - Team name: "Lakers" or "Los Angeles Lakers"
+  - Season format: "2023-24"
+
+- `get_league_leaders(stat_category: str)`
+  - View top league leaders by statistical category
+  - Categories: PTS, AST, REB, STL, BLK, etc.
+
+## Testing
+
+Run the test scripts to verify the API functionality:
+
+```
+python tests/test_api_client.py
+python tests/test_nba_api_with_error_handling.py
+```
+
+## Dependencies
+
+- Python ≥ 3.10
+- nba_api ≥ 1.2.1
+- fastmcp
+
+## Error Handling
+
+The API includes comprehensive error handling for:
+- Invalid dates or date formats
+- Player name mismatches
+- Network connectivity issues
+- API rate limiting
+- Missing or incomplete data
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. Verify your API key is correctly set
+2. Ensure you're using Python 3.10 or higher
+3. Check that all dependencies are installed
+4. For specific endpoint errors, see the error messages for detailed information
+
+## License
+
+MIT

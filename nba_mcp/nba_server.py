@@ -1,4 +1,4 @@
-#nba_server.py
+#nba_mcp\nba_server.py
 import os
 from mcp.server.fastmcp import FastMCP
 from nba_mcp.api.client import NBAApiClient
@@ -14,6 +14,26 @@ from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_tea
 import json
 # nba_server.py (add near the top)
 from pydantic import BaseModel, Field
+# near the top of nba_server.py
+import argparse
+
+# only grab “--mode” here and ignore any other flags
+parser = argparse.ArgumentParser(add_help=False)
+parser.add_argument(
+    "--mode", choices=["claude", "local"], default="claude",
+    help="Which port profile to use"
+)
+args, _ = parser.parse_known_args()
+
+if args.mode == "claude":
+     BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8000"))
+else:
+     BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8001"))
+
+# python nba_server.py --mode local       # runs on 8001
+# python nba_server.py --mode claude      # runs on 8000
+
+
 # import logger
 import logging
 logger = logging.getLogger(__name__)
@@ -21,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 # ── 1) Read configuration up‑front ────────────────────────
 HOST      = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
-BASE_PORT = int(os.getenv("NBA_MCP_PORT", os.getenv("FASTMCP_SSE_PORT", "8000")))
 PATH      = os.getenv("FASTMCP_SSE_PATH", "/sse")
 
 # ── 2) Create the global server instance for decorator registration ──
@@ -32,23 +51,24 @@ mcp_server = FastMCP(
     path=PATH
 )
 
-
+# ===== ONE‑LINE ADDITION =====
+mcp = mcp_server  # Alias so the FastMCP CLI can auto‑discover the server
 import socket
 
+import socket
 def port_available(port: int, host: str = HOST) -> bool:
-    """
-    Return True if no other process is listening on (host, port).
-    We set SO_REUSEADDR so that ports in TIME_WAIT on Windows are
-    treated as unavailable—just like the real server socket.
-    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        # Mirror Uvicorn's reuse flags on Windows
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # On Windows, exclusive use prevents collisions
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        else:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             sock.bind((host, port))
             return True
         except OSError:
             return False
+
 
 
 
@@ -104,20 +124,6 @@ _CACHED_OPENAPI = _load_cached("endpoints.json")
 _CACHED_STATIC  = _load_cached("static_data.json")
 
 
-from fastmcp.prompts.base import UserMessage, AssistantMessage
-
-@mcp_server.prompt()
-def ask_review(code_snippet: str) -> str:
-    """Generates a standard code review request."""
-    return f"Please review the following code snippet for potential bugs and style issues:\n```python\n{code_snippet}\n```"
-
-@mcp_server.prompt()
-def debug_session_start(error_message: str) -> list[Message]:
-    """Initiates a debugging help session."""
-    return [
-        UserMessage(f"I encountered an error:\n{error_message}"),
-        AssistantMessage("Okay, I can help with that. Can you provide the full traceback and tell me what you were trying to do?")
-    ]
 
 #########################################
 # MCP Resources
@@ -422,35 +428,38 @@ async def get_date_range_game_log_or_team_game_log(
 
 
 @mcp_server.tool()
-async def play_by_play_info_for_current_games() -> str:
+async def play_by_play_info_for_current_games(
+) -> str:
     """
-    Only for Live Games, get the current NBA games and their play-by-play data.
+    Live MCP tool: for each active game today, return a Markdown
+    summary (sections 1–6), each truncated under Claude’s limits.
     """
     client = NBAApiClient()
     games_df = await client.get_today_games(as_dataframe=True)
 
-    # ── guardrails ──────────────────────────────────────────────
     if isinstance(games_df, str):
         return games_df
     if not isinstance(games_df, pd.DataFrame) or games_df.empty:
         return "No NBA games scheduled today."
 
-    all_payloads = []
+    md_blocks: List[str] = []
+    # Iterate each game and fetch its markdown summary
     for _, row in games_df.iterrows():
         gid = row["gameId"]
-        result = await client.get_game_stream(gid)
-        if isinstance(result, str):
-            # error for this game
-            all_payloads.append({ "gameId": gid, "error": result })
+        md = await client.get_game_stream(
+            gid,
+            recent_n=3,       # example default
+            max_events=200     # example limit
+        )
+        if isinstance(md, str):
+            md_blocks.append(f"## Game {gid}\n\n{md}")
         else:
-            all_payloads.append(result)
+            # error object
+            md_blocks.append(f"## Game {gid} Error\n```\n{md}\n```")
 
-    # one big combined JSON
-    combined = {
-        "fetchedAt": datetime.now(timezone.utc).isoformat(),
-        "games": all_payloads
-    }
-    return json.dumps(combined, indent=2)
+    # Join by double‑newline so they render as separate sections
+    return "\n\n".join(md_blocks)
+
 
 @mcp_server.tool()
 async def get_past_play_by_play(
@@ -462,36 +471,8 @@ async def get_past_play_by_play(
     start_clock: Optional[str] = None
 ) -> str:
     """
-    MCP tool: Retrieve historical play‑by‑play for a given game.
-
-    You must supply **either**:
-      • `game_id` (10‑digit NBA game code), or
-      • both `game_date` (YYYY‑MM‑DD) and `team` (full or partial name/abbreviation).
-
-    **start_period** (default `1`) accepts any of the following, all normalized to an integer 1–4:
-      • Integers: `1`, `2`, `3`, `4`
-      • Ordinal/cardinal text: `"1st"`, `"2nd"`, `"third quarter"`, `"Quarter 4"`, `"Q3"`, etc.
-      • Written words: `"one"`, `"two"`, `"three"`, `"fourth"`
-
-    **start_clock** (default `None`) accepts any of the following, all normalized to `"MM:SS"`:
-      • Colon or dot notation: `"7:15"`, `"7.15"`
-      • Minutes only: `"7 m"`, `"7 min"`, `"7 minutes"` → `"7:00"`
-      • Seconds only: `"30 s"`, `"30 sec"`, `"30 secs"` → `"0:30"`
-      • Combined: `"7 min 15 sec"`, `"7 minutes 15 seconds"` → `"7:15"`
-      • Bare digits: `"5"` → `"5:00"`
-
-    Inputs outside of the NBA quarter‑clock ranges (minutes > 12 or seconds ≥ 60) will raise a validation error.
-
-    You may also supply **end_period** (default `4`) to cap the quarter range.
-
-    Returns a JSON string of the form:
-    {
-      "AvailableVideo": [...],
-      "PlayByPlay":    [...]
-    }
-
-    **Data availability**: NBA play‑by‑play goes back to the **1996–97** season.
-    Requests for seasons before 1996–97 will result in an error.
+    MCP tool: retrieve historical play-by-play as a Markdown
+    summary truncated to a safe number of lines.
     """
     client = NBAApiClient()
     result = await client.get_past_play_by_play(
@@ -500,11 +481,15 @@ async def get_past_play_by_play(
         team=team,
         start_period=start_period,
         end_period=end_period,
-        start_clock=start_clock
+        start_clock=start_clock,
+        max_lines=200,   # example
+        batch_size=2    # example
     )
+    # If result is a dict, it's an error structure
     if isinstance(result, dict):
-        return json.dumps(result)
+        return json.dumps(result, indent=2)
     return result
+
 
 
 
@@ -513,94 +498,68 @@ async def get_past_play_by_play(
 # Running the Server
 #########################################
 
-# nba_server.py (excerpt)
+# ------------------------------------------------------------------
+# nba_server.py
+# ------------------------------------------------------------------
+def main():
+    """Parse CLI args and start FastMCP server (with fallback)."""
+    parser = argparse.ArgumentParser(prog="nba-mcp")
+    parser.add_argument(
+        "--mode",
+        choices=["claude", "local"],
+        default="claude",
+        help="Which port profile to use"
+    )
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse", "websocket"],
+        default=os.getenv("MCP_TRANSPORT", "stdio"),
+        help="MCP transport to use"
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("MCP_HOST", "127.0.0.1"),
+        help="Host to bind for SSE/WebSocket"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("MCP_PORT", "0")) or None,
+        help="Port for SSE/WebSocket (None for stdio)"
+    )
+    args = parser.parse_args()
 
-import os
-import sys
-import traceback
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Union
-import pandas as pd
-import json
-class PortBindingError(RuntimeError):
-    """Raised when FastMCP cannot bind to any candidate port."""
-# --- Add near other helpers ---
-
-def _pid_of_listener(port: int, host: str = HOST) -> str | None:
-    """
-    Return 'pid:exe' of a listening process on (host, port) using psutil,
-    or None if unavailable.
-    """
-    try:
-        import psutil
-        for c in psutil.net_connections(kind="inet"):
-            if c.laddr.port == port and c.status == psutil.CONN_LISTEN:
-                proc = psutil.Process(c.pid)
-                return f"{c.pid}:{proc.name()}"
-    except Exception:
-        pass
-    return None
-
-# nba_server.py (update the main() function)
-# --- Replace ENTIRE main() ---
-# ---------------------------------------------------------------------
-# nba_server.py  (replace the entire end‑of‑file main function)
-def main() -> None:
-    logger.info("NBA MCP server starting…")
-    host, path = HOST, PATH
-    max_tries = int(os.getenv("NBA_MCP_MAX_PORT_TRIES", "10"))
-
-    if rng := os.getenv("NBA_MCP_PORT_RANGE"):
-        start, end = map(int, rng.split("-", 1))
-        ports = list(range(start, end + 1))
-    elif (p := os.getenv("NBA_MCP_PORT")) is not None:
-        base = int(p)
-        ports = list(range(base, base + max_tries))
+    # pick port based on mode
+    if args.mode == "claude":
+        port = int(os.getenv("NBA_MCP_PORT", "8000"))
     else:
-        ports = list(range(BASE_PORT, BASE_PORT + max_tries))
+        port = int(os.getenv("NBA_MCP_PORT", "8001"))
 
-    logger.debug("Candidate ports: %s", ports)
+    transport = args.transport
+    host = args.host
 
-    # Use the global server instance directly
-    global mcp_server
-    
-    # Try each port in order
-    for idx, port in enumerate(ports, start=1):
-        logger.info("🔌  Attempt %d/%d — port %d", idx, len(ports), port)
-        if not port_available(port):
-            logger.warning("Port %d busy, skipping.", port)
-            continue
+    # if they explicitly passed --port, override
+    if args.port:
+        port = args.port
 
-        # safe to bind here
+    # if using network transport, check availability
+    if transport != "stdio" and port is not None and not port_available(port, host):
+        logger.warning("Port %s:%s not available → falling back to stdio", host, port)
+        transport = "stdio"
+        
+        mcp_server.host = host
         mcp_server.port = port
-        logger.info("Starting NBA MCP server on port %d", port)
-        mcp_server.run(transport="sse")
-        logger.info("✅  Serving on http://%s:%d%s", host, port, path)
-        return
-
-
-    # ---- no success, use random free port ----------------------------
-    hint = f" – first listener {_pid_of_listener(ports[0])}" or ""
-    logger.warning("All preferred ports busy%s. Falling back to OS‑assigned port.", hint)
-
-    # Update to use port 0 (OS-assigned)
-    mcp_server.port = 0
-    
-    # Start the server
-    logger.info("Starting NBA MCP server on random port")
-    mcp_server.run(transport="sse")
-    
-    # Get the actual port assigned by the OS - may need to be adjusted based on FastMCP's API
-    # This line may need modification based on how FastMCP exposes the actual port
     try:
-        actual = mcp_server._server.servers[0].sockets[0].getsockname()[1]
-        logger.info("✅  Serving on http://%s:%d%s", host, actual, path)
-    except (AttributeError, IndexError):
-        logger.info("✅  Serving on http://%s:[DYNAMIC_PORT]%s", host, path)
-
-
-
-
+        if transport == "stdio":
+            logger.info("Starting FastMCP server on STDIO")
+            mcp.run()
+        else:
+            logger.info("Starting FastMCP server on %s://%s:%s",
+                        transport, host, port)
+            mcp.run(transport=transport)
+    except Exception:
+        logger.exception("Failed to start MCP server (transport=%s)", transport)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

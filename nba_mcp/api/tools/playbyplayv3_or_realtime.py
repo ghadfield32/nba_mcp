@@ -957,6 +957,39 @@ class GameStream:
             "events":   events
         }
         return payload
+    def gamestream_to_markdown(
+        self,
+        recent_n: int = 5,
+        max_events: int = 750,
+        games_today: Optional[List[Dict[str, Any]]] = None
+    ) -> str:
+        """
+        Return the live six‑section markdown (1. Today's Games + 2–6 Snapshot)
+        for this game, truncated to at most `max_events` lines.
+        """
+        if games_today is None:
+            games_today = self.get_today_games()
+
+        # Sections 1 + 2–6
+        md1 = format_today_games(games_today)
+        snapshot = self.fetch_grouped_snapshot(recent_n=recent_n)
+        md2 = format_snapshot_markdown(
+            snapshot,
+            self.game_id,
+            max_players=3,
+            recent_n=recent_n
+        )
+
+        # Combine & split lines
+        all_lines = (md1 + "\n\n" + md2).splitlines()
+
+        # Truncate
+        if len(all_lines) > max_events:
+            all_lines = all_lines[:max_events] + ["…"]
+
+        return "\n".join(all_lines)
+
+
 
 
 # --------------------------------------------------------------------------- #
@@ -1485,46 +1518,52 @@ class PastGamesPlaybyPlay:
         inst.set_date(game_date.strftime("%Y-%m-%d"))
         return inst
 
-    # ---------- markdown summary (GameStream-style) -------------------------------
-    def to_markdown(
+    # ---------- markdown summary -------------------------------
+    def playbyplay_to_markdown(
         self,
-        *,
-        recent_n: int = 5,
-        timeout: float = 10.0
+        max_lines: int = 750,
+        batch_size: int = 1
     ) -> str:
         """
-        Return the same six-section markdown block you get from `GameStream`,
-        but for a *finished* game.
-
-        Example
-        -------
-        pbp = PastGamesPlaybyPlay.from_team_date("2023-12-25", team="PHX")
-        print(pbp.to_markdown())
+        Stream first the top-stat lines, a blank line, then each play as
+        "[Q<period> <clock>] <score_home>–<score_away> | <Description>",
+        truncating after `max_lines` total lines.
         """
-        # 1) fetch data ----------------------------------------------------------
-        data   = self.get_pbp(as_records=True, timeout=timeout)
-        plays  = data["PlayByPlay"]
-        
-        if not plays:
-            raise RuntimeError("Play-by-play came back empty.")
-        
-        snapshot = _snapshot_from_past_game(
-            self.game_id,
-            plays,
-            recent_n=recent_n,
-            timeout=timeout,
-        )
-        
-        # 2) human-readable markdown --------------------------------------------
+        lines: List[str] = []
 
-        
-        md_today = format_today_games([])           # past date => no live "today" list
-        md_snap  = format_snapshot_markdown(
-            snapshot,
-            self.game_id,
-            recent_n=recent_n
-        )
-        return "\n\n".join([md_today, md_snap])
+        # 1) Stat leaders
+        for stat in ("points", "rebounds", "assists", "steals", "blocks", "turnovers"):
+            if len(lines) >= max_lines:
+                break
+            lines.append(self._fmt_top(stat))
+
+        # Blank line if space remains
+        if len(lines) < max_lines:
+            lines.append("")
+
+        # 2) Plays
+        for ev_line in self.get_contextual_pbp(batch_size=batch_size):
+            if len(lines) >= max_lines:
+                lines.append("…")
+                break
+            lines.append(ev_line)
+
+        return "\n".join(lines)
+
+    # Helper copied from get_contextual_pbp
+    def _fmt_top(self, stat: str) -> str:
+        summary = group_live_game(self.game_id, recent_n=5)
+        def top_for(side: str) -> str:
+            raw = summary["players"][side]
+            pairs = [
+                (p.get("name") or p.get("playerName") or "?",
+                 p.get("statistics", {}).get(stat, 0))
+                for p in raw
+            ]
+            best = sorted(pairs, key=lambda x: x[1], reverse=True)[:3]
+            return ", ".join(f"{nm} ({val} {stat})" for nm, val in best)
+        return f"🏀 Top {stat.upper():<3} | Home: {top_for('home')}  |  Away: {top_for('away')}"
+
 
     @staticmethod
     def get_games_on_date(game_date: date, timeout: float = 10.0) -> list[str]:
@@ -1749,21 +1788,23 @@ if __name__ == "__main__":
     # stream.debug_first_play()
     # stream.print_markdown_summary()
     
-    
+    stream, games = GameStream.from_today()
+    md = stream.gamestream_to_markdown(recent_n=3, max_events=100)
+    print(md)
     # --------------------------------------------------------------------------- #
     # ──  Past PlaybyPlay EXAMPLE USAGE                                                         ──
     # --------------------------------------------------------------------------- #
 
-    # new style:
-    pbp2 = PastGamesPlaybyPlay.from_game_id(
-        game_date="2025-04-15", 
-        team="Warriors", 
-        # start_period=3, 
-        # start_clock="7:15"
-    )
-    for line in pbp2.get_contextual_pbp():
-        print(line)
+    # midgame style:
+    # pbp2 = PastGamesPlaybyPlay.from_game_id(
+    #     game_date="2025-04-15", 
+    #     team="Warriors", 
+    #     # start_period=3, 
+    #     # start_clock="7:15"
 
+    pbp = PastGamesPlaybyPlay.from_game_id(game_date="2025-04-15", team="Warriors")
+    hist_md = pbp.playbyplay_to_markdown(max_lines=100, batch_size=2)
+    print(hist_md)
 
     # # stress tests:
     # # should all map to period=1
