@@ -1,4 +1,3 @@
-
 # NBA MCP Server
 
 ## Overview
@@ -54,7 +53,7 @@ python -m nba_mcp
 
 Using the launcher script with custom configuration:
 ```bash
-python run_nba_mcp.py --port 8080 --max-tries 5
+python run_nba_mcp.py --port 8001
 ```
 
 ## Features
@@ -84,85 +83,68 @@ You can run the NBA MCP server in two ways:
    - Cursor: `%APPDATA%\Cursor\User\mcp.json` or `~/.config/Cursor/User/mcp.json`
    
    ```json
-   {
-     "mcpServers": {
-       "nba-mcp": {
-         "command": ["python", "-m", "nba_mcp"],
-         "cwd": "${workspaceFolder}",
-         "env": {
-           "NBA_API_KEY": "your-api-key"
-         }
-       }
-     }
-   }
+  {
+    "mcpServers": {
+      "nba_mcp Docs": {
+        "url": "https://gitmcp.io/ghadfield32/nba_mcp"
+      }
+    }
+  }
    ```
 
 ## Available MCP Tools
 
 ### Game Information
 
-#### Live Scores
-```python
-# Get current live scores
-await get_live_scores()
-
-# Get scores for a specific date
-await get_live_scores(target_date="2024-03-15")
-```
-
-#### Game Scores by Date
-```python
-# Get scores for a specific date
-await get_game_scores(date="2024-03-15")
-```
-
-#### Game History
-```python
-# Get games with lookback
-await get_nba_games(date="2024-03-15", lookback_days=7)
-```
+- `get_live_scores(target_date: Optional[str] = None)` - Get current or historical NBA scores
+- `get_game_scores(date: str)` - Get scores for a specific date
+- `get_nba_games(date: str, lookback_days: int)` - Get games with historical lookback
 
 ### Player Statistics
 
-#### Current Season Stats
-```python
-# Get player's current season stats
-await get_player_stats(player="LeBron James")
-```
-
-#### Career Statistics
-```python
-# Get comprehensive career information
-await get_player_career_information(player_name="Stephen Curry")
-```
-
-#### Multi-Season Analysis
-```python
-# Get stats across multiple seasons
-await get_player_multi_season_stats(
-    player="Luka Doncic",
-    seasons=[2024, 2023, 2022]
-)
-```
+- `get_player_stats(player: str)` - Get player's current season stats
+- `get_player_career_information(player_name: str)` - Get comprehensive career information
+- `get_player_multi_season_stats(player: str, seasons: List[int])` - Get stats across multiple seasons
 
 ### Team and League Data
 
-#### Team Game Logs
-```python
-# Get team's game history
-await get_team_game_log(
-    team_name="Lakers",
-    season="2023-24"
-)
+- `get_team_game_log(team_name: str, season: str)` - Get team's game history
+- `get_league_leaders(stat_category: str)` - Get league leaders for specific stat categories
+
+## Running LangGraph Bots
+
+### Prerequisites
+First, pull the required Ollama model:
+```bash
+# Pull the LLaMA 3.2 model
+python -m ollama pull llama3.2:3b
 ```
 
-#### League Leaders
-```python
-# Get scoring leaders
-await get_league_leaders(stat_category="PTS")
+### Basic Agent
+```bash
+# Run the basic LangGraph agent with Ollama
+python examples/langgraph_ollama_agent.py
+```
 
-# Get assist leaders
-await get_league_leaders(stat_category="AST")
+### Agent with Tools
+```bash
+# Run the agent with NBA MCP tools in local mode
+# This will:
+# 1. Start the NBA MCP server on port 8001
+# 2. Connect the LangGraph agent to it
+python examples/langgraph_ollama_agent_w_tools.py --mode local
+```
+
+Example interaction:
+```
+Starting NBA MCP server in 'local' mode (port 8001)…
+Langgraph agent starting…
+Loaded tools: ['get_league_leaders_info', 'get_player_career_information', 'get_live_scores', 'play_by_play_info_for_current_games']
+Enter a question:
+> who leads the nba in assists this season?
+AIMessage: Let me check the league leaders for assists this season.
+ToolMessage: [League leaders data for assists...]
+AIMessage: Based on the data, [Player Name] leads the NBA in assists this season...
 ```
 
 ## Testing
