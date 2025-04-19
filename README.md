@@ -1,6 +1,98 @@
 # NBA MCP Server
 
-A Media Control Protocol (MCP) server for retrieving NBA data.
+## Overview
+NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API.
+
+## Getting Started
+
+### Installation
+```bash
+# Clone the repository
+git clone <repository-url>
+cd nba_mcp
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Running the Server
+
+The simplest way to run the server:
+```bash
+python -m nba_mcp
+```
+
+Using the launcher script with custom configuration:
+```bash
+python run_nba_mcp.py --port 8080 --max-tries 5
+```
+
+### Troubleshooting Port Binding Issues
+
+If you encounter error messages like:
+```
+[WinError 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+```
+
+This means that the ports the server is trying to use (8000-8002 by default) are already in use by another process. 
+
+#### Port Diagnostic Tools
+
+We've included diagnostic tools to help you resolve port conflicts:
+
+1. **Check Available Ports**
+   ```bash
+   python run_nba_mcp.py --check-ports
+   ```
+
+2. **Identify Processes Using Specific Ports**
+   ```bash
+   python check_ports.py --check 8000 8001 8002
+   ```
+
+3. **Terminate Processes Using Specific Ports** (use with caution)
+   ```bash
+   python check_ports.py --kill 8000
+   ```
+
+4. **Check a Range of Ports**
+   ```bash
+   python check_ports.py --range 8000 8100
+   ```
+
+#### Solutions for Port Conflicts
+
+1. **Use a Different Port**
+   ```bash
+   # Set via environment variable
+   set NBA_MCP_PORT=9000
+   python -m nba_mcp
+   
+   # Or use the launcher script
+   python run_nba_mcp.py --port 9000
+   ```
+
+2. **Increase Port Range**
+   ```bash
+   # Try more ports if the defaults are in use
+   set NBA_MCP_MAX_PORT_TRIES=20
+   python -m nba_mcp
+   
+   # Or use the launcher script
+   python run_nba_mcp.py --max-tries 20
+   ```
+
+3. **Find and Close Conflicting Processes**
+   - On Windows: 
+     - Identify using `netstat -ano | findstr ":8000"`
+     - Terminate using Task Manager or `taskkill /F /PID <pid>`
+   - On Linux/macOS:
+     - Identify using `lsof -i :8000`
+     - Terminate using `kill -9 <pid>`
+
+## API Documentation
+
+[API documentation coming soon]
 
 ## Features
 

@@ -3,6 +3,7 @@ pyproject.toml
 setup.py
 nba_mcp/__init__.py
 nba_mcp/__main__.py
+nba_mcp/main.py
 nba_mcp/nba_server.py
 nba_mcp.egg-info/PKG-INFO
 nba_mcp.egg-info/SOURCES.txt

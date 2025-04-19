@@ -31,6 +31,9 @@ from nba_mcp.api.tools.nba_api_utils  import (
 # ── NEW HELPER: build a "snapshot" from a *finished* game ─────────────────────
 from nba_api.stats.endpoints import boxscoretraditionalv2 as _BSv2
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 
 
@@ -82,9 +85,9 @@ class PlayByPlayFetcher:
         dfs = resp.get_data_frames()
 
         # debug what came back
-        print(f"[DEBUG fetch] got {len(dfs)} frame(s) from PlayByPlayV3")
+        logger.debug(f"[DEBUG fetch] got {len(dfs)} frame(s) from PlayByPlayV3")
         for i, frame in enumerate(dfs):
-            print(f"[DEBUG fetch] frame[{i}] columns:", frame.columns.tolist())
+            logger.debug(f"[DEBUG fetch] frame[{i}] columns:", frame.columns.tolist())
 
         # pick the frame that actually has period+clock
         pbp_df = None
@@ -95,7 +98,7 @@ class PlayByPlayFetcher:
                 break
 
         if pbp_df is None:
-            print("[DEBUG fetch] ⚠️ couldn’t detect PBP frame; defaulting to dfs[1]")
+            logger.debug("⚠️ couldn't detect PBP frame; defaulting to dfs[1]")
             if len(dfs) < 2:
                 raise RuntimeError(f"Expected ≥2 frames from PlayByPlayV3, got {len(dfs)}")
             pbp_df = dfs[1]
@@ -162,7 +165,7 @@ def _snapshot_from_past_game(
         # option: debug any missing stats here:
         missing = [c for c in ("FGM","FGA","REB","AST","TO","PTS") if pd.isna(row.get(c))]
         if missing:
-            print(f"[DEBUG][_team_stats] {row['TEAM_ID']} missing {missing}")
+            logger.debug(f"[DEBUG][_team_stats] {row['TEAM_ID']} missing {missing}")
         return {
             "fieldGoalsMade":      _to_int(row["FGM"]),
             "fieldGoalsAttempted": _to_int(row["FGA"]),
@@ -279,7 +282,7 @@ def get_today_games(timeout: float = 10.0) -> List[Dict[str, Any]]:
         return games_info
 
     # Explicitly log unexpected cases:
-    print(f"[DEBUG] Unexpected payload structure: {payload}", file=sys.stderr)
+    logger.debug(f"[DEBUG] Unexpected payload structure: {payload}", file=sys.stderr)
     return []  # Always return an empty list if no games
 
 
@@ -299,7 +302,7 @@ def fetch_json(
     except ValueError:
         snippet = resp.text[:500].replace("\n"," ")
         raise RuntimeError(f"Non‑JSON response from {url!r}: {snippet}…")
-    print(f"[DEBUG] {url!r} → keys: {list(payload.keys())}")
+    logger.debug(f"[DEBUG] {url!r} → keys: {list(payload.keys())}")
     return payload
 
 def get_playbyplay_v3(
@@ -357,7 +360,7 @@ def get_live_boxscore(
     Supports both the 'liveData' shape and nba.cloud fallback shapes:
       1) a game['teams'] list
       2) separate game['homeTeam']/game['awayTeam'] fields
-    Prints detailed statistics available for each team.
+    Logs detailed statistics available for each team.
     """
     url = f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
     payload = fetch_json(url, timeout=timeout)
@@ -367,45 +370,47 @@ def get_live_boxscore(
         boxscore = payload["liveData"]["boxscore"]
 
         # Debug and display available statistics
-        print("[DEBUG] liveData['boxscore'] keys:", list(boxscore.keys()))
+        logger.debug("liveData['boxscore'] keys: %s", list(boxscore.keys()))
         for team_key in ['home', 'away']:
             team_stats = boxscore["teams"][team_key]
-            print(f"[DEBUG] Stats for {team_key} team:")
+            logger.debug("Stats for %s team:", team_key)
             for stat_category, stat_value in team_stats.items():
                 if isinstance(stat_value, (dict, list)):
-                    print(f"  - {stat_category}: (complex type, keys: {list(stat_value.keys()) if isinstance(stat_value, dict) else 'list'})")
+                    logger.debug("  - %s: (complex type, keys: %s)", 
+                               stat_category, 
+                               list(stat_value.keys()) if isinstance(stat_value, dict) else 'list')
                 else:
-                    print(f"  - {stat_category}: {stat_value}")
+                    logger.debug("  - %s: %s", stat_category, stat_value)
 
         return boxscore
 
     # 2) nba.cloud fallback(s)
     if "game" in payload:
         game_obj = payload["game"]
-        print(f"[DEBUG] payload['game'] keys: {list(game_obj.keys())}")
+        logger.debug(f"[DEBUG] payload['game'] keys: {list(game_obj.keys())}")
 
         # 2a) list-based fallback
         if "teams" in game_obj and isinstance(game_obj["teams"], list):
             teams_list = game_obj["teams"]
-            print(f"[DEBUG] fallback list boxscore, game['teams'] length: {len(teams_list)}")
+            logger.debug(f"[DEBUG] fallback list boxscore, game['teams'] length: {len(teams_list)}")
             mapped = {"home": None, "away": None}
             for t in teams_list:
                 ind = t.get("homeAwayIndicator") or t.get("homeAway") or t.get("side")
                 if ind == "H": mapped["home"] = t
                 elif ind == "A": mapped["away"] = t
             if mapped["home"] and mapped["away"]:
-                print("[DEBUG] Stats in fallback (list-based):", list(mapped["home"].keys()))
+                logger.debug("Stats in fallback (list-based): %s", list(mapped["home"].keys()))
                 return {"teams": mapped}
             return {"teams": teams_list}
 
         # 2b) home/away-fields fallback
         if "homeTeam" in game_obj and "awayTeam" in game_obj:
-            print("[DEBUG] fallback home/away boxscore path")
+            logger.debug("fallback home/away boxscore path")
             mapped = {
                 "home": game_obj["homeTeam"],
                 "away": game_obj["awayTeam"]
             }
-            print("[DEBUG] Stats in fallback (home/away):", list(mapped["home"].keys()))
+            logger.debug("Stats in fallback (home/away): %s", list(mapped["home"].keys()))
             return {"teams": mapped}
 
     # 3) Unrecognized shape
@@ -440,17 +445,17 @@ def measure_update_frequency(
         try:
             ts = extract_ts(payload)
             now = datetime.now(timezone.utc)
-            print(f"[DEBUG] sample #{i+1} timestamp: {ts.isoformat()}  (fetched at {now.isoformat()})")
+            logger.debug(f"[DEBUG] sample #{i+1} timestamp: {ts.isoformat()}  (fetched at {now.isoformat()})")
             timestamps.append(ts)
         except Exception as ex:
-            print(f"[DEBUG] failed to extract timestamp on sample #{i+1}: {ex}")
+            logger.debug(f"[DEBUG] failed to extract timestamp on sample #{i+1}: {ex}")
         time.sleep(delay)
 
     intervals: List[float] = []
     for a, b in zip(timestamps, timestamps[1:]):
         delta = (b - a).total_seconds()
         intervals.append(delta)
-        print(f"[DEBUG] interval: {delta}s")
+        logger.debug(f"[DEBUG] interval: {delta}s")
 
     return intervals
 
@@ -475,7 +480,7 @@ def diff_new_events(
     # debug any stray entries missing the key entirely
     missing = [e for e in new_events if key not in e]
     if missing:
-        print(f"[DEBUG] Missing '{key}' on events:", missing)
+        logger.debug(f"[DEBUG] Missing '{key}' on events:", missing)
 
     return new_filtered
 
@@ -542,7 +547,7 @@ def measure_content_changes(
         payload = fetch_fn(game_id)
         val = extractor_fn(payload)
         now = datetime.now(timezone.utc)
-        print(f"[DEBUG] sample #{i+1}: value={val!r} at {now.isoformat()}")
+        logger.debug(f"[DEBUG] sample #{i+1}: value={val!r} at {now.isoformat()}")
         values.append(val)
         timestamps.append(now)
         time.sleep(delay)
@@ -553,7 +558,7 @@ def measure_content_changes(
         if v != last_val:
             delta = (t - last_time).total_seconds()
             change_intervals.append(delta)
-            print(f"[DEBUG] changed {last_val!r}→{v!r} after {delta}s")
+            logger.debug(f"[DEBUG] changed {last_val!r}→{v!r} after {delta}s")
             last_val, last_time = v, t
 
     return change_intervals
@@ -567,7 +572,7 @@ def group_live_game(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
     # 1) raw game info (clock, period, names, status text)
     info        = get_game_info(game_id)
     status_text = info.get("gameStatusText", "").lower()
-    print(f"[DEBUG] gameStatusText: {status_text}")
+    logger.debug(f"[DEBUG] gameStatusText: {status_text}")
 
     # Skip games that haven't started yet
     if any(tok in status_text for tok in ("pm et", "am et", "pregame")):
@@ -649,13 +654,13 @@ def pretty_print_snapshot(
     each section quickly from the console.
     """
     status = snapshot["status"]
-    print("\n=== GAME STATUS ===")
+    logger.debug("\n=== GAME STATUS ===")
     clock = parse_iso_clock(status["gameClock"])
-    print(f"Period {status['period']}  |  Clock {clock}  "
+    logger.debug(f"Period {status['period']}  |  Clock {clock}  "
           f"|  {status['homeScore']}-{status['awayScore']} "
           f"(diff {status['scoreDiff']})")
 
-    print("\n=== TEAM STATS (headline) ===")
+    logger.debug("\n=== TEAM STATS (headline) ===")
     for side in ("home", "away"):
         team_stats = snapshot["teams"][side]
         headline = {k: team_stats[k] for k in (
@@ -665,24 +670,24 @@ def pretty_print_snapshot(
             "assists",
             "turnovers"
         ) if k in team_stats}
-        print(f"{side.capitalize():5}: {headline}")
+        logger.debug(f"{side.capitalize():5}: {headline}")
 
-    print("\n=== PLAYERS (first few) ===")
+    logger.debug("\n=== PLAYERS (first few) ===")
     for side in ("home", "away"):
         players = snapshot["players"][side]
         slist = truncate_list(
             [f"{p['name']} ({p['statistics']['points']} pts)" for p in players],
             max_players
         )
-        print(f"{side.capitalize():5}: {', '.join(slist)}")
+        logger.debug(f"{side.capitalize():5}: {', '.join(slist)}")
 
 
-    print("\n=== RECENT PLAYS ===")
+    logger.debug("\n=== RECENT PLAYS ===")
     for play in truncate_list(snapshot["recentPlays"], max_plays):
         desc   = play.get("description", play["actionType"])
         clock  = parse_iso_clock(play.get("clock", ""))
         period = play.get("period", "?")
-        print(f"[Q{period} {clock}] {desc}")
+        logger.debug(f"[Q{period} {clock}] {desc}")
 
 def generate_tool_output(
     game_id: str,
@@ -763,7 +768,7 @@ def format_snapshot_markdown(snapshot: Dict[str, Any],
                              max_players: int = 3,
                              recent_n: int = 3) -> str:
     """
-    Convert the snapshot into sections 2–6 as Markdown.
+    Convert the snapshot into sections 2–6 as Markdown.
     Supports both live (camelCase) and historical (snake_case) play dicts.
     """
     from typing import List, Dict, Any
@@ -781,12 +786,12 @@ def format_snapshot_markdown(snapshot: Dict[str, Any],
     parts: List[str] = []
 
     # 2. Selected game
-    parts.append("### 2. Selected Game")
-    parts.append(f"- **Game ID:** {game_id}")
-    parts.append(f"- **Match‑up:** {away} @ {home}\n")
+    parts.append("### 2. Selected Game")
+    parts.append(f"- **Game ID:** {game_id}")
+    parts.append(f"- **Match-up:** {away} @ {home}\n")
 
-    # 3. Game status
-    parts.append("### 3. Game Status")
+    # 3. Game Status
+    parts.append("### 3. Game Status")
     parts.append(f"- **Period:** {s['period']}")
     parts.append(f"- **Clock:** {parse_iso_clock(s['gameClock'])}")
     parts.append(
@@ -800,8 +805,8 @@ def format_snapshot_markdown(snapshot: Dict[str, Any],
         fg = _fg_line(t['fieldGoalsMade'], t['fieldGoalsAttempted'])
         return f"| {label} | {fg} | {t['reboundsTotal']} | {t['assists']} | {t['turnovers']} |"
 
-    parts.append("### 4. Team Stats")
-    parts.append("| Team | FGM‑FGA | Reb | Ast | TO |")
+    parts.append("### 4. Team Stats")
+    parts.append("| Team | FGM-FGA | Reb | Ast | TO |")
     parts.append("|------|---------|-----|-----|----|")
     parts.append(_row("home", home))
     parts.append(_row("away", away))
@@ -811,13 +816,13 @@ def format_snapshot_markdown(snapshot: Dict[str, Any],
     def _leading(pl: List[Dict[str, Any]]) -> List[str]:
         return [f"{p['name']} {p['statistics']['points']} pts" for p in pl[:max_players]]
 
-    parts.append("### 5. Leading Scorers")
+    parts.append("### 5. Leading Scorers")
     parts.append(f"- **{home}:**  " + " · ".join(_leading(players["home"])))
     parts.append(f"- **{away}:**  " + " · ".join(_leading(players["away"])))
     parts.append("")
 
     # 6. Recent plays
-    parts.append("### 6. Recent Plays")
+    parts.append("### 6. Recent Plays")
     parts.append("| Qtr | Clock | Play |")
     parts.append("|-----|-------|------|")
     for p in recent:
@@ -850,7 +855,7 @@ def print_markdown_summary(game_id: str,
                            games_today: List[Dict[str, Any]],
                            snapshot: Dict[str, Any]) -> None:
     """
-    Convenience wrapper: prints full Markdown block 1‑6.
+    Convenience wrapper: prints full Markdown block 1-6.
     """
     md = []
     md.append(format_today_games(games_today))
@@ -864,11 +869,11 @@ def debug_play_structure(game_id: str) -> None:
     plays = get_live_playbyplay(game_id)
     if plays:
         first_play = plays[0]
-        print("[DEBUG] First play structure and data:")
+        logger.debug("[DEBUG] First play structure and data:")
         for key, value in first_play.items():
-            print(f" - {key}: {value}")
+            logger.debug(f" - {key}: {value}")
     else:
-        print("[DEBUG] No plays found.")
+        logger.debug("[DEBUG] No plays found.")
 
 
 
@@ -911,7 +916,7 @@ class GameStream:
         try:
             return get_live_playbyplay(self.game_id)
         except Exception as e:
-            print(f"[DEBUG] Error fetching live pbp for {self.game_id}: {e}")
+            logger.debug(f"[DEBUG] Error fetching live pbp for {self.game_id}: {e}")
             return []
 
     def stream_new_events(self, interval: float = 3.0):
@@ -939,7 +944,7 @@ class GameStream:
         events   = self.safe_fetch_live_pbp()
 
         # 2) human Markdown
-        #    (we only need the 1‑6 blocks for THIS game, so pass [this] as games_today)
+        #    (we only need the 1-6 blocks for THIS game, so pass [this] as games_today)
         md_today = format_today_games(games_today)
         md_snap  = format_snapshot_markdown(snapshot, self.game_id,
                                             max_players=3,
@@ -959,7 +964,7 @@ class GameStream:
 # --------------------------------------------------------------------------- #
 @dataclass
 class PastGamesPlaybyPlay:
-    """Easy access to historical play‑by‑play with fuzzy‑friendly search."""
+    """Easy access to historical play-by-play with fuzzy-friendly search."""
 
 
     game_id: str
@@ -1032,7 +1037,7 @@ class PastGamesPlaybyPlay:
         m_sec = re.search(r"(\d+)\s*(?:s|sec|secs|second(?:s)?)", text)
         secs  = int(m_sec.group(1)) if m_sec else 0
 
-        # 3) colon‑format "M:SS" or "MM:SS"
+        # 3) colon-format "M:SS" or "MM:SS"
         if mins is None and ":" in text:
             a, b = text.split(":", 1)
             try:
@@ -1041,11 +1046,11 @@ class PastGamesPlaybyPlay:
             except ValueError:
                 pass
 
-        # 4) pure‑seconds fallback: "5 secs" → mins=0, secs=5
+        # 4) pure-seconds fallback: "5 secs" → mins=0, secs=5
         if mins is None and m_sec:
             mins = 0
 
-        # 5) bare‑digit as minutes: "5" → "5:00"
+        # 5) bare-digit as minutes: "5" → "5:00"
         if mins is None:
             m_digit = re.search(r"\b(\d{1,2})\b", text)
             if m_digit:
@@ -1148,35 +1153,35 @@ class PastGamesPlaybyPlay:
         Team args accept:
         • "Knicks", "NY", "NYK" • 1610612752 • "New York"
         """
-        print(f"[DEBUG] Searching for game on {when} with team={team}, home={home}, away={away}")
+        logger.debug(f"[DEBUG] Searching for game on {when} with team={team}, home={home}, away={away}")
 
-        # 1) canonical YYYY‑MM‑DD for the API
+        # 1) canonical YYYY-MM-DD for the API
         game_date = normalize_date(when)
-        print(f"[DEBUG] Normalized date: {game_date.strftime('%Y-%m-%d')}")
+        logger.debug(f"[DEBUG] Normalized date: {game_date.strftime('%Y-%m-%d')}")
         
         try:
             games = _scoreboard_df(game_date.strftime("%Y-%m-%d"), timeout)
-            print(f"[DEBUG] Found {len(games)} games on {game_date.strftime('%Y-%m-%d')}")
+            logger.debug(f"[DEBUG] Found {len(games)} games on {game_date.strftime('%Y-%m-%d')}")
             
             if games.empty:
                 raise RuntimeError(f"No games found on {game_date.strftime('%Y-%m-%d')}")
             
             # Print available games for debugging
-            print("[DEBUG] Available games:")
+            logger.debug("[DEBUG] Available games:")
             for _, row in games.iterrows():
                 home_name = get_team_name(row["HOME_TEAM_ID"]) or f"Team {row['HOME_TEAM_ID']}"
                 away_name = get_team_name(row["VISITOR_TEAM_ID"]) or f"Team {row['VISITOR_TEAM_ID']}"
-                print(f"[DEBUG] GAME_ID: {row['GAME_ID']}, " 
+                logger.debug(f"[DEBUG] GAME_ID: {row['GAME_ID']}, " 
                       f"{away_name} ({row['VISITOR_TEAM_ID']}) @ "
                       f"{home_name} ({row['HOME_TEAM_ID']})")
 
             # Apply team filter (to both home and away)
             if team:
-                print(f"[DEBUG] Filtering for any team matching: {team}")
+                logger.debug(f"[DEBUG] Filtering for any team matching: {team}")
                 team_id = get_team_id_from_abbr(team) or get_team_id(team)
                 
                 if team_id:
-                    print(f"[DEBUG] Resolved team ID: {team_id}")
+                    logger.debug(f"[DEBUG] Resolved team ID: {team_id}")
                     team_id_int = int(team_id)
                     filtered_games = games[
                         games["HOME_TEAM_ID"].eq(team_id_int) | 
@@ -1185,11 +1190,11 @@ class PastGamesPlaybyPlay:
                     
                     if not filtered_games.empty:
                         games = filtered_games
-                        print(f"[DEBUG] After team filter: {len(games)} games remaining")
+                        logger.debug(f"[DEBUG] After team filter: {len(games)} games remaining")
                     else:
-                        print(f"[WARNING] No games found with team ID {team_id_int}")
+                        logger.debug(f"[WARNING] No games found with team ID {team_id_int}")
                 else:
-                    print(f"[WARNING] Could not resolve team ID for '{team}'")
+                    logger.debug(f"[WARNING] Could not resolve team ID for '{team}'")
                     # Try text-based search on team names
                     filtered_games = pd.DataFrame()
                     for _, row in games.iterrows():
@@ -1201,25 +1206,25 @@ class PastGamesPlaybyPlay:
                     
                     if not filtered_games.empty:
                         games = filtered_games
-                        print(f"[DEBUG] After team name filter: {len(games)} games remaining")
+                        logger.debug(f"[DEBUG] After team name filter: {len(games)} games remaining")
                     else:
-                        print(f"[WARNING] No games found with team name containing '{team}'")
+                        logger.debug(f"[WARNING] No games found with team name containing '{team}'")
 
             # Apply home filter if provided
             if home:
-                print(f"[DEBUG] Filtering for home team: {home}")
+                logger.debug(f"[DEBUG] Filtering for home team: {home}")
                 hid = get_team_id_from_abbr(home) or get_team_id(home)
                 
                 if hid:
-                    print(f"[DEBUG] Resolved home team ID: {hid}")
+                    logger.debug(f"[DEBUG] Resolved home team ID: {hid}")
                     hid_int = int(hid)
                     filtered_home = games[games["HOME_TEAM_ID"].eq(hid_int)]
                     
                     if not filtered_home.empty:
                         games = filtered_home
-                        print(f"[DEBUG] After home filter: {len(games)} games remaining")
+                        logger.debug(f"[DEBUG] After home filter: {len(games)} games remaining")
                     else:
-                        print(f"[WARNING] No games found with home team ID {hid_int}")
+                        logger.debug(f"[WARNING] No games found with home team ID {hid_int}")
                         # Try with team name text search
                         for _, row in games.iterrows():
                             home_name = get_team_name(row["HOME_TEAM_ID"]) or ""
@@ -1228,27 +1233,27 @@ class PastGamesPlaybyPlay:
                         
                         if not filtered_home.empty:
                             games = filtered_home
-                            print(f"[DEBUG] After home name filter: {len(games)} games remaining")
+                            logger.debug(f"[DEBUG] After home name filter: {len(games)} games remaining")
                         else:
-                            print(f"[WARNING] No games found with home team matching '{home}'")
+                            logger.debug(f"[WARNING] No games found with home team matching '{home}'")
                 else:
-                    print(f"[WARNING] Could not resolve team ID for home: '{home}'")
+                    logger.debug(f"[WARNING] Could not resolve team ID for home: '{home}'")
             
             # Apply away filter if provided
             if away:
-                print(f"[DEBUG] Filtering for away team: {away}")
+                logger.debug(f"[DEBUG] Filtering for away team: {away}")
                 aid = get_team_id_from_abbr(away) or get_team_id(away)
                 
                 if aid:
-                    print(f"[DEBUG] Resolved away team ID: {aid}")
+                    logger.debug(f"[DEBUG] Resolved away team ID: {aid}")
                     aid_int = int(aid)
                     filtered_away = games[games["VISITOR_TEAM_ID"].eq(aid_int)]
                     
                     if not filtered_away.empty:
                         games = filtered_away
-                        print(f"[DEBUG] After away filter: {len(games)} games remaining")
+                        logger.debug(f"[DEBUG] After away filter: {len(games)} games remaining")
                     else:
-                        print(f"[WARNING] No games found with away team ID {aid_int}")
+                        logger.debug(f"[WARNING] No games found with away team ID {aid_int}")
                         # Try with team name text search
                         for _, row in games.iterrows():
                             away_name = get_team_name(row["VISITOR_TEAM_ID"]) or ""
@@ -1257,31 +1262,31 @@ class PastGamesPlaybyPlay:
                         
                         if not filtered_away.empty:
                             games = filtered_away
-                            print(f"[DEBUG] After away name filter: {len(games)} games remaining")
+                            logger.debug(f"[DEBUG] After away name filter: {len(games)} games remaining")
                         else:
-                            print(f"[WARNING] No games found with away team matching '{away}'")
+                            logger.debug(f"[WARNING] No games found with away team matching '{away}'")
                 else:
-                    print(f"[WARNING] Could not resolve team ID for away: '{away}'")
+                    logger.debug(f"[WARNING] Could not resolve team ID for away: '{away}'")
 
             if games.empty:
                 raise RuntimeError(f"No games on {game_date.strftime('%Y-%m-%d')} that match the filters")
 
             if show_choices and len(games) > 1:
-                print("Multiple games found; pick one by index or refine the filter:")
+                logger.debug("Multiple games found; pick one by index or refine the filter:")
                 for i, (_, row) in enumerate(games.iterrows(), 1):
                     game_dict = _create_game_dict_from_row(row)
-                    print(f"{i:>2}. {format_game(game_dict)}")
+                    logger.debug(f"{i:>2}. {format_game(game_dict)}")
                 idx = int(input("Choice [1]: ") or 1) - 1
                 game_id = str(games.iloc[idx]["GAME_ID"])
             else:
                 game_id = str(games.iloc[0]["GAME_ID"])
-                print(f"[DEBUG] Selected game_id: {game_id}")
+                logger.debug(f"[DEBUG] Selected game_id: {game_id}")
 
             instance = cls(game_id)
             instance.set_date(game_date.strftime("%Y-%m-%d"))
             return instance
         except Exception as e:
-            print(f"[ERROR] Error in search method: {e}")
+            logger.debug(f"[ERROR] Error in search method: {e}")
             raise
 
     # ---------- main fetch ---------------------------------------------------
@@ -1326,36 +1331,36 @@ class PastGamesPlaybyPlay:
         Print detailed information about the game.
         """
         try:
-            print(f"[DEBUG] Looking for game {self.game_id} on date {self.date}")
+            logger.debug(f"[DEBUG] Looking for game {self.game_id} on date {self.date}")
             hdr = _scoreboard_df(self.date, timeout)
             
             if hdr.empty:
-                print(f"No games found on {self.date}")
+                logger.debug(f"No games found on {self.date}")
                 return
             
-            print(f"[DEBUG] Available GAME_IDs in scoreboard: {hdr['GAME_ID'].tolist()}")
+            logger.debug(f"[DEBUG] Available GAME_IDs in scoreboard: {hdr['GAME_ID'].tolist()}")
             
             # Try both integer and string comparison
             for _, row in hdr.iterrows():
                 if str(row["GAME_ID"]) == self.game_id:
-                    print(f"[DEBUG] Found match for game_id {self.game_id}")
+                    logger.debug(f"[DEBUG] Found match for game_id {self.game_id}")
                     game_dict = _create_game_dict_from_row(row)
-                    print(format_game(game_dict))
+                    logger.debug(format_game(game_dict))
                     return
                 
             # If we reach here, no match was found
-            print(f"No game data found for ID {self.game_id} on {self.date}")
-            print("Available games on this date:")
+            logger.debug(f"No game data found for ID {self.game_id} on {self.date}")
+            logger.debug("Available games on this date:")
             for _, row in hdr.iterrows():
                 game_dict = _create_game_dict_from_row(row)
-                print(f"- GAME_ID: {row['GAME_ID']}, {game_dict['visitor_team']['full_name']} @ {game_dict['home_team']['full_name']}")
+                logger.debug(f"- GAME_ID: {row['GAME_ID']}, {game_dict['visitor_team']['full_name']} @ {game_dict['home_team']['full_name']}")
         except Exception as e:
-            print(f"Error in describe method: {e}")
+            logger.debug(f"Error in describe method: {e}")
 
     @property
     def date(self) -> str:
         """
-        Derive YYYY‑MM‑DD from the embedded game ID (works post‑2001).
+        Derive YYYY-MM-DD from the embedded game ID (works post-2001).
         If a date was explicitly set, use that instead.
         """
         # Check if we have a stored date first
@@ -1379,11 +1384,11 @@ class PastGamesPlaybyPlay:
                 return game_date.strftime("%Y-%m-%d")
             except ValueError:
                 # If date is invalid, fall back to default
-                print(f"[DEBUG] Invalid date extracted from game_id: {season_year}-{month}-{day}")
+                logger.debug(f"[DEBUG] Invalid date extracted from game_id: {season_year}-{month}-{day}")
                 season_year = 2000 + season_fragment
                 return normalize_date(f"{season_year}-10-01").strftime("%Y-%m-%d")
         except Exception as e:
-            print(f"[DEBUG] Error extracting date from game_id {self.game_id}: {e}")
+            logger.debug(f"[DEBUG] Error extracting date from game_id {self.game_id}: {e}")
             # Default fallback
             season_fragment = int(self.game_id[3:5]) if self.game_id[3:5].isdigit() else 0
             season_year = 2000 + season_fragment if season_fragment < 50 else 1900 + season_fragment
@@ -1419,7 +1424,7 @@ class PastGamesPlaybyPlay:
         • `side`   – "home", "away", or "any"  (default "any").
 
         If more than one game matches the criteria you'll be prompted to choose —
-        set `show_choices=False` to auto‑pick the first row.
+        set `show_choices=False` to auto-pick the first row.
         """
         # 1) canonical date & scoreboard
         game_date = normalize_date(when)
@@ -1466,10 +1471,10 @@ class PastGamesPlaybyPlay:
 
         # 5) choose & return
         if show_choices and len(df) > 1:
-            print("More than one game matches — pick one:")
+            logger.debug("More than one game matches — pick one:")
             for i, (_, row) in enumerate(df.reset_index().iterrows(), 1):
                 gd = _create_game_dict_from_row(row)
-                print(f"{i:>2}. {format_game(gd)}  (GAME_ID {row.GAME_ID})")
+                logger.debug(f"{i:>2}. {format_game(gd)}  (GAME_ID {row.GAME_ID})")
             idx = int(input("Choice [1]: ") or 1) - 1
             chosen = df.iloc[idx]
         else:
@@ -1480,7 +1485,7 @@ class PastGamesPlaybyPlay:
         inst.set_date(game_date.strftime("%Y-%m-%d"))
         return inst
 
-    # ---------- markdown summary (GameStream‑style) -------------------------------
+    # ---------- markdown summary (GameStream-style) -------------------------------
     def to_markdown(
         self,
         *,
@@ -1488,12 +1493,12 @@ class PastGamesPlaybyPlay:
         timeout: float = 10.0
     ) -> str:
         """
-        Return the same six‑section markdown block you get from `GameStream`,
+        Return the same six-section markdown block you get from `GameStream`,
         but for a *finished* game.
 
         Example
         -------
-        pbp = PastGamesPlaybyPlay.from_team_date("2023‑12‑25", team="PHX")
+        pbp = PastGamesPlaybyPlay.from_team_date("2023-12-25", team="PHX")
         print(pbp.to_markdown())
         """
         # 1) fetch data ----------------------------------------------------------
@@ -1501,7 +1506,7 @@ class PastGamesPlaybyPlay:
         plays  = data["PlayByPlay"]
         
         if not plays:
-            raise RuntimeError("Play‑by‑play came back empty.")
+            raise RuntimeError("Play-by-play came back empty.")
         
         snapshot = _snapshot_from_past_game(
             self.game_id,
@@ -1510,7 +1515,7 @@ class PastGamesPlaybyPlay:
             timeout=timeout,
         )
         
-        # 2) human‑readable markdown --------------------------------------------
+        # 2) human-readable markdown --------------------------------------------
 
         
         md_today = format_today_games([])           # past date => no live "today" list
@@ -1551,8 +1556,8 @@ class PastGamesPlaybyPlay:
             end_period=end_period or 4
         ).fetch()
 
-        # debug print (you can remove once you’re confident)
-        print("[DEBUG] PBP columns:", df.columns.tolist())
+        # debug print (you can remove once you're confident)
+        logger.debug("[DEBUG] PBP columns: %s", df.columns.tolist())
 
         # parse the target time (mm:ss → seconds)
         mins, secs = map(int, clock.split(":"))
@@ -1594,18 +1599,18 @@ class PastGamesPlaybyPlay:
         batch_size: int = 1
     ) -> Iterable[str]:
         """
-        1) Yield “Top <Stat>” lines for each major stat (PTS, REB, AST, STL, BLK, TO),
+        1) Yield "Top <Stat>" lines for each major stat (PTS, REB, AST, STL, BLK, TO),
            showing the top 3 on Home vs. Away.
         2) Blank line.
         3) Then stream each play as:
               [Q<period> <clock>] <homeScore>–<awayScore> | <Description>
            where the first token of Description (the last name) is
-           replaced with the player’s full name.
+           replaced with the player's full name.
         """
         # — fetch final boxscore snapshot for leaders —
         summary = group_live_game(self.game_id, recent_n=5)
 
-        # — helper to format top‑3 for a given stat —
+        # — helper to format top-3 for a given stat —
         def fmt_top(stat: str) -> str:
             def top_for(side: str) -> str:
                 raw = summary["players"][side]
@@ -1626,14 +1631,14 @@ class PastGamesPlaybyPlay:
                 return ", ".join(f"{nm} ({val} {stat})" for nm, val in best)
             return f"🏀 Top {stat.upper():<3} | Home: {top_for('home')}  |  Away: {top_for('away')}"
 
-        # 1) yield each stat‐leader line
+        # 1) yield each stat-leader line
         for stat in ("points", "rebounds", "assists", "steals", "blocks", "turnovers"):
             yield fmt_top(stat)
 
         # 2) blank line before the play stream
         yield ""
 
-        # 3) now stream plays, swapping last‑name → full‑name
+        # 3) now stream plays, swapping last-name → full-name
         sp = getattr(self, "_start_period", 1)
         sc = getattr(self, "_start_clock", None)
         for ev in self.stream_pbp(start_period=sp, start_clock=sc, batch_size=batch_size):
@@ -1662,7 +1667,7 @@ class PastGamesPlaybyPlay:
                     or ""
                 ).strip()
 
-                # determine the “orig” token to replace:
+                # determine the "orig" token to replace:
                 orig = (
                     r.get("player_name")
                     or r.get("player_name_i")
@@ -1680,19 +1685,19 @@ class PastGamesPlaybyPlay:
 
 
 # tests
-# ─── NEW: Historical Smoke‑Test Runner via PastGamesPlaybyPlay ─────────────────
-# ─── UPDATED: Historical Smoke‑Test Runner via PastGamesPlaybyPlay ─────────────────
+# ─── NEW: Historical Smoke-Test Runner via PastGamesPlaybyPlay ─────────────────
+# ─── UPDATED: Historical Smoke-Test Runner via PastGamesPlaybyPlay ─────────────────
 def run_historical_smoke_tests_via_class():
     """
-    Smoke‑test a handful of historical scenarios using only (date, team):
-      • 1996‑97 opener
+    Smoke-test a handful of historical scenarios using only (date, team):
+      • 1996-97 opener
       • Christmas 2023
-      • 1995‑96 opener (pre‑PBP: expected failure)
+      • 1995-96 opener (pre-PBP: expected failure)
     """
     scenarios = [
         {
             "params": {"game_date": "1996-11-01", "team": "Bulls"},
-            "description": "1996‑97 season opener via date+team (should succeed)"
+            "description": "1996-97 season opener via date+team (should succeed)"
         },
         {
             "params": {"game_date": "2023-12-25", "team": "PHX"},
@@ -1700,30 +1705,30 @@ def run_historical_smoke_tests_via_class():
         },
         {
             "params": {"game_date": "1995-11-01", "team": "Bulls"},
-            "description": "1995‑96 opener via date+team (pre‑PBP; expected failure)"
+            "description": "1995-96 opener via date+team (pre-PBP; expected failure)"
         },
     ]
 
-    print("\n\n# ── HISTORICAL DATA SMOKE TESTS VIA PastGamesPlaybyPlay ─────────────────────────\n")
+    logger.debug("\n\n# ── HISTORICAL DATA SMOKE TESTS VIA PastGamesPlaybyPlay ─────────────────────────\n")
     for sc in scenarios:
         desc = sc["description"]
         gd, tm = sc["params"]["game_date"], sc["params"]["team"]
-        print(f"\n=== [Date+Team] {desc} (date={gd!r}, team={tm!r}) ===")
+        logger.debug(f"\n=== [Date+Team] {desc} (date={gd!r}, team={tm!r}) ===")
         try:
             # build our instance via the class factory
             inst = PastGamesPlaybyPlay.from_game_id(
                 game_date=gd, 
                 team=tm, 
-                show_choices=False     # auto‑pick first if multiple
+                show_choices=False     # auto-pick first if multiple
             )
             # fetch only Q1 events
             result = inst.get_pbp(start_period=1, end_period=1, as_records=True)
             plays = result["PlayByPlay"]
-            print(f"✔️  Retrieved {len(plays)} plays")
+            logger.debug(f"✔️  Retrieved {len(plays)} plays")
             if plays:
-                print("Sample columns:", list(plays[0].keys()))
+                logger.debug("Sample columns:", list(plays[0].keys()))
         except Exception as e:
-            print(f"⚠️  Error: {e}")
+            logger.debug(f"⚠️  Error: {e}")
 
 
 

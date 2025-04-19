@@ -25,7 +25,7 @@ def fetch_game_live_data(
     Fetch **live** box‑score, play‑by‑play and odds for a single game.
 
     Always returns the same top‑level keys so that callers do not need to
-    branch on “data missing vs. data present”.
+    branch on "data missing vs. data present".
 
     Keys:
         * gameId       – the 10‑digit game code
@@ -47,7 +47,7 @@ def fetch_game_live_data(
     except JSONDecodeError:
         # Endpoint has no body yet (game not started)
         logger.debug("No box‑score JSON for game %s – tip‑off not reached.", game_id)
-        box_data = None  # explicit “missing” marker
+        box_data = None  # explicit "missing" marker
 
     # ---------- 2) Play‑by‑play ---------------------------------------------
     try:
@@ -124,9 +124,10 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
             )
         date_label = game_date
     else:
-        sb          = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
-        games_list  = sb.games.get_dict()
-        date_label  = sb.score_board_date
+        # Live ScoreBoard doesn't accept game_date parameter, only day_offset
+        sb = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
+        games_list = sb.games.get_dict()
+        date_label = sb.score_board_date
 
     # ---------------- 2) Per‑game enrichment --------------------------------
     all_data: list[dict] = []
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     print("\nReal-time today:\n")
     print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores(), indent=2))
 
-    # Example: historical fetch for testing (e.g., April 16, 2025)
-    print("\nHistorical snapshot (2025-04-16):\n")
-    print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores('2025-04-16'), indent=2))
+    # # Example: historical fetch for testing (e.g., April 16, 2025)
+    # print("\nHistorical snapshot (2025-04-16):\n")
+    # print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores('2025-04-16'), indent=2))
 

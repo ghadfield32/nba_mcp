@@ -1,4 +1,5 @@
 #nba_server.py
+import os
 from mcp.server.fastmcp import FastMCP
 from nba_mcp.api.client import NBAApiClient
 import sys
@@ -7,18 +8,27 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Union
 import pandas as pd
 from nba_api.stats.static import teams, players
-from nba_mcp.api.tools.nba_api_utils import (get_team_id, get_team_name, get_player_name
+from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
                            , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
                            )
-from nba_mcp.api.tools.lookup_utils import get_player_id
 import json
 # nba_server.py (add near the top)
 from pydantic import BaseModel, Field
 # import logger
 import logging
 logger = logging.getLogger(__name__)
+# 1) Read once, at import time:
+HOST = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
+BASE_PORT = int(os.getenv("NBA_MCP_PORT", os.getenv("FASTMCP_SSE_PORT", "8888")))
+PATH = os.getenv("FASTMCP_SSE_PATH", "/sse")
 
-mcp_server = FastMCP("nba_mcp")
+mcp_server = FastMCP(
+  name="nba_mcp",
+  host=HOST,
+  port=BASE_PORT,
+  path=PATH
+)
+
 
 
 from pydantic import BaseModel, Field
@@ -103,17 +113,50 @@ async def get_player_career_information(
         if df.empty:
             return f"No career stats found for '{player_name}' in {season_str}."
 
-        # 6) Format a single summary row
-        row = df.iloc[0]
-        return "\n".join([
-            f"Player: {player_name}",
-            f"Season: {season_str}",
-            f"Games Played: {row.get('GP', 'N/A')}",
-            f"Points Per Game: {row.get('PTS', 'N/A')}",
-            f"Rebounds Per Game: {row.get('REB', 'N/A')}",
-            f"Assists Per Game: {row.get('AST', 'N/A')}",
-            f"Field Goal %: {row.get('FG_PCT', 'N/A')}"
-        ])
+        # 6) Format a more detailed response with proper stats
+        if len(df) == 1:
+            # Single season data
+            row = df.iloc[0]
+            team = row.get('TEAM_ABBREVIATION', 'N/A')
+            return "\n".join([
+                f"Player: {player_name}",
+                f"Season: {season_str} ({team})",
+                f"Games Played: {row.get('GP', 'N/A')}",
+                f"Minutes Per Game: {row.get('MIN', 'N/A')}",
+                f"Points Per Game: {row.get('PTS', 'N/A')}",
+                f"Rebounds Per Game: {row.get('REB', 'N/A')}",
+                f"Assists Per Game: {row.get('AST', 'N/A')}",
+                f"Steals Per Game: {row.get('STL', 'N/A')}",
+                f"Blocks Per Game: {row.get('BLK', 'N/A')}",
+                f"Field Goal %: {row.get('FG_PCT', 'N/A')}",
+                f"3-Point %: {row.get('FG3_PCT', 'N/A')}",
+                f"Free Throw %: {row.get('FT_PCT', 'N/A')}"
+            ])
+        else:
+            # Multiple seasons - provide a career summary
+            # Find the earliest and latest seasons
+            if 'SEASON_ID' in df.columns:
+                seasons = sorted(df['SEASON_ID'].unique())
+                season_range = f"{seasons[0]} to {seasons[-1]}" if seasons else "unknown"
+            else:
+                season_range = "unknown"
+                
+            # Count total games and calculate career averages
+            total_games = df['GP'].sum() if 'GP' in df.columns else 'N/A'
+            
+            # Build response with career averages
+            return "\n".join([
+                f"Player: {player_name}",
+                f"Seasons: {season_range}",
+                f"Career Games: {total_games}",
+                f"Career Stats:",
+                f"- Points Per Game: {df['PTS'].mean():.1f}" if 'PTS' in df.columns else "- Points Per Game: N/A",
+                f"- Rebounds Per Game: {df['REB'].mean():.1f}" if 'REB' in df.columns else "- Rebounds Per Game: N/A",
+                f"- Assists Per Game: {df['AST'].mean():.1f}" if 'AST' in df.columns else "- Assists Per Game: N/A", 
+                f"- Field Goal %: {df['FG_PCT'].mean():.3f}" if 'FG_PCT' in df.columns else "- Field Goal %: N/A",
+                f"- 3-Point %: {df['FG3_PCT'].mean():.3f}" if 'FG3_PCT' in df.columns else "- 3-Point %: N/A",
+                f"- Free Throw %: {df['FT_PCT'].mean():.3f}" if 'FT_PCT' in df.columns else "- Free Throw %: N/A"
+            ])
 
     except Exception as e:
         # 7) Uncaught exception: log full traceback
@@ -213,9 +256,8 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
                 away_team = away["teamName"]
                 home_pts  = home["score"]
                 away_pts  = away["score"]
-
-            # Historical if we got uppercase keys from Stats API
             else:
+                # Historical if we got uppercase keys from Stats API
                 home_team = home.get("TEAM_ABBREVIATION") or get_team_name(home["TEAM_ID"])
                 away_team = away.get("TEAM_ABBREVIATION") or get_team_name(away["TEAM_ID"])
                 home_pts  = home.get("PTS")
@@ -224,14 +266,15 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
             status = summary.get("gameStatusText", "")
             lines.append(f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})")
 
-
         header = f"NBA Games for {target_date}:\n"
         return header + "\n".join(lines)
 
     except Exception as e:
-        err = f"Unexpected error in get_live_scores: {e}"
-        traceback.print_exc(file=sys.stderr)
-        return err
+        # Log full traceback via the logger (MCP will strip this out),
+        # and return the concise error message to the caller.
+        logger.exception("Unexpected error in get_live_scores")
+        return f"Unexpected error in get_live_scores: {e}"
+
 
 
 
@@ -417,56 +460,40 @@ import json
 # nba_server.py (update the main() function)
 def main():
     """Entry point for the NBA MCP server."""
+    global mcp_server
     logger.info("NBA MCP server starting…")
-    logger.info("Server version: 0.1.0")
-    logger.info("Python version: %s", sys.version)
-    logger.info("Initializing server transport…")
-
-    # determine host and base port
-    host = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
-    base_port = int(os.getenv("NBA_MCP_PORT",
-                  os.getenv("FASTMCP_SSE_PORT", "8000")))
-    path = os.getenv("FASTMCP_SSE_PATH", "/sse")
-
-    logger.info("Starting server with SSE on %s:%s%s", host, base_port, path)
-
-    # try binding up to 3 consecutive ports
-    max_tries = 3
+    
+    max_tries = int(os.getenv("NBA_MCP_MAX_PORT_TRIES", "10"))
     for offset in range(max_tries):
-        port = base_port + offset
-        os.environ["FASTMCP_SSE_PORT"] = str(port)
+        port = BASE_PORT + offset
+        logger.info("Binding SSE on %s:%s%s", HOST, port, PATH)
+        logger.info("Attempting to bind to port %s...", port)
+
         try:
-            mcp_server.run(transport="sse")
-            # if it returns, clean shutdown
+            # Directly pass the port value to run()
+            mcp_server.run(transport="sse", host=HOST, port=port, path=PATH)
             logger.info("Server shut down normally on port %s", port)
             return
-        except SystemExit as se:
-            # only catch exit from bind failure, not sys.exit() from other issues
-            if se.code == 1 and offset < max_tries - 1:
-                logger.warning(
-                    "Port %s in use, retrying on port %s", port, port + 1
-                )
-                continue
-            else:
-                logger.exception("Caught SystemExit in main(): exit code=%s", se.code)
-                raise
+
         except OSError as oe:
             if oe.errno == 10048 and offset < max_tries - 1:
-                logger.warning(
-                    "OSError %s binding port %s, retrying on %s",
-                    oe.errno, port, port + 1
-                )
+                logger.warning("Port %s in use, retrying on %s", port, port + 1)
                 continue
-            logger.exception("Fatal OSError inside FastMCP.run()")
+            logger.exception("Fatal OSError binding port %s", port)
+            sys.exit(1)
+
+        except SystemExit as se:
+            # Often uvicorn calls sys.exit(1) on bind failure
+            if se.code == 1 and offset < max_tries - 1:
+                logger.warning("Bind exited on port %s, retrying on %s", port, port + 1)
+                continue
             raise
-    # if we get here, all ports failed
+
     logger.error(
-        "Could not bind to any port in %s–%s. Please free the port or set NBA_MCP_PORT.",
-        base_port, base_port + max_tries - 1
+        "Could not bind to any port in range %s–%s",
+        BASE_PORT, BASE_PORT + max_tries - 1
     )
     sys.exit(1)
-
-
 
 
 
