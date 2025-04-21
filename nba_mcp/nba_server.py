@@ -4,8 +4,8 @@ from mcp.server.fastmcp import FastMCP
 from nba_mcp.api.client import NBAApiClient
 import sys
 import traceback
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Union
+from datetime import datetime, timezone, date
+from typing import Optional, List, Dict, Union, Any
 import pandas as pd
 from nba_api.stats.static import teams, players
 from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
@@ -16,6 +16,7 @@ import json
 from pydantic import BaseModel, Field
 # near the top of nba_server.py
 import argparse
+from fastmcp import Context
 
 # only grab “--mode” here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
@@ -55,7 +56,6 @@ mcp_server = FastMCP(
 mcp = mcp_server  # Alias so the FastMCP CLI can auto‑discover the server
 import socket
 
-import socket
 def port_available(port: int, host: str = HOST) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         # On Windows, exclusive use prevents collisions
@@ -139,6 +139,126 @@ async def get_openapi_spec() -> str:
 async def get_static_data() -> str:
     logger.debug("Serving cached static_data.json")
     return _CACHED_STATIC
+
+
+# ── in nba_server.py, alongside your existing @mcp_server.resource defs ──
+
+@mcp_server.resource("nba://player/{player_name}/career/{season}")
+async def player_career_stats_resource(player_name: str, season: str):
+    """
+    Returns raw JSON records (list of dicts) for a player’s career stats in a season.
+    """
+    client = NBAApiClient()
+    # always return list-of‑records
+    result = await client.get_player_career_stats(player_name, season, as_dataframe=False)
+    # If error came back as dict, re‑raise it to the client
+    if isinstance(result, dict) and "error" in result:
+        return result
+    # If a friendlier message string came back, wrap it
+    if isinstance(result, str):
+        return {"message": result}
+    # Otherwise it's already a list of dicts
+    return {"data": result}
+
+@mcp_server.resource("nba://league/leaders/{stat_category}/{per_mode}/{season}")
+async def league_leaders_resource(
+    stat_category: str, per_mode: str, season: str
+):
+    """
+    Returns top-10 league leaders as JSON for given season, stat_category, per_mode.
+    """
+    client = NBAApiClient()
+    data = await client.get_league_leaders(
+        season=season,
+        stat_category=stat_category,
+        per_mode=per_mode,
+        as_dataframe=False
+    )
+    if isinstance(data, str):
+        return {"message": data}
+    return {"data": data[:10]}
+
+
+@mcp_server.resource("nba://scores/{target_date}")
+async def live_scores_resource(target_date: str):
+    """
+    Returns live or historical NBA scores for a date as JSON.
+    """
+    client = NBAApiClient()
+    result = await client.get_live_scoreboard(
+        target_date=target_date,
+        as_dataframe=False
+    )
+    if isinstance(result, str):
+        return {"message": result}
+    return {"data": result}
+
+
+@mcp_server.resource("nba://games-v2/{game_date}")
+async def games_by_date_resource(game_date: str):
+    """
+    Returns list of games+scores from ScoreboardV2 for a date.
+    """
+    client = NBAApiClient()
+    data = await client.get_games_by_date(
+        target_date=game_date,
+        as_dataframe=False
+    )
+    if isinstance(data, dict) and "error" in data:
+        return data
+    return data
+
+
+
+@mcp_server.resource(
+    "nba://playbyplay/"
+    "{game_date}/"
+    "{team}/"
+    "{start_period}/"
+    "{end_period}/"
+    "{start_clock}/"
+    "{recent_n}/"
+    "{max_lines}"
+)
+async def playbyplay_resource(
+    game_date: str,
+    team: str,
+    start_period: int = 1,
+    end_period: int = 4,
+    start_clock: Optional[str] = None,
+    recent_n: int = 5,
+    max_lines: int = 200
+) -> Dict[str, Any]:
+    """
+    Unified MCP resource: returns play-by-play Markdown for a given date and team,
+    with full control over live vs historical behavior.
+
+    **Path format:**
+      `nba://playbyplay/{game_date}/{team}/{start_period}/{end_period}/{start_clock}/{recent_n}/{max_lines}`
+
+    **Parameters (all via path segments):**
+      - `game_date` (str): YYYY‑MM‑DD. For live/pregame, use today’s date.
+      - `team` (str): Team name or abbreviation (e.g. "Lakers").
+      - `start_period` (int): Starting quarter for historical output (1–4).
+      - `end_period` (int): Ending quarter for historical output (1–4).
+      - `start_clock` (str): Clock ("MM:SS") to begin historical output, or `"None"`.
+      - `recent_n` (int): How many recent live plays to include.
+      - `max_lines` (int): Max total lines of Markdown to return.
+
+    Internally delegates to your `NBAApiClient.get_play_by_play` method.
+    """
+    client = NBAApiClient()
+    md = await client.get_play_by_play(
+        game_date=game_date,
+        team=team,
+        start_period=start_period,
+        end_period=end_period,
+        start_clock=None if start_clock in ("", "None") else start_clock,
+        recent_n=recent_n,
+        max_lines=max_lines
+    )
+    return {"markdown": md}
+
 
 
 #########################################
@@ -426,69 +546,68 @@ async def get_date_range_game_log_or_team_game_log(
 
 
 
-
 @mcp_server.tool()
-async def play_by_play_info_for_current_games(
-) -> str:
-    """
-    Live MCP tool: for each active game today, return a Markdown
-    summary (sections 1–6), each truncated under Claude’s limits.
-    """
-    client = NBAApiClient()
-    games_df = await client.get_today_games(as_dataframe=True)
-
-    if isinstance(games_df, str):
-        return games_df
-    if not isinstance(games_df, pd.DataFrame) or games_df.empty:
-        return "No NBA games scheduled today."
-
-    md_blocks: List[str] = []
-    # Iterate each game and fetch its markdown summary
-    for _, row in games_df.iterrows():
-        gid = row["gameId"]
-        md = await client.get_game_stream(
-            gid,
-            recent_n=3,       # example default
-            max_events=200     # example limit
-        )
-        if isinstance(md, str):
-            md_blocks.append(f"## Game {gid}\n\n{md}")
-        else:
-            # error object
-            md_blocks.append(f"## Game {gid} Error\n```\n{md}\n```")
-
-    # Join by double‑newline so they render as separate sections
-    return "\n\n".join(md_blocks)
-
-
-@mcp_server.tool()
-async def get_past_play_by_play(
-    game_id: Optional[str] = None,
+async def play_by_play(
     game_date: Optional[str] = None,
     team: Optional[str] = None,
     start_period: int = 1,
     end_period: int = 4,
-    start_clock: Optional[str] = None
+    start_clock: Optional[str] = None,
+    recent_n: int = 5,
+    max_lines: int = 200
 ) -> str:
     """
-    MCP tool: retrieve historical play-by-play as a Markdown
-    summary truncated to a safe number of lines.
+    Unified MCP tool: returns play-by-play for specified date/team,
+    or for all games today if no parameters given.
     """
     client = NBAApiClient()
-    result = await client.get_past_play_by_play(
-        game_id=game_id,
+    output_blocks = []
+
+    # If neither date nor team provided, iterate over today's games via client
+    if game_date is None or team is None:
+        games_df = await client.get_today_games(as_dataframe=True)
+        if isinstance(games_df, str):
+            return games_df
+        if not isinstance(games_df, pd.DataFrame) or games_df.empty:
+            return "No NBA games scheduled today."
+
+        today_str = date.today().strftime("%Y-%m-%d")
+        for _, row in games_df.iterrows():
+            # Use away team name by default
+            team_name = row.get("away_team") or row.get("awayTeam")
+            header = f"## {row.get('gameId')} | {row.get('awayTeam')} @ {row.get('homeTeam')}"
+            md = await client.get_play_by_play(
+                game_date=today_str,
+                team=team_name,
+                start_period=start_period,
+                end_period=end_period,
+                start_clock=start_clock,
+                recent_n=recent_n,
+                max_lines=max_lines
+            )
+            if isinstance(md, str):
+                output_blocks.append(f"{header}\n\n{md}")
+            else:
+                output_blocks.append(
+                    f"{header} Error\n```json\n{json.dumps(md, indent=2)}\n```"
+                )
+
+        return "\n\n".join(output_blocks)
+
+    # Single game fetch when both date and team provided
+    md = await client.get_play_by_play(
         game_date=game_date,
         team=team,
         start_period=start_period,
         end_period=end_period,
         start_clock=start_clock,
-        max_lines=200,   # example
-        batch_size=2    # example
+        recent_n=recent_n,
+        max_lines=max_lines
     )
-    # If result is a dict, it's an error structure
-    if isinstance(result, dict):
-        return json.dumps(result, indent=2)
-    return result
+    if isinstance(md, str):
+        return md
+    return json.dumps(md, indent=2)
+
 
 
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
-
+from datetime import date as _date
 import requests
 import json
-from typing import List, Dict, Any, Optional, Tuple, Callable, Union
+from typing import List, Dict, Any, Optional, Tuple, Callable, Union, Literal, Iterable
 import time
 from typing import Callable
 from datetime import datetime, timezone, date
@@ -32,11 +32,26 @@ from nba_mcp.api.tools.nba_api_utils  import (
 from nba_api.stats.endpoints import boxscoretraditionalv2 as _BSv2
 
 import logging
+
+# 1) configure the root logger
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+# 2) ensure your module‐level logger is DEBUG
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 
 
+
+def _is_game_live(status_text: str) -> bool:
+    """Return True if status_text indicates a live, in-progress game."""
+    low = status_text.lower()
+    for tok in ("pm et", "am et", "pregame", "final"):
+        if tok in low:
+            return False
+    return True
 
 
 
@@ -221,42 +236,37 @@ def _scoreboard_df(gdate: Union[str, pd.Timestamp], timeout: float = 10.0) -> pd
 
 def _create_game_dict_from_row(row: pd.Series) -> dict:
     """
-    Create a game dictionary from a row in the scoreboard DataFrame
-    with structure compatible with format_game function.
+    …returns a dict for format_game(…) that now shows tip‑off time
+    if the game hasn't started yet.
     """
-    # Get team names from IDs
-    home_team_name = get_team_name(row["HOME_TEAM_ID"]) or f"Team {row['HOME_TEAM_ID']}"
-    visitor_team_name = get_team_name(row["VISITOR_TEAM_ID"]) or f"Team {row['VISITOR_TEAM_ID']}"
-    
-    # Get scores (LIVE_PERIOD > 0 indicates game has started)
-    home_score = 0 
-    visitor_score = 0
-    period = 0
-    game_time = ""
-    
-    # Only include score if the game has started
-    if row.get("LIVE_PERIOD", 0) > 0:
-        if "HOME_TEAM_SCORE" in row and "VISITOR_TEAM_SCORE" in row:
-            home_score = row["HOME_TEAM_SCORE"]
-            visitor_score = row["VISITOR_TEAM_SCORE"]
-        period = row.get("LIVE_PERIOD", 0)
-        game_time = row.get("LIVE_PC_TIME", "")
-    
-    # Build the dictionary that format_game expects
+    home_score = visitor_score = 0
+    period     = 0
+
+    # 1) pre‑game: show scheduled time from GAME_STATUS_TEXT
+    if row.get("LIVE_PERIOD", 0) == 0:
+        game_time = row.get("GAME_STATUS_TEXT", "")
+    else:
+        # 2) in‑progress or final: use live clock
+        home_score    = row.get("HOME_TEAM_SCORE", 0)
+        visitor_score = row.get("VISITOR_TEAM_SCORE", 0)
+        period        = row.get("LIVE_PERIOD", 0)
+        game_time     = row.get("LIVE_PC_TIME", "")
+
     return {
         "home_team": {
-            "full_name": home_team_name
+            "full_name": get_team_name(row["HOME_TEAM_ID"]) or f"Team {row['HOME_TEAM_ID']}"
         },
         "visitor_team": {
-            "full_name": visitor_team_name
+            "full_name": get_team_name(row["VISITOR_TEAM_ID"]) or f"Team {row['VISITOR_TEAM_ID']}"
         },
-        "home_team_score": home_score,
+        "home_team_score":    home_score,
         "visitor_team_score": visitor_score,
-        "period": period,
-        "time": game_time,
-        "status": row.get("GAME_STATUS_ID", 0),
-        "game_id": str(row["GAME_ID"])
+        "period":             period,
+        "time":               game_time,               # ← now filled pregame
+        "status":             row.get("GAME_STATUS_ID", 0),
+        "game_id":            str(row["GAME_ID"])
     }
+
 
 _STATS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -515,18 +525,30 @@ def get_game_info(
     timeout: float = 5.0
 ) -> Dict[str, Any]:
     """
-    Fetch the raw 'game' object from the liveData boxscore endpoint,
-    so we can pull out period, gameClock, etc.
+    Fetch the raw 'game' object from the liveData boxscore endpoint
+    (period, gameClock, statusText, etc.).
     """
     url = f"https://cdn.nba.com/static/json/liveData/boxscore/boxscore_{game_id}.json"
-    payload = fetch_json(url, timeout=timeout)
-    # prefer the 'liveData' shape if present
+    logger.debug(f"[DEBUG get_game_info] GET {url!r} with headers={_STATS_HEADERS}")
+    try:
+        payload = fetch_json(url, headers=_STATS_HEADERS, timeout=timeout)
+    except RuntimeError as e:
+        msg = str(e)
+        if "403" in msg:
+            # boxscore JSON not published yet
+            raise RuntimeError(f"Game {game_id} boxscore not yet available (HTTP 403).")
+        raise
+
+    # prefer the 'liveData' shape
     if "liveData" in payload and "game" in payload["liveData"]:
         return payload["liveData"]["game"]
-    # fallback to payload["game"]
+    # fallback
     if "game" in payload:
         return payload["game"]
+
     raise RuntimeError(f"Can't extract raw game info for {game_id}")
+
+
 
 
 def measure_content_changes(
@@ -1462,22 +1484,24 @@ class PastGamesPlaybyPlay:
         # 1) canonical date & scoreboard
         game_date = normalize_date(when)
         df = _scoreboard_df(game_date.strftime("%Y-%m-%d"), timeout)
-        if df.empty:
-            raise RuntimeError(f"No NBA games on {game_date:%Y-%m-%d}")
+        logger.debug(f"[SEARCH] {len(df)} games on {game_date:%Y-%m-%d}")
+        logger.debug("[SEARCH] sample rows:")
+        for _, r in df.head(3).iterrows():
+            logger.debug(f"  • GAME_ID={r.GAME_ID}  HOME={r.HOME_TEAM_ID} VIS={r.VISITOR_TEAM_ID} STATUS={r.GAME_STATUS_TEXT}")
 
-        # 2) resolve the primary team (must match)
         team_ids = _resolve_team_ids(team)
-        if not team_ids:
-            raise ValueError(f"Could not resolve team name/abbr: {team!r}")
+        logger.debug(f"[SEARCH] resolved '{team}' → team_ids={team_ids!r}")
 
+        # filter for team
         df = df[
             df["HOME_TEAM_ID"].isin(team_ids) |
             df["VISITOR_TEAM_ID"].isin(team_ids)
         ]
+        logger.debug(f"[SEARCH] after team filter → {len(df)} rows: {df['GAME_ID'].tolist()}")
+
         if df.empty:
-            raise RuntimeError(
-                f"{team} did not play on {game_date:%Y-%m-%d}"
-            )
+            raise RuntimeError(f"{team!r} did not play on {game_date:%Y-%m-%d'}")
+
 
         # 3) optional opponent filter
         if opponent:
@@ -1518,37 +1542,100 @@ class PastGamesPlaybyPlay:
         inst.set_date(game_date.strftime("%Y-%m-%d"))
         return inst
 
-    # ---------- markdown summary -------------------------------
+    def _fmt_top_historical(self, stat: str, summary: dict[str, Any]) -> str:
+        """
+        Build the '🏀 Top STAT | Home: ... | Away: ...' line
+        from a historical summary dict (output of _snapshot_from_past_game).
+        """
+        def top_for(side: Literal["home","away"]) -> str:
+            players = summary["players"][side]
+            pairs = [(p["name"], p["statistics"].get(stat, 0)) for p in players]
+            best = sorted(pairs, key=lambda x: x[1], reverse=True)[:3]
+            return ", ".join(f"{nm} ({val} {stat})" for nm, val in best)
+
+        return f"🏀 Top {stat.upper():<3} | Home: {top_for('home')}  |  Away: {top_for('away')}"
+
+
+    # ─── Replace your playbyplay_to_markdown method in PastGamesPlaybyPlay ────
     def playbyplay_to_markdown(
         self,
         max_lines: int = 750,
-        batch_size: int = 1
+        batch_size: int = 1,
+        *,
+        start_period: Optional[int] = None,
+        end_period: Optional[int] = None,
+        start_clock: Optional[str] = None
     ) -> str:
-        """
-        Stream first the top-stat lines, a blank line, then each play as
-        "[Q<period> <clock>] <score_home>–<score_away> | <Description>",
-        truncating after `max_lines` total lines.
-        """
+        # 0) Override defaults if specified
+        if start_period is not None:
+            self._start_period = start_period
+        if start_clock is not None:
+            self._start_clock = start_clock
+
+        # 1) Fetch all the PBP records for that period
+        try:
+            full = self.get_pbp(
+                start_period=self._start_period,
+                end_period=end_period or self._start_period,
+                as_records=True
+            )
+            records = full["PlayByPlay"]
+        except Exception as e:
+            logger.debug(f"[DEBUG] get_pbp failed for {self.game_id}: {e}")
+            return f"_Historical play‑by‑play not available for {self.game_id}._"
+
+        # 2) If we have a start_clock, slice out anything before it
+        if self._start_clock:
+            try:
+                idx = self.find_event_index(
+                    period=self._start_period,
+                    clock=self._start_clock,
+                    start_period=self._start_period,
+                    end_period=end_period
+                )
+                records = records[idx:]
+            except Exception as e:
+                logger.debug(f"[DEBUG] find_event_index failed: {e}")
+
         lines: List[str] = []
 
-        # 1) Stat leaders
-        for stat in ("points", "rebounds", "assists", "steals", "blocks", "turnovers"):
-            if len(lines) >= max_lines:
-                break
-            lines.append(self._fmt_top(stat))
-
-        # Blank line if space remains
-        if len(lines) < max_lines:
+        # 3) Build the stat‐leader snapshot
+        try:
+            summary = _snapshot_from_past_game(self.game_id, records)
+            for stat in ("points","rebounds","assists","steals","blocks","turnovers"):
+                if len(lines) >= max_lines:
+                    break
+                lines.append(self._fmt_top_historical(stat, summary))
+            if len(lines) < max_lines:
+                lines.append("")  # blank line separator
+        except Exception as e:
+            logger.debug(f"[DEBUG] snapshot failed for {self.game_id}: {e}")
+            lines.append(f"_Stat summary not available for {self.game_id}, showing raw PBP:_")
             lines.append("")
 
-        # 2) Plays
-        for ev_line in self.get_contextual_pbp(batch_size=batch_size):
-            if len(lines) >= max_lines:
+        # 4) Now append the raw play‑by‑play
+        count = 0
+        for rec in records:
+            if count >= max_lines:
                 lines.append("…")
                 break
-            lines.append(ev_line)
+
+            per   = rec.get("period") or rec.get("quarter") or "?"
+            clk   = rec.get("clock") or rec.get("pctimestring") or ""
+            try:
+                clk = parse_iso_clock(clk)
+            except:
+                pass
+
+            home  = rec.get("score_home") or rec.get("scoreHome") or "0"
+            away  = rec.get("score_away") or rec.get("scoreAway") or "0"
+            desc  = rec.get("description") or rec.get("actionType") or ""
+            lines.append(f"[Q{per} {clk}] {home}–{away} | {desc}")
+            count += 1
 
         return "\n".join(lines)
+
+
 
     # Helper copied from get_contextual_pbp
     def _fmt_top(self, stat: str) -> str:
@@ -1607,6 +1694,19 @@ class PastGamesPlaybyPlay:
             if row["period"] == period and self._iso_to_seconds(row["clock"]) <= target:
                 return idx
         return 0
+    
+    def _fmt_top(self, stat: str) -> str:
+        summary = group_live_game(self.game_id, recent_n=5)
+        def top_for(side: str) -> str:
+            raw = summary["players"][side]
+            pairs = [
+                (p.get("name") or p.get("playerName") or "?",
+                 p.get("statistics", {}).get(stat, 0))
+                for p in raw
+            ]
+            best = sorted(pairs, key=lambda x: x[1], reverse=True)[:3]
+            return ", ".join(f"{nm} ({val} {stat})" for nm, val in best)
+        return f"🏀 Top {stat.upper():<3} | Home: {top_for('home')}  |  Away: {top_for('away')}"
 
     def stream_pbp(
         self,
@@ -1633,93 +1733,153 @@ class PastGamesPlaybyPlay:
         )
         yield from fetcher.stream(batch_size=batch_size)
 
+# ── Updated get_contextual_pbp to honor end_period ─────────────────────────
     def get_contextual_pbp(
         self,
-        batch_size: int = 1
+        batch_size: int = 1,
+        *,
+        start_period: Optional[int] = None,
+        end_period: Optional[int] = None,
+        start_clock: Optional[str] = None
     ) -> Iterable[str]:
         """
-        1) Yield "Top <Stat>" lines for each major stat (PTS, REB, AST, STL, BLK, TO),
-           showing the top 3 on Home vs. Away.
+        1) Yield top‑stat lines.
         2) Blank line.
-        3) Then stream each play as:
-              [Q<period> <clock>] <homeScore>–<awayScore> | <Description>
-           where the first token of Description (the last name) is
-           replaced with the player's full name.
+        3) Stream plays [Q<period> <clock>] … via stream_pbp().
+           Honors optional start_period, end_period, start_clock.
         """
-        # — fetch final boxscore snapshot for leaders —
+        # (unchanged) top‑stat lines
         summary = group_live_game(self.game_id, recent_n=5)
-
-        # — helper to format top-3 for a given stat —
-        def fmt_top(stat: str) -> str:
-            def top_for(side: str) -> str:
-                raw = summary["players"][side]
-                # extract (name, value)
-                pairs = [
-                    (
-                        # try our standardized "name" key or fallback to whatever exists
-                        p.get("name")
-                          or p.get("playerName")
-                          or p.get("player_name")
-                          or "?",
-                        p.get("statistics", {}).get(stat, 0)
-                    )
-                    for p in raw
-                ]
-                # sort desc, take top 3
-                best = sorted(pairs, key=lambda x: x[1], reverse=True)[:3]
-                return ", ".join(f"{nm} ({val} {stat})" for nm, val in best)
-            return f"🏀 Top {stat.upper():<3} | Home: {top_for('home')}  |  Away: {top_for('away')}"
-
-        # 1) yield each stat-leader line
-        for stat in ("points", "rebounds", "assists", "steals", "blocks", "turnovers"):
-            yield fmt_top(stat)
-
-        # 2) blank line before the play stream
+        for stat in ("points","rebounds","assists","steals","blocks","turnovers"):
+            yield self._fmt_top(stat)
         yield ""
 
-        # 3) now stream plays, swapping last-name → full-name
-        sp = getattr(self, "_start_period", 1)
-        sc = getattr(self, "_start_clock", None)
-        for ev in self.stream_pbp(start_period=sp, start_clock=sc, batch_size=batch_size):
+        # Determine which bounds to use
+        sp = start_period or getattr(self, "_start_period", 1)
+        sc = start_clock or getattr(self, "_start_clock", None)
+        ep = end_period  # may be None → stream to end
+
+        # Stream and format each play
+        for ev in self.stream_pbp(
+            start_period=sp,
+            end_period=ep,
+            start_clock=sc,
+            batch_size=batch_size
+        ):
             recs = ev if isinstance(ev, list) else [ev]
             for r in recs:
-                # clock & scores
-                clk    = parse_iso_clock(r.get("clock", "") or "")
+                # same formatting logic as before...
+                clk    = parse_iso_clock(r.get("clock","") or "")
                 home   = r.get("score_home") or r.get("scoreHome") or "0"
                 away   = r.get("score_away") or r.get("scoreAway") or "0"
-                period = r.get("period", "?")
-
-                # full name lookup if we have a person_id
-                pid = r.get("person_id") or r.get("personId") or 0
-                full = None
-                if pid:
-                    try:
-                        full = get_player_name(pid)
-                    except Exception:
-                        full = None
-
-                # raw description
-                raw = (
-                    r.get("description")
-                    or r.get("action_type")
-                    or r.get("actionType")
-                    or ""
-                ).strip()
-
-                # determine the "orig" token to replace:
-                orig = (
-                    r.get("player_name")
-                    or r.get("player_name_i")
-                    or raw.split(" ", 1)[0]
-                )
-
-                # only swap if it really is at the start
-                if full and orig and raw.startswith(orig):
-                    desc = full + raw[len(orig):]
-                else:
-                    desc = raw
-
+                period = r.get("period","?")
+                # swap last‑name → full name if available
+                pid    = r.get("person_id") or r.get("personId") or 0
+                full   = pid and get_player_name(pid) or None
+                raw    = (r.get("description") or r.get("actionType") or "").strip()
+                orig   = (r.get("player_name") or raw.split(" ",1)[0] or "")
+                desc   = (full + raw[len(orig):]) if (full and orig and raw.startswith(orig)) else raw
                 yield f"[Q{period} {clk}] {home}–{away} | {desc}"
+
+
+
+
+# ── Orchestrator: date+team → Markdown ─────────────────────────────────────
+from datetime import date as _date, datetime
+
+
+def to_markdown_for_date_team(
+    when: Union[str, _date],
+    team: str,
+    *,
+    start_period: int = 1,
+    end_period: int = 4,
+    start_clock: Optional[str] = None,
+    recent_n: int = 5,
+    max_lines: int = 750
+) -> str:
+    """
+    Orchestrator:
+      - If the game hasn’t started yet → show scheduled tip‑off
+      - If in progress            → live gamestream
+      - Otherwise (final or past) → historical PBP via PastGamesPlaybyPlay
+    """
+
+    # --- Debug: Inputs ---
+    logger.debug(f"[to_md] called with when={when!r}, team={team!r}, "
+                 f"start_period={start_period}, end_period={end_period}, start_clock={start_clock}")
+
+    # 1) locate the instance via date+team
+    inst    = PastGamesPlaybyPlay.from_team_date(
+                 when=when, team=team, show_choices=False
+              )
+    game_id = inst.game_id
+
+    # 2) compare to today
+    raw_date  = normalize_date(when)
+    game_date = raw_date.date() if isinstance(raw_date, datetime) else raw_date
+    today     = _date.today()
+    logger.debug(f"[to_md] normalized game_date={game_date}  today={today}")
+
+    # assume not pregame until proven otherwise
+    is_pregame  = False
+    status_text = ""
+
+    # ─── Live/pregame logic ─────────────────────────────────────
+    if game_date >= today:
+        try:
+            info        = get_game_info(game_id)
+            status_text = info.get("gameStatusText", "").lower()
+            logger.debug(f"[to_md] liveData status_text={status_text!r}")
+        except RuntimeError as e:
+            # treat HTTP 403 or future‐date as pregame
+            if "403" in str(e) or game_date > today:
+                is_pregame = True
+                logger.debug(f"[to_md] marking as pregame due to {e}")
+            else:
+                raise
+
+        # ── Pregame ───────────────────────────────────────────────
+        if is_pregame or any(tok in status_text for tok in ("pregame","am et","pm et")):
+            df  = _scoreboard_df(game_date.strftime("%Y-%m-%d"))
+            row = df[df["GAME_ID"].astype(str) == game_id].iloc[0]
+            away_name = get_team_name(row["VISITOR_TEAM_ID"]) or row["VISITOR_TEAM_ID"]
+            home_name = get_team_name(row["HOME_TEAM_ID"])    or row["HOME_TEAM_ID"]
+            tip_time  = row.get("GAME_STATUS_TEXT", "").strip()
+            logger.debug(f"[to_md] returning PREGAME tip-off for {game_id}")
+            return (
+                "### 1. Today's Games\n"
+                f"- **{game_id}** {away_name} @ {home_name}  (Tip‑off at {tip_time})"
+            )
+
+        # ── Live ─────────────────────────────────────────────────
+        if _is_game_live(status_text):
+            logger.debug(f"[to_md] returning LIVE gamestream for {game_id}")
+            gs          = GameStream(game_id)
+            games_today = GameStream.get_today_games()
+            return gs.gamestream_to_markdown(
+                recent_n=recent_n,
+                max_events=max_lines,
+                games_today=games_today
+            )
+
+    # ─── Final / Historical ──────────────────────────────────────
+    logger.debug(f"[to_md] falling through to HISTORICAL for {game_id}")
+    try:
+        result = inst.playbyplay_to_markdown(
+            max_lines=max_lines,
+            batch_size=1,
+            start_period=start_period,
+            end_period=end_period,
+            start_clock=start_clock
+        )
+        logger.debug(f"[to_md] historical markdown length={len(result.splitlines())} lines")
+        return result
+    except (IndexError, RuntimeError) as e:
+        logger.debug(f"[to_md] Historical PBP failed for {game_id}: {e}")
+        return f"_Play‑by‑play not available for finished game {game_id}._"
+
+
 
 
 
@@ -1772,6 +1932,122 @@ def run_historical_smoke_tests_via_class():
 
 
 
+
+class PlaybyPlayLiveorPast:
+    """
+    Orchestrator class for generating markdown based on date and team.
+    Combines GameStream for live data and PastGamesPlaybyPlay for historical data.
+    """
+    def __init__(
+        self,
+        when: Union[str, _date],
+        team: str,
+        start_period: int = 1,
+        end_period: int = 4,
+        start_clock: Optional[str] = None,
+        recent_n: int = 5,
+        max_lines: int = 750
+    ):
+        # Store parameters
+        self.when = when
+        self.team = team
+        self.start_period = start_period
+        self.end_period = end_period
+        self.start_clock = start_clock
+        self.recent_n = recent_n
+        self.max_lines = max_lines
+
+        # Instantiate historical PBP handler
+        self.inst = PastGamesPlaybyPlay.from_team_date(
+            when=self.when,
+            team=self.team,
+            show_choices=False
+        )
+        self.game_id = self.inst.game_id
+
+    def to_markdown(self) -> str:
+        """
+        Generate markdown depending on game status:
+          - Pregame: scheduled tip-off
+          - Live: live game stream
+          - Historical: past play-by-play
+        """
+        logger.debug(
+            f"[ToMarkdown] called with when={self.when!r}, team={self.team!r}, "
+            f"start_period={self.start_period}, end_period={self.end_period}, "
+            f"start_clock={self.start_clock}"
+        )
+
+        # Normalize the provided date
+        raw_date = normalize_date(self.when)
+        game_date = raw_date.date() if isinstance(raw_date, datetime) else raw_date
+        today = _date.today()
+        logger.debug(f"[ToMarkdown] normalized game_date={game_date}  today={today}")
+
+        # Default to not pregame
+        is_pregame = False
+        status_text = ""
+
+        # Check future or today for live/pregame
+        if game_date >= today:
+            try:
+                info = get_game_info(self.game_id)
+                status_text = info.get("gameStatusText", "").lower()
+                logger.debug(f"[ToMarkdown] liveData status_text={status_text!r}")
+            except RuntimeError as e:
+                # HTTP 403 or future date signals pregame
+                if "403" in str(e) or game_date > today:
+                    is_pregame = True
+                    logger.debug(f"[ToMarkdown] marking as pregame due to {e}")
+                else:
+                    raise
+
+            # Pregame scenario
+            if is_pregame or any(tok in status_text for tok in ("pregame", "am et", "pm et")):
+                df = _scoreboard_df(game_date.strftime("%Y-%m-%d"))
+                row = df[df["GAME_ID"].astype(str) == self.game_id].iloc[0]
+                away_name = get_team_name(row["VISITOR_TEAM_ID"]) or row["VISITOR_TEAM_ID"]
+                home_name = get_team_name(row["HOME_TEAM_ID"]) or row["HOME_TEAM_ID"]
+                tip_time = row.get("GAME_STATUS_TEXT", "").strip()
+                logger.debug(f"[ToMarkdown] returning PREGAME tip-off for {self.game_id}")
+                return (
+                    "### 1. Today's Games\n"
+                    f"- **{self.game_id}** {away_name} @ {home_name}  (Tip‑off at {tip_time})"
+                )
+
+            # Live scenario
+            if _is_game_live(status_text):
+                logger.debug(f"[ToMarkdown] returning LIVE gamestream for {self.game_id}")
+                gs = GameStream(self.game_id)
+                games_today = GameStream.get_today_games()
+                return gs.gamestream_to_markdown(
+                    recent_n=self.recent_n,
+                    max_events=self.max_lines,
+                    games_today=games_today
+                )
+
+        # Fallback to historical PBP
+        logger.debug(f"[ToMarkdown] falling through to HISTORICAL for {self.game_id}")
+        try:
+            result = self.inst.playbyplay_to_markdown(
+                max_lines=self.max_lines,
+                batch_size=1,
+                start_period=self.start_period,
+                end_period=self.end_period,
+                start_clock=self.start_clock
+            )
+            logger.debug(
+                f"[ToMarkdown] historical markdown length={len(result.splitlines())} lines"
+            )
+            return result
+        except (IndexError, RuntimeError) as e:
+            logger.debug(f"[ToMarkdown] Historical PBP failed for {self.game_id}: {e}")
+            return f"_Play‑by‑play not available for finished game {self.game_id}._"
+
+
+
+
+
 # ─── USAGE ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # --------------------------------------------------------------------------- #
@@ -1788,9 +2064,9 @@ if __name__ == "__main__":
     # stream.debug_first_play()
     # stream.print_markdown_summary()
     
-    stream, games = GameStream.from_today()
-    md = stream.gamestream_to_markdown(recent_n=3, max_events=100)
-    print(md)
+    # stream, games = GameStream.from_today()
+    # md = stream.gamestream_to_markdown(recent_n=3, max_events=100)
+    # print(md)
     # --------------------------------------------------------------------------- #
     # ──  Past PlaybyPlay EXAMPLE USAGE                                                         ──
     # --------------------------------------------------------------------------- #
@@ -1799,12 +2075,12 @@ if __name__ == "__main__":
     # pbp2 = PastGamesPlaybyPlay.from_game_id(
     #     game_date="2025-04-15", 
     #     team="Warriors", 
-    #     # start_period=3, 
-    #     # start_clock="7:15"
+    #     start_period=3, 
+    #     start_clock="7:15")
 
-    pbp = PastGamesPlaybyPlay.from_game_id(game_date="2025-04-15", team="Warriors")
-    hist_md = pbp.playbyplay_to_markdown(max_lines=100, batch_size=2)
-    print(hist_md)
+    # pbp = PastGamesPlaybyPlay.from_game_id(game_date="2025-04-15", team="Warriors")
+    # hist_md = pbp.playbyplay_to_markdown(max_lines=100, batch_size=2)
+    # print(hist_md)
 
     # # stress tests:
     # # should all map to period=1
@@ -1830,6 +2106,28 @@ if __name__ == "__main__":
             
             
     # ─── RUN HISTORICAL SMOKE TESTS VIA PastGamesPlaybyPlay ───────────────────────
-    run_historical_smoke_tests_via_class()
+    # run_historical_smoke_tests_via_class()
     
-    
+
+    # ── HISTORICAL EXAMPLE ─────────────────────────────────────────────
+    # Game on April 15, 2025, Warriors vs. opponent, Q1–Q1 only,
+    # up to 100 lines of output:
+    live_md = PlaybyPlayLiveorPast(
+        when="2025-04-15",
+        team="Warriors",
+        start_period=3,
+        start_clock="7:15",
+        max_lines=100
+    ).to_markdown()
+    print("=== Live Snapshot ===\n", live_md)
+
+    # ── LIVE EXAMPLE ────────────────────────────────────────────────────
+    # Today’s game for the Lakers, show the live snapshot:
+     # show 3 recent plays,
+    live_md = PlaybyPlayLiveorPast(
+        when=_date.today().strftime("%Y-%m-%d"),
+        team="Knicks",
+        recent_n=3,
+        max_lines=100
+    ).to_markdown()
+    print("=== Live Snapshot ===\n", live_md)

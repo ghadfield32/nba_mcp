@@ -38,9 +38,9 @@ from .tools.playercareerstats_leagueleaders_tools import (
     get_league_leaders as _fetch_league_leaders
 )
 from .tools.leaguegamelog_tools import fetch_league_game_log
-from .tools.playbyplayv3_or_realtime import get_today_games, GameStream
-from .tools.playbyplayv3_or_realtime import PastGamesPlaybyPlay
-
+from .tools.playbyplayv3_or_realtime import (get_today_games,
+                                             PlaybyPlayLiveorPast) 
+  
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -377,67 +377,46 @@ class NBAApiClient:
             return self._handle_response_error(e, "get_today_games")
 
 
-    async def get_game_stream(
-        self,
-        game_id: str,
-        recent_n: int = 5,
-        max_events: int = 200
-    ) -> Union[str, Dict[str, Any]]:
-        """
-        Fetch the live GameStream for `game_id` and return
-        a Markdown summary (sections 1–6) truncated to at most
-        `max_events` lines, showing the last `recent_n` plays.
-        """
-        try:
-            def build_md():
-                stream = GameStream(game_id)
-                # Use our new to_markdown helper
-                return stream.gamestream_to_markdown(recent_n=recent_n, max_events=max_events)
-
-            md = await asyncio.to_thread(build_md)
-            return md
-        except Exception as e:
-            # Return structured error if something goes wrong
-            return self._handle_response_error(e, "get_game_stream")
-
-
-    async def get_past_play_by_play(
+    async def get_play_by_play(
         self,
         *,
-        game_id: Optional[str] = None,
-        game_date: Optional[str] = None,
-        team: Optional[str] = None,
+        game_date: str,
+        team: str,
         start_period: int = 1,
         end_period: int = 4,
         start_clock: Optional[str] = None,
-        max_lines: int = 200,
-        batch_size: int = 1,
-        timeout: float = 10.0
+        recent_n: int = 5,
+        max_lines: int = 200
     ) -> Union[str, Dict[str, Any]]:
         """
-        Fetch historical play-by-play via PastGamesPlaybyPlay and
-        return a line-by-line Markdown summary truncated to at most
-        `max_lines` lines, streaming in batches of `batch_size`.
+        Unified play-by-play (pregame / live / historical).
+
+        Requires:
+          • game_date (YYYY-MM-DD)
+          • team name (e.g., "Lakers")
+
+        Optional:
+          - start_period, end_period, start_clock for historical slicing
+          - recent_n, max_lines for live snapshots
         """
         try:
-            # Build helper (normalizes IDs/dates)
-            pbp = PastGamesPlaybyPlay.from_game_id(
-                game_id=game_id,
-                game_date=game_date,
-                team=team,
-                start_period=start_period,
-                start_clock=start_clock,
-                show_choices=False,
-                timeout=timeout
-            )
-
+            # Delegate directly to the orchestrator
             def build_md():
-                return pbp.playbyplay_to_markdown(max_lines=max_lines, batch_size=batch_size)
+                orch = PlaybyPlayLiveorPast(
+                    when=game_date,
+                    team=team,
+                    start_period=start_period,
+                    end_period=end_period,
+                    start_clock=start_clock,
+                    recent_n=recent_n,
+                    max_lines=max_lines
+                )
+                return orch.to_markdown()
 
             md = await asyncio.to_thread(build_md)
             return md
         except Exception as e:
-            return self._handle_response_error(e, "get_past_play_by_play")
+            return self._handle_response_error(e, "get_play_by_play")
 
             
     async def get_games_by_date(
