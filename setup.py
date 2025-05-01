@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="nba-mcp",
-    version="0.4.0",
+    version="0.5.0",
     packages=find_packages(),
     python_requires=">=3.10",
     install_requires=[
@@ -32,6 +32,7 @@ setup(
             "mypy>=1.0.0",
             "black>=23.0.0",
             "isort>=5.0.0",
+            "invoke>=2.2.0",
         ]
     },
     entry_points={

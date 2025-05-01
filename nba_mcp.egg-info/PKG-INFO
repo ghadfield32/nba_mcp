@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: nba-mcp
-Version: 0.4.0
+Version: 0.5.0
 Summary: NBA MCP Server
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
@@ -17,12 +17,14 @@ Requires-Dist: ollama>=0.4.8
 Requires-Dist: jupyter>=1.1.1
 Requires-Dist: streamlit>=1.37.1
 Requires-Dist: rich<14,>=10.14.0
+Requires-Dist: mss>=6.3.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
 Requires-Dist: mypy>=1.0.0; extra == "dev"
 Requires-Dist: black>=23.0.0; extra == "dev"
 Requires-Dist: isort>=5.0.0; extra == "dev"
+Requires-Dist: invoke>=2.2.0; extra == "dev"
 Dynamic: requires-python
 
 # NBA MCP Server
@@ -72,15 +74,17 @@ uv pip install -e ".[dev]"
 ```
 
 ### Running the Server
+# python nba_server.py --mode local       # runs on 8001
+# python nba_server.py --mode claude      # runs on 8000
 
-The simplest way to run the server:
+The simplest way to run the server on Claude Desktop:
 ```bash
-python -m nba_mcp
+python -m nba_mcp.nba_server --mode claude      # runs on 8000
 ```
 
-Using the launcher script with custom configuration:
+Using the local port is great for local llms through ollama and such:
 ```bash
-python run_nba_mcp.py --port 8001
+python -m nba_mcp.nba_server --mode local      # runs on 8001
 ```
 
 ## Features

@@ -50,12 +50,12 @@ uv pip install -e ".[dev]"
 
 The simplest way to run the server on Claude Desktop:
 ```bash
-python nba_server.py --mode claude      # runs on 8000
+python -m nba_mcp.nba_server --mode claude      # runs on 8000
 ```
 
 Using the local port is great for local llms through ollama and such:
 ```bash
-python nba_server.py --mode local       # runs on 8001
+python -m nba_mcp.nba_server --mode local      # runs on 8001
 ```
 
 ## Features

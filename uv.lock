@@ -583,6 +583,15 @@ wheels = [
 ]
 
 [[package]]
+name = "invoke"
+version = "2.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/42/127e6d792884ab860defc3f4d80a8f9812e48ace584ffc5a346de58cdc6c/invoke-2.2.0.tar.gz", hash = "sha256:ee6cbb101af1a859c7fe84f2a264c059020b0cb7fe3535f9424300ab568f6bd5", size = 299835 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/66/7f8c48009c72d73bc6bbe6eb87ac838d6a526146f7dab14af671121eb379/invoke-2.2.0-py3-none-any.whl", hash = "sha256:6ea924cc53d4f78e3d98bc436b08069a03077e6f85ad1ddaa8a116d7dad15820", size = 160274 },
+]
+
+[[package]]
 name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1245,6 +1254,15 @@ wheels = [
 ]
 
 [[package]]
+name = "mss"
+version = "10.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/2c/6a50c69793918502b4391729bd5741964c9f8ccc98c8482d4a680384923b/mss-10.0.0.tar.gz", hash = "sha256:d903e0d51262bf0f8782841cf16eaa6d7e3e1f12eae35ab41c2e318837c6637f", size = 83127 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/aa/b897ae9e1c1616e4df9fb319637ef6a9d07cca6d46de6b59c80209f006a4/mss-10.0.0-py3-none-any.whl", hash = "sha256:82cf6460a53d09e79b7b6d871163c982e6c7e9649c426e7b7591b74956d5cb64", size = 24050 },
+]
+
+[[package]]
 name = "mypy"
 version = "1.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1316,7 +1334,7 @@ wheels = [
 
 [[package]]
 name = "nba-mcp"
-version = "0.4.0"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
@@ -1325,6 +1343,7 @@ dependencies = [
     { name = "langchain-mcp-adapters" },
     { name = "langchain-ollama" },
     { name = "langgraph" },
+    { name = "mss" },
     { name = "nba-api" },
     { name = "ollama" },
     { name = "pandas" },
@@ -1337,6 +1356,7 @@ dependencies = [
 [package.optional-dependencies]
 dev = [
     { name = "black" },
+    { name = "invoke" },
     { name = "isort" },
     { name = "mypy" },
     { name = "pytest" },
@@ -1348,11 +1368,13 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "fastmcp", specifier = ">=2.2.0" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "invoke", marker = "extra == 'dev'", specifier = ">=2.2.0" },
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "langchain-mcp-adapters", specifier = ">=0.0.9" },
     { name = "langchain-ollama", specifier = ">=0.3.2" },
     { name = "langgraph", specifier = ">=0.3.31" },
+    { name = "mss", specifier = ">=6.3.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "nba-api", specifier = ">=1.9.0" },
     { name = "ollama", specifier = ">=0.4.8" },

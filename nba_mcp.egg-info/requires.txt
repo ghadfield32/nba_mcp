@@ -11,6 +11,7 @@ ollama>=0.4.8
 jupyter>=1.1.1
 streamlit>=1.37.1
 rich<14,>=10.14.0
+mss>=6.3.0
 
 [dev]
 pytest>=7.0.0
@@ -18,3 +19,4 @@ pytest-asyncio>=0.21.0
 mypy>=1.0.0
 black>=23.0.0
 isort>=5.0.0
+invoke>=2.2.0
