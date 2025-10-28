@@ -20,12 +20,12 @@ Example:
         return 429
 """
 
-import time
-import threading
 import logging
-from typing import Dict, Optional, Any
+import threading
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 

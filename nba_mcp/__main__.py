@@ -1,7 +1,7 @@
 # nba_mcp/__main__.py
-import sys
 import logging
 import os
+import sys
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s %(levelname)s %(name)s: %(message)s"

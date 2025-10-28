@@ -9,14 +9,15 @@ Formats tool execution results into natural language responses with:
 - Metadata (sources, timestamps, confidence)
 """
 
-from typing import Dict, Any, List, Optional
+import logging
 from dataclasses import dataclass
 from datetime import datetime
-import logging
+from typing import Any, Dict, List, Optional
 
-from .parser import ParsedQuery
-from .executor import ExecutionResult, ToolResult
 from tabulate import tabulate
+
+from .executor import ExecutionResult, ToolResult
+from .parser import ParsedQuery
 
 logger = logging.getLogger(__name__)
 

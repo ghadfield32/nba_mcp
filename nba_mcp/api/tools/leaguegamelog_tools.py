@@ -7,13 +7,14 @@ This script demonstrates how to use endpoints for retrieving game log data.
 
 from datetime import date, datetime
 from typing import Optional, Union
-import pandas as pd
 
+import pandas as pd
 from nba_api.stats.endpoints import leaguegamelog
+
 from nba_mcp.api.tools.nba_api_utils import (
     get_team_id,
-    normalize_season,
     normalize_date,
+    normalize_season,
     normalize_season_type,
 )
 

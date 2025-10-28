@@ -16,16 +16,18 @@ and for the player career stats it also shows how to fetch a JSON snippet.
 Ensure you have Python 3.7+ installed.
 """
 
+import logging
+from typing import List, Union
+
 import pandas as pd
-from typing import Union, List
-from nba_api.stats.endpoints import playercareerstats, LeagueLeaders
+from nba_api.stats.endpoints import LeagueLeaders, playercareerstats
+
 from nba_mcp.api.tools.nba_api_utils import (
     get_player_id,
-    normalize_stat_category,
     normalize_per_mode,
     normalize_season,
+    normalize_stat_category,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

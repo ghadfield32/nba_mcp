@@ -1,84 +1,85 @@
 # nba_mcp\nba_server.py
-import os
-from mcp.server.fastmcp import FastMCP
-from nba_mcp.api.client import NBAApiClient
-import sys
-import traceback
-from datetime import datetime, timezone, date
-from typing import Optional, List, Dict, Union, Any
-import pandas as pd
-from nba_api.stats.static import teams, players
-from nba_mcp.api.tools.nba_api_utils import (
-    get_player_id,
-    get_team_id,
-    get_team_name,
-    get_player_name,
-    get_static_lookup_schema,
-    normalize_stat_category,
-    normalize_per_mode,
-    normalize_season,
-    normalize_date,
-    format_game,
-)
+# near the top of nba_server.py
+import argparse
 import json
+import os
+import sys
+import time
+import traceback
+from datetime import date, datetime, timezone
+from typing import Any, Dict, List, Optional, Union
+
+import pandas as pd
+from fastmcp import Context
+from mcp.server.fastmcp import FastMCP
+from nba_api.stats.static import players, teams
 
 # nba_server.py (add near the top)
 from pydantic import BaseModel, Field
 
-# near the top of nba_server.py
-import argparse
-from fastmcp import Context
-import time
-
-# Import new response models and error handling
-from nba_mcp.api.models import (
-    ResponseEnvelope,
-    success_response,
-    error_response,
-    partial_response,
-    EntityReference,
-    PlayerSeasonStats,
-    TeamStanding,
-    PlayerComparison,
-)
-from nba_mcp.api.errors import (
-    NBAMCPError,
-    EntityNotFoundError,
-    InvalidParameterError,
-    RateLimitError,
-    retry_with_backoff,
-    get_circuit_breaker,
-)
+from nba_mcp.api.client import NBAApiClient
 from nba_mcp.api.entity_resolver import (
+    get_cache_info,
     resolve_entity,
     suggest_players,
     suggest_teams,
-    get_cache_info,
+)
+from nba_mcp.api.errors import (
+    EntityNotFoundError,
+    InvalidParameterError,
+    NBAMCPError,
+    RateLimitError,
+    get_circuit_breaker,
+    retry_with_backoff,
 )
 
+# Import new response models and error handling
+from nba_mcp.api.models import (
+    EntityReference,
+    PlayerComparison,
+    PlayerSeasonStats,
+    ResponseEnvelope,
+    TeamStanding,
+    error_response,
+    partial_response,
+    success_response,
+)
+from nba_mcp.api.tools.nba_api_utils import (
+    format_game,
+    get_player_id,
+    get_player_name,
+    get_static_lookup_schema,
+    get_team_id,
+    get_team_name,
+    normalize_date,
+    normalize_per_mode,
+    normalize_season,
+    normalize_stat_category,
+)
+
+# Import Week 4 infrastructure (cache + rate limiting)
+from nba_mcp.cache.redis_cache import CacheTier, cached, get_cache, initialize_cache
+
 # Import NLQ pipeline components
+from nba_mcp.nlq.pipeline import answer_nba_question as nlq_answer_question
 from nba_mcp.nlq.pipeline import (
-    answer_nba_question as nlq_answer_question,
     get_pipeline_status,
 )
 from nba_mcp.nlq.tool_registry import initialize_tool_registry
 
-# Import Week 4 infrastructure (cache + rate limiting)
-from nba_mcp.cache.redis_cache import initialize_cache, get_cache, CacheTier, cached
-from nba_mcp.rate_limit.token_bucket import (
-    initialize_rate_limiter,
-    get_rate_limiter,
-    rate_limited,
-)
-
 # Import Week 4 observability (metrics + tracing)
 from nba_mcp.observability import (
-    initialize_metrics,
     get_metrics_manager,
+    get_tracing_manager,
+    initialize_metrics,
+    initialize_tracing,
     track_metrics,
     update_infrastructure_metrics,
-    initialize_tracing,
-    get_tracing_manager,
+)
+from nba_mcp.rate_limit.token_bucket import (
+    get_rate_limiter,
+    initialize_rate_limiter,
+    rate_limited,
 )
 
 # only grab "--mode" here and ignore any other flags
@@ -132,8 +133,9 @@ def port_available(port: int, host: str = HOST) -> bool:
             return False
 
 
-from pydantic import BaseModel, Field
 from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class LeagueLeadersParams(BaseModel):
@@ -1308,8 +1310,8 @@ def main():
     # Start metrics HTTP server (for Prometheus scraping)
     metrics_port = int(os.getenv("METRICS_PORT", port + 1 if port else 9090))
     try:
-        from http.server import HTTPServer, BaseHTTPRequestHandler
         import threading
+        from http.server import BaseHTTPRequestHandler, HTTPServer
 
         class MetricsHandler(BaseHTTPRequestHandler):
             def do_GET(self):

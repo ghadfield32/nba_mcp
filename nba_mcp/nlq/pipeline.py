@@ -5,13 +5,13 @@ Complete NLQ Pipeline Interface.
 Provides a simple async function to answer NBA questions in natural language.
 """
 
-from typing import Optional
 import logging
+from typing import Optional
 
+from .executor import execute_plan
 from .parser import parse_query, validate_parsed_query
 from .planner import plan_query_execution
-from .executor import execute_plan
-from .synthesizer import synthesize_response, SynthesizedResponse
+from .synthesizer import SynthesizedResponse, synthesize_response
 
 logger = logging.getLogger(__name__)
 

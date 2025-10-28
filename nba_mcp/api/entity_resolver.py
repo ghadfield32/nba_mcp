@@ -15,14 +15,15 @@ Features:
 - Suggestion ranking for ambiguous queries
 """
 
-from typing import Optional, List, Dict, Any, Literal
-from functools import lru_cache
 import logging
 from difflib import SequenceMatcher
+from functools import lru_cache
+from typing import Any, Dict, List, Literal, Optional
+
 from nba_api.stats.static import players, teams
 
-from .models import EntityReference
 from .errors import EntityNotFoundError
+from .models import EntityReference
 
 logger = logging.getLogger(__name__)
 

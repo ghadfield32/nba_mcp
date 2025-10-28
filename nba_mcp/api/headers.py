@@ -23,9 +23,8 @@ Usage:
 """
 
 import os
+from importlib.metadata import PackageNotFoundError, version
 from typing import Dict
-from importlib.metadata import version, PackageNotFoundError
-
 
 # ============================================================================
 # Version Detection

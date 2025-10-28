@@ -6,9 +6,9 @@ Maps parsed queries to sequences of MCP tool calls using answer pack templates.
 Identifies parallelizable operations and handles dependencies.
 """
 
-from typing import List, Dict, Any, Optional, Callable
-from dataclasses import dataclass, field
 import logging
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
 from .parser import ParsedQuery, TimeRange
 

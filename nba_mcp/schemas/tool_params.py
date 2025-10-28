@@ -19,9 +19,9 @@ Usage:
     params = ResolveNBAEntityParams(query="LeBron", entity_type="player")
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Union
+from typing import List, Literal, Optional, Union
 
+from pydantic import BaseModel, Field
 
 # ============================================================================
 # Tool 1: resolve_nba_entity

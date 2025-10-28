@@ -6,15 +6,15 @@ Executes tool calls with intelligent parallelization, error handling,
 and result aggregation.
 """
 
-from typing import Dict, Any, List, Callable, Optional
-from dataclasses import dataclass, field
 import asyncio
 import logging
 import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
-from .planner import ToolCall, ExecutionPlan
-from ..api.models import ResponseEnvelope, success_response, error_response
 from ..api.errors import NBAMCPError
+from ..api.models import ResponseEnvelope, error_response, success_response
+from .planner import ExecutionPlan, ToolCall
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,6 @@ class ExecutionResult:
 # ============================================================================
 
 from .tool_registry import get_tool, list_tools
-
 
 # ============================================================================
 # TOOL EXECUTION

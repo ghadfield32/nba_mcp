@@ -12,21 +12,21 @@ Traces can be exported to any OpenTelemetry-compatible backend
 """
 
 import functools
-import time
-from typing import Optional, Callable, Any, Dict, List
-from contextlib import contextmanager
 import logging
+import time
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from opentelemetry import trace
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import (
         BatchSpanProcessor,
         ConsoleSpanExporter,
     )
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-    from opentelemetry.trace import Status, StatusCode, Span
+    from opentelemetry.trace import Span, Status, StatusCode
 
     OTEL_AVAILABLE = True
 except ImportError:

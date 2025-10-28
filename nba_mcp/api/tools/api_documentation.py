@@ -1,24 +1,26 @@
 # tools.api_documentation.py
-import sys
-import os
-from pathlib import Path
 import inspect
 import json
+import logging
+import os
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, Optional
+
 import pandas as pd
-from typing import Optional, Dict
-from nba_mcp.api.tools.nba_api_utils import (
-    get_player_id,
-    normalize_stat_category,
-    normalize_per_mode,
-    normalize_season,
-    get_team_id,
-)
 
 # Import NBA API modules
 from nba_api.stats import endpoints
-from nba_api.stats.static import teams, players
-import logging
+from nba_api.stats.static import players, teams
+
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id,
+    get_team_id,
+    normalize_per_mode,
+    normalize_season,
+    normalize_stat_category,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -11,11 +11,11 @@ Extracts structured components from natural language:
 Uses pattern matching + optional LLM fallback for ambiguous queries.
 """
 
-from typing import Optional, List, Dict, Any, Literal
-from dataclasses import dataclass, field
-from datetime import datetime, date, timedelta
-import re
 import logging
+import re
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Literal, Optional
 
 from ..api.entity_resolver import resolve_entity, suggest_players, suggest_teams
 from ..api.errors import EntityNotFoundError

@@ -1,39 +1,39 @@
 from __future__ import annotations
-from datetime import date as _date
-import requests
+
 import json
-from typing import List, Dict, Any, Optional, Tuple, Callable, Union, Literal, Iterable
-import time
-from typing import Callable
-from datetime import datetime, timezone, date
-import sys
+import logging
 import re
+import sys
+import time
+from dataclasses import dataclass
 from datetime import date
-from nba_api.stats.endpoints import scoreboardv2 as _SBv2, PlayByPlayV3
+from datetime import date as _date
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple, Union
+
+import pandas as pd
+import requests
+
+# ── NEW HELPER: build a "snapshot" from a *finished* game ─────────────────────
+from nba_api.stats.endpoints import (
+    PlayByPlayV3,
+)
+from nba_api.stats.endpoints import boxscoretraditionalv2 as _BSv2
+from nba_api.stats.endpoints import scoreboardv2 as _SBv2
+from nba_api.stats.static import teams as _static_teams
+
+from nba_mcp.api.tools.nba_api_utils import (
+    _resolve_team_ids,
+    format_game,
+    get_player_name,
+    get_team_id,
+    get_team_id_from_abbr,
+    get_team_name,
+    normalize_date,
+)
 
 # (and your existing imports)
 
-from dataclasses import dataclass
-
-import pandas as pd
-from nba_api.stats.endpoints import (
-    scoreboardv2 as _SBv2,
-)
-from nba_api.stats.static import teams as _static_teams
-from nba_mcp.api.tools.nba_api_utils import (
-    normalize_date,
-    get_team_id,
-    get_team_name,
-    get_team_id_from_abbr,
-    format_game,
-    _resolve_team_ids,
-    get_player_name,
-)
-
-# ── NEW HELPER: build a "snapshot" from a *finished* game ─────────────────────
-from nba_api.stats.endpoints import boxscoretraditionalv2 as _BSv2
-
-import logging
 
 # 1) configure the root logger
 logging.getLogger("urllib3").setLevel(logging.WARNING)
@@ -524,9 +524,12 @@ def stream_live_pbp(game_id: str, interval: float = 3.0):
         time.sleep(interval)
 
 
-import requests, json, time
-from typing import List, Dict, Any, Optional, Callable
+import json
+import time
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
+
+import requests
 
 
 def get_game_info(game_id: str, timeout: float = 5.0) -> Dict[str, Any]:
@@ -765,7 +768,7 @@ def generate_tool_output(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
 
 
 # ── NEW: markdown_helpers.py ──────────────────────────────────────────────
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 def _fg_line(made: int, att: int) -> str:
@@ -798,7 +801,7 @@ def format_snapshot_markdown(
     Convert the snapshot into sections 2–6 as Markdown.
     Supports both live (camelCase) and historical (snake_case) play dicts.
     """
-    from typing import List, Dict, Any
+    from typing import Any, Dict, List
 
     s = snapshot["status"]
     teams = snapshot["teams"]
@@ -1858,7 +1861,8 @@ class PastGamesPlaybyPlay:
 
 
 # ── Orchestrator: date+team → Markdown ─────────────────────────────────────
-from datetime import date as _date, datetime
+from datetime import date as _date
+from datetime import datetime
 
 
 def to_markdown_for_date_team(

@@ -11,20 +11,21 @@ This module provides comprehensive metrics tracking for:
 Metrics are exposed at /metrics endpoint for Prometheus scraping.
 """
 
-import time
 import functools
-from typing import Optional, Callable, Any, Dict
+import logging
+import time
+from typing import Any, Callable, Dict, Optional
+
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    REGISTRY,
+    CollectorRegistry,
     Counter,
-    Histogram,
     Gauge,
+    Histogram,
     Info,
     generate_latest,
-    CONTENT_TYPE_LATEST,
-    CollectorRegistry,
-    REGISTRY,
 )
-import logging
 
 logger = logging.getLogger(__name__)
 

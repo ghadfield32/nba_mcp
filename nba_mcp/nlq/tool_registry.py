@@ -6,8 +6,8 @@ Maps tool names to actual MCP tool functions, allowing the executor
 to call real tools instead of mocks.
 """
 
-from typing import Dict, Callable, Optional
 import logging
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
