@@ -1124,7 +1124,7 @@ async def get_shot_chart(
 
     Returns:
         JSON string with ResponseEnvelope containing shot chart data
-
+    """
     start_time = time.time()
 
     try:
