@@ -151,7 +151,18 @@ def resolve_player(
         return None
 
     full_name = f"{player['first_name']} {player['last_name']}"
-    confidence = calculate_match_confidence(query, full_name)
+    query_lower = query.lower()
+
+    # Calculate confidence: 1.0 for exact matches, fuzzy for partial
+    if query_lower == full_name.lower():
+        confidence = 1.0  # Exact full name match
+    elif query_lower == player['last_name'].lower():
+        confidence = 0.9  # Last name match (high confidence but not perfect)
+    elif query_lower == player['first_name'].lower():
+        confidence = 0.7  # First name only (lower confidence due to common first names)
+    else:
+        # Fuzzy match for partial queries
+        confidence = calculate_match_confidence(query, full_name)
 
     if confidence < min_confidence:
         return None
@@ -197,7 +208,20 @@ def resolve_team(
         return None
 
     full_name = team['full_name']
-    confidence = calculate_match_confidence(query, full_name)
+    query_lower = query.lower()
+
+    # Calculate confidence: 1.0 for exact matches, fuzzy for partial
+    if query_lower == team['abbreviation'].lower():
+        confidence = 1.0  # Exact abbreviation match
+    elif query_lower == team['city'].lower():
+        confidence = 1.0  # Exact city match
+    elif query_lower == team['nickname'].lower():
+        confidence = 1.0  # Exact nickname match
+    elif query_lower == full_name.lower():
+        confidence = 1.0  # Exact full name match
+    else:
+        # Fuzzy match for partial queries
+        confidence = calculate_match_confidence(query, full_name)
 
     if confidence < min_confidence:
         return None

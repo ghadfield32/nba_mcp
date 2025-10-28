@@ -112,7 +112,7 @@ async def get_team_standings(
             LeagueStandings,
             league_id="00",
             season=season_str,
-            season_type_all_star="Regular Season"
+            season_type="Regular Season"
         )
 
         # Get standings dataframe
