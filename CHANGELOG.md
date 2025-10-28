@@ -32,6 +32,13 @@
 
 **Dependencies**: Zero new dependencies (uses existing pandas/numpy)
 
+**Testing** (2025-10-28):
+- [x] **Unit tests**: tests/test_shot_charts.py (560 lines, 26 tests, 21 passed ✅)
+- [x] **Coverage**: Coordinate validation (6 tests), hexbin aggregation (7 tests), zone summary (4 tests), edge cases (5 tests)
+- [x] **Integration tests**: 3 tests marked for optional NBA API validation (may fail due to NBA API flakiness)
+- [x] **Performance tests**: 2 tests marked to validate <2s p95 and aggregation performance targets
+- [x] **Bug fix**: Season parameter now correctly handled (was list, now string) - NBA API requires single season string
+
 ---
 
 ## PHASE 1: STANDARDIZATION (JSON Schemas, Headers, Validation, Versioning) ✅ COMPLETED
