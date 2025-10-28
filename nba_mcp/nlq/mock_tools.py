@@ -6,6 +6,7 @@ Mock tools for testing the NLQ pipeline without real NBA API calls.
 import asyncio
 from typing import Any, Dict, List, Optional
 
+
 async def mock_get_league_leaders_info(
     stat_category: str,
     season: Optional[str] = None,
@@ -23,6 +24,7 @@ async def mock_get_league_leaders_info(
         ],
     }
 
+
 async def mock_compare_players(
     player1_name: str,
     player2_name: str,
@@ -36,6 +38,7 @@ async def mock_compare_players(
         "player2": {"name": player2_name, "ppg": 27.3},
     }
 
+
 async def mock_get_team_standings(
     season: Optional[str] = None, conference: Optional[str] = None
 ) -> List[Dict[str, Any]]:
@@ -45,6 +48,7 @@ async def mock_get_team_standings(
         {"team": "Team 1", "wins": 40, "losses": 20},
         {"team": "Team 2", "wins": 35, "losses": 25},
     ]
+
 
 async def mock_get_team_advanced_stats(
     team_name: str, season: Optional[str] = None
@@ -57,12 +61,14 @@ async def mock_get_team_advanced_stats(
         "defensive_rating": 108.2,
     }
 
+
 async def mock_get_player_advanced_stats(
     player_name: str, season: Optional[str] = None
 ) -> Dict[str, Any]:
     """Mock implementation for testing."""
     await asyncio.sleep(0.1)
     return {"player_name": player_name, "true_shooting_pct": 0.625, "usage_pct": 28.5}
+
 
 async def mock_get_live_scores(
     target_date: Optional[str] = None,
@@ -77,6 +83,7 @@ async def mock_get_live_scores(
             "away_score": 98,
         }
     ]
+
 
 def register_mock_tools():
     """Register all mock tools for testing."""

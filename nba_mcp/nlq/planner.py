@@ -1,6 +1,7 @@
 # nba_mcp/nlq/planner.py
 """
 Execution Planner for NBA MCP NLQ.
+
 Maps parsed queries to sequences of MCP tool calls using answer pack templates.
 Identifies parallelizable operations and handles dependencies.
 """
@@ -13,7 +14,11 @@ from .parser import ParsedQuery, TimeRange
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # TOOL CALL SPECIFICATION
+# ============================================================================
+
 
 @dataclass
 class ToolCall:
@@ -32,6 +37,7 @@ class ToolCall:
             "parallel_group": self.parallel_group,
         }
 
+
 @dataclass
 class ExecutionPlan:
     """Complete execution plan for a query."""
@@ -49,7 +55,10 @@ class ExecutionPlan:
             "can_parallelize": self.can_parallelize,
         }
 
+
+# ============================================================================
 # ANSWER PACK TEMPLATES
+# ============================================================================
 
 ANSWER_PACK_TEMPLATES = {
     # Template 1: League Leaders
@@ -192,13 +201,18 @@ ANSWER_PACK_TEMPLATES = {
     },
 }
 
+
+# ============================================================================
 # HELPER FUNCTIONS FOR PARAMETER EXTRACTION
+# ============================================================================
+
 
 def _extract_season(time_range: Optional[TimeRange]) -> Optional[str]:
     """Extract season string from time range."""
     if not time_range:
         return None
     return time_range.season
+
 
 def _extract_date(time_range: Optional[TimeRange]) -> Optional[str]:
     """Extract date string from time range."""
@@ -212,6 +226,7 @@ def _extract_date(time_range: Optional[TimeRange]) -> Optional[str]:
         return date.today().isoformat()
     return None
 
+
 def _extract_per_mode(modifiers: Dict[str, Any]) -> str:
     """Extract per-mode from modifiers."""
     normalization = modifiers.get("normalization", "per_game")
@@ -223,12 +238,14 @@ def _extract_per_mode(modifiers: Dict[str, Any]) -> str:
         return "PerGame"  # Will normalize in post-processing
     return "PerGame"
 
+
 def _extract_season_type(modifiers: Dict[str, Any]) -> str:
     """Extract season type from modifiers."""
     season_type = modifiers.get("season_type", "regular")
     if season_type == "playoffs":
         return "Playoffs"
     return "Regular Season"
+
 
 def _extract_conference(query: str) -> Optional[str]:
     """Extract conference filter from query."""
@@ -238,6 +255,7 @@ def _extract_conference(query: str) -> Optional[str]:
     elif "western" in query_lower or "west" in query_lower:
         return "West"
     return None
+
 
 def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
     """
@@ -280,7 +298,11 @@ def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
         )
     ]
 
+
+# ============================================================================
 # TEMPLATE MATCHING
+# ============================================================================
+
 
 def match_template(parsed: ParsedQuery) -> Optional[str]:
     """
@@ -342,7 +364,11 @@ def match_template(parsed: ParsedQuery) -> Optional[str]:
     logger.warning(f"No template matched for intent={intent}, entities={num_entities}")
     return None
 
+
+# ============================================================================
 # PLAN GENERATION
+# ============================================================================
+
 
 def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
     """
@@ -354,6 +380,12 @@ def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
     Returns:
         ExecutionPlan or None if no template matches
 
+    Examples:
+        >>> parsed = ParsedQuery(intent="leaders", stat_types=["AST"])
+        >>> plan = generate_execution_plan(parsed)
+        >>> plan.tool_calls[0].tool_name
+        'get_league_leaders_info'
+    """
     logger.info(f"Generating execution plan for query: '{parsed.raw_query}'")
 
     # Match template
@@ -390,7 +422,11 @@ def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
         logger.error(f"Failed to generate tool calls from template: {e}", exc_info=True)
         return None
 
+
+# ============================================================================
 # PLAN VALIDATION
+# ============================================================================
+
 
 def validate_execution_plan(plan: ExecutionPlan) -> bool:
     """
@@ -424,7 +460,11 @@ def validate_execution_plan(plan: ExecutionPlan) -> bool:
 
     return True
 
+
+# ============================================================================
 # MAIN PLANNER FUNCTION
+# ============================================================================
+
 
 async def plan_query_execution(parsed: ParsedQuery) -> ExecutionPlan:
     """

@@ -1,6 +1,7 @@
 # leaguegamelog_tools.py
 """
 Example Script for Pulling NBA Data Using nba_api
+
 This script demonstrates how to use endpoints for retrieving game log data.
 """
 
@@ -16,6 +17,7 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_season,
     normalize_season_type,
 )
+
 
 def fetch_league_game_log(
     season: str,
@@ -75,6 +77,7 @@ def fetch_league_game_log(
             df = df[mask]
 
     return df.reset_index(drop=True)
+
 
 if __name__ == "__main__":
     # ------------------------------

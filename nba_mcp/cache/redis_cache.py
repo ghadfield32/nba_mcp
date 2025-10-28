@@ -1,8 +1,18 @@
 # nba_mcp/cache/redis_cache.py
 """
 Redis cache implementation with TTL tiers for NBA MCP.
+
 Provides intelligent caching based on data freshness requirements:
 - Live data (30s): In-progress games, live stats
+- Daily data (1h): Today's stats, current standings
+- Historical data (24h): Past seasons, game logs
+- Static data (7d): Player names, team info
+
+Features:
+- Connection pooling
+- Stale-while-revalidate
+- Cache statistics
+- Automatic key generation
 """
 
 import hashlib
@@ -19,7 +29,11 @@ from redis.connection import ConnectionPool
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # TTL TIERS
+# ============================================================================
+
 
 class CacheTier(Enum):
     """Cache TTL tiers based on data freshness requirements."""
@@ -32,7 +46,11 @@ class CacheTier(Enum):
     def __str__(self):
         return self.name.lower()
 
+
+# ============================================================================
 # CACHE KEY GENERATION
+# ============================================================================
+
 
 def generate_cache_key(
     tool_name: str, params: Dict[str, Any], version: str = "v1"
@@ -48,13 +66,21 @@ def generate_cache_key(
     Returns:
         Cache key string
 
+    Example:
+        >>> generate_cache_key("get_player_stats", {"player": "LeBron James", "season": "2023-24"})
+        "nba_mcp:v1:get_player_stats:a3f2b8c9d1e4f5a6"
+    """
     # Sort params for deterministic hashing
     param_str = json.dumps(params, sort_keys=True)
     param_hash = hashlib.md5(param_str.encode()).hexdigest()[:16]
 
     return f"nba_mcp:{version}:{tool_name}:{param_hash}"
 
+
+# ============================================================================
 # REDIS CACHE CLIENT
+# ============================================================================
+
 
 class RedisCache:
     """
@@ -211,7 +237,11 @@ class RedisCache:
         except Exception as e:
             logger.error(f"Error closing Redis pool: {e}")
 
+
+# ============================================================================
 # CACHE DECORATOR
+# ============================================================================
+
 
 def cached(tier: CacheTier, key_fn: Optional[Callable] = None, version: str = "v1"):
     """
@@ -221,6 +251,13 @@ def cached(tier: CacheTier, key_fn: Optional[Callable] = None, version: str = "v
         tier: Cache tier (determines TTL)
         key_fn: Optional custom key generation function
         version: API version for cache invalidation
+
+    Example:
+        @cached(tier=CacheTier.DAILY)
+        async def get_player_stats(player_name: str, season: str):
+            # ... expensive NBA API call
+            return stats
+    """
 
     def decorator(func: Callable):
         @wraps(func)
@@ -261,9 +298,13 @@ def cached(tier: CacheTier, key_fn: Optional[Callable] = None, version: str = "v
 
     return decorator
 
+
+# ============================================================================
 # GLOBAL CACHE INSTANCE
+# ============================================================================
 
 _cache_instance: Optional[RedisCache] = None
+
 
 def initialize_cache(
     url: str = "redis://localhost:6379/0", password: Optional[str] = None, **kwargs
@@ -283,9 +324,11 @@ def initialize_cache(
     _cache_instance = RedisCache(url, password, **kwargs)
     return _cache_instance
 
+
 def get_cache() -> Optional[RedisCache]:
     """Get global cache instance."""
     return _cache_instance
+
 
 def close_cache():
     """Close global cache instance."""
@@ -294,7 +337,11 @@ def close_cache():
         _cache_instance.close()
         _cache_instance = None
 
+
+# ============================================================================
 # CACHE MIDDLEWARE
+# ============================================================================
+
 
 async def with_cache(
     tool_name: str,

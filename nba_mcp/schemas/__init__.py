@@ -1,5 +1,6 @@
 """
 JSON Schema export for NBA MCP tools.
+
 This module exports all tool parameter schemas as JSON Schema files,
 making them easily consumable by LLMs, OpenAPI tools, and other clients.
 """

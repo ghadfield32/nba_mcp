@@ -24,6 +24,7 @@ from nba_mcp.api.tools.nba_api_utils import (
 
 logger = logging.getLogger(__name__)
 
+
 def get_endpoint_data_structure(endpoint_class):
     """Get the detailed data structure for an endpoint including metrics and column info.
     This is intended to run once so we can cache the result.
@@ -75,6 +76,7 @@ def get_endpoint_data_structure(endpoint_class):
         return {"parameters_used": params, "datasets": data_sets}
     except Exception as e:
         return {"error": str(e)}
+
 
 def analyze_api_structure() -> dict:
     """
@@ -128,6 +130,7 @@ def analyze_api_structure() -> dict:
 
     logger.info("Successfully documented %d endpoints", len(api_docs["endpoints"]))
     return api_docs
+
 
 def save_documentation(api_docs: dict, output_dir: str = "api_documentation"):
     """Save the API documentation to JSON and Markdown files."""
@@ -208,6 +211,7 @@ def save_documentation(api_docs: dict, output_dir: str = "api_documentation"):
         f.write(markdown_str)
 
     logger.info("Documentation saved in directory: %s", output_path)
+
 
 if __name__ == "__main__":
     # Generate the documentation quickly

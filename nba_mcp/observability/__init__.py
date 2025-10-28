@@ -1,5 +1,6 @@
 """
 Observability module for NBA MCP server.
+
 Provides metrics, tracing, and monitoring capabilities.
 """
 

@@ -1,8 +1,13 @@
 # nba_mcp/api/advanced_stats.py
 """
 Advanced NBA statistics tools.
+
 Provides:
 1. Team standings (conference, division rankings)
+2. Team advanced stats (OffRtg, DefRtg, Pace, NetRtg, Four Factors)
+3. Player advanced stats (Usage%, TS%, eFG%, PER, WS, BPM, VORP)
+4. Player comparisons with metric registry
+5. Per-possession and era-adjusted normalization
 """
 
 import asyncio
@@ -33,7 +38,10 @@ from .tools.nba_api_utils import get_player_name, get_team_name, normalize_seaso
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # METRIC REGISTRY (Shared across all comparison tools)
+# ============================================================================
 
 METRIC_REGISTRY = {
     # Basic stats
@@ -64,7 +72,11 @@ METRIC_REGISTRY = {
     "REB_PER_100": {"name": "Rebounds Per 100 Possessions", "dtype": "float64"},
 }
 
+
+# ============================================================================
 # TEAM STANDINGS
+# ============================================================================
+
 
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_team_standings(
@@ -153,7 +165,11 @@ async def get_team_standings(
         logger.error(f"Failed to fetch team standings: {e}", exc_info=True)
         raise NBAApiError(f"Failed to fetch team standings: {e}")
 
+
+# ============================================================================
 # TEAM ADVANCED STATS
+# ============================================================================
+
 
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_team_advanced_stats(
@@ -240,7 +256,11 @@ async def get_team_advanced_stats(
         logger.error(f"Failed to fetch team advanced stats: {e}", exc_info=True)
         raise NBAApiError(f"Failed to fetch team advanced stats: {e}")
 
+
+# ============================================================================
 # PLAYER ADVANCED STATS
+# ============================================================================
+
 
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_player_advanced_stats(
@@ -327,7 +347,11 @@ async def get_player_advanced_stats(
         logger.error(f"Failed to fetch player advanced stats: {e}", exc_info=True)
         raise NBAApiError(f"Failed to fetch player advanced stats: {e}")
 
+
+# ============================================================================
 # PLAYER COMPARISON WITH METRIC REGISTRY
+# ============================================================================
+
 
 def normalize_per_possession(
     stats: Dict[str, Any], possessions: float = 75.0
@@ -372,6 +396,7 @@ def normalize_per_possession(
             normalized[key_per_poss] = normalized[stat] * scaling_factor
 
     return normalized
+
 
 async def compare_players(
     player1_name: str,
@@ -469,7 +494,11 @@ async def compare_players(
         logger.error(f"Failed to compare players: {e}", exc_info=True)
         raise NBAApiError(f"Failed to compare players: {e}")
 
+
+# ============================================================================
 # RESPONSE DETERMINISM HELPERS
+# ============================================================================
+
 
 def ensure_deterministic_response(data: Union[Dict, List]) -> Union[Dict, List]:
     """

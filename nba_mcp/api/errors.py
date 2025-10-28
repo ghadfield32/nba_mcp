@@ -1,8 +1,12 @@
 # nba_mcp/api/errors.py
 """
 Error taxonomy and resilience patterns for NBA MCP.
+
 Provides:
 1. Custom exception hierarchy for different failure modes
+2. Retry logic with exponential backoff
+3. Circuit breaker pattern for failing endpoints
+4. Error code constants for consistent error handling
 """
 
 import asyncio
@@ -14,7 +18,11 @@ from typing import Any, Callable, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # ERROR CODES
+# ============================================================================
+
 
 class ErrorCode:
     """Standard error codes for NBA MCP."""
@@ -36,7 +44,11 @@ class ErrorCode:
     CIRCUIT_BREAKER_OPEN = "CIRCUIT_BREAKER_OPEN"
     INTERNAL_ERROR = "INTERNAL_ERROR"
 
+
+# ============================================================================
 # EXCEPTION HIERARCHY
+# ============================================================================
+
 
 class NBAMCPError(Exception):
     """Base exception for all NBA MCP errors."""
@@ -62,6 +74,7 @@ class NBAMCPError(Exception):
             "retry_after": self.retry_after,
             "details": self.details,
         }
+
 
 class EntityNotFoundError(NBAMCPError):
     """Raised when player/team/referee/arena cannot be resolved."""
@@ -122,6 +135,7 @@ class EntityNotFoundError(NBAMCPError):
             },
         )
 
+
 class InvalidParameterError(NBAMCPError):
     """Raised when tool parameters are invalid."""
 
@@ -176,6 +190,7 @@ class InvalidParameterError(NBAMCPError):
             },
         )
 
+
 class RateLimitError(NBAMCPError):
     """Raised when NBA API rate limit is exceeded."""
 
@@ -216,6 +231,7 @@ class RateLimitError(NBAMCPError):
                 "how_to_fix": f"Wait {wait_time}, then retry. Enable caching to reduce API calls.",
             },
         )
+
 
 class UpstreamSchemaError(NBAMCPError):
     """Raised when NBA API response schema changes unexpectedly."""
@@ -264,6 +280,7 @@ class UpstreamSchemaError(NBAMCPError):
             },
         )
 
+
 class CircuitBreakerOpenError(NBAMCPError):
     """Raised when circuit breaker is open (endpoint temporarily disabled)."""
 
@@ -274,6 +291,7 @@ class CircuitBreakerOpenError(NBAMCPError):
             retry_after=retry_after,
             details={"endpoint": endpoint},
         )
+
 
 class NBAApiError(NBAMCPError):
     """Generic NBA API error (network, timeout, unexpected response)."""
@@ -349,7 +367,11 @@ class NBAApiError(NBAMCPError):
             },
         )
 
+
+# ============================================================================
 # RETRY LOGIC WITH EXPONENTIAL BACKOFF
+# ============================================================================
+
 
 def retry_with_backoff(
     max_retries: int = 3,
@@ -367,6 +389,13 @@ def retry_with_backoff(
         max_delay: Maximum delay in seconds
         exponential_base: Base for exponential backoff (typically 2.0)
         retry_on: Tuple of exceptions to retry on
+
+    Example:
+        @retry_with_backoff(max_retries=3, base_delay=2.0)
+        async def fetch_data():
+            # Will retry up to 3 times with delays: 2s, 4s, 8s
+            pass
+    """
 
     def decorator(func: Callable):
         @wraps(func)
@@ -412,7 +441,11 @@ def retry_with_backoff(
 
     return decorator
 
+
+# ============================================================================
 # CIRCUIT BREAKER
+# ============================================================================
+
 
 class CircuitBreaker:
     """
@@ -534,10 +567,14 @@ class CircuitBreaker:
 
         return wrapper
 
+
+# ============================================================================
 # GLOBAL CIRCUIT BREAKERS
+# ============================================================================
 
 # Circuit breakers for critical endpoints
 _circuit_breakers: Dict[str, CircuitBreaker] = {}
+
 
 def get_circuit_breaker(endpoint_name: str) -> CircuitBreaker:
     """Get or create circuit breaker for endpoint."""
@@ -547,7 +584,11 @@ def get_circuit_breaker(endpoint_name: str) -> CircuitBreaker:
         )
     return _circuit_breakers[endpoint_name]
 
+
+# ============================================================================
 # UPSTREAM SCHEMA VALIDATION
+# ============================================================================
+
 
 def validate_upstream_schema(
     endpoint: str,

@@ -54,6 +54,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 class NBAApiClient:
     """Client for interacting with the NBA API."""
 

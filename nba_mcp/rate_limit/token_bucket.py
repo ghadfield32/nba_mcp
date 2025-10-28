@@ -1,8 +1,23 @@
 # nba_mcp/rate_limit/token_bucket.py
 """
 Token bucket rate limiter for NBA MCP.
+
 Provides per-tool and global rate limiting to prevent NBA API quota exhaustion.
+
 Algorithm:
+- Each tool has a bucket with capacity N tokens
+- Tokens refill at rate R per second
+- Each request consumes 1 token
+- If no tokens available, request is rate-limited
+
+Example:
+    limiter = TokenBucket(capacity=60, refill_rate=1.0)  # 60 req/min
+    if limiter.consume():
+        # Request allowed
+        call_nba_api()
+    else:
+        # Rate limited
+        return 429
 """
 
 import logging
@@ -14,7 +29,11 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # TOKEN BUCKET
+# ============================================================================
+
 
 @dataclass
 class TokenBucket:
@@ -102,7 +121,11 @@ class TokenBucket:
             self.last_refill = time.time()
             logger.info("Token bucket reset")
 
+
+# ============================================================================
 # RATE LIMITER (manages multiple buckets)
+# ============================================================================
+
 
 class RateLimiter:
     """
@@ -127,6 +150,10 @@ class RateLimiter:
             capacity: Max tokens (burst capacity)
             refill_rate: Tokens per second
 
+        Example:
+            limiter.add_limit("get_player_stats", capacity=60, refill_rate=1.0)
+            # 60 requests/minute
+        """
         with self.lock:
             self.buckets[name] = TokenBucket(capacity, refill_rate)
             logger.info(
@@ -217,7 +244,11 @@ class RateLimiter:
 
             logger.info("All rate limits reset")
 
+
+# ============================================================================
 # QUOTA TRACKER (daily limits)
+# ============================================================================
+
 
 @dataclass
 class QuotaTracker:
@@ -289,9 +320,13 @@ class QuotaTracker:
             self.reset_time = datetime.now() + timedelta(days=1)
             self.warning_emitted = False
 
+
+# ============================================================================
 # GLOBAL RATE LIMITER
+# ============================================================================
 
 _rate_limiter: Optional[RateLimiter] = None
+
 
 def initialize_rate_limiter() -> RateLimiter:
     """
@@ -344,14 +379,19 @@ def initialize_rate_limiter() -> RateLimiter:
     logger.info("Rate limiter initialized with default limits")
     return _rate_limiter
 
+
 def get_rate_limiter() -> Optional[RateLimiter]:
     """Get global rate limiter instance."""
     return _rate_limiter
 
+
+# ============================================================================
 # RATE LIMIT DECORATOR
+# ============================================================================
 
 from functools import wraps
 from typing import Callable
+
 
 def rate_limited(tool_name: str):
     """
@@ -359,6 +399,13 @@ def rate_limited(tool_name: str):
 
     Args:
         tool_name: Tool name for rate limit lookup
+
+    Example:
+        @rate_limited("get_player_stats")
+        async def get_player_stats(player: str):
+            # ... NBA API call
+            pass
+    """
 
     def decorator(func: Callable):
         @wraps(func)

@@ -7,6 +7,7 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_season,
 )
 
+
 def get_boxscore_advanced(
     game_id: str,
     start_period: int = 1,
@@ -41,6 +42,7 @@ def get_boxscore_advanced(
     team_df.columns = [c.lower() for c in team_df.columns]
 
     return {"player_stats": player_df, "team_stats": team_df}
+
 
 def get_player_season_advanced(
     player: str | int,
@@ -102,6 +104,7 @@ def get_player_season_advanced(
     # concatenate all per-game rows
     season_adv = pd.concat(records, ignore_index=True)
     return season_adv
+
 
 if __name__ == "__main__":
     # manual smoke test

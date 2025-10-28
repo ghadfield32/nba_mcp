@@ -1,7 +1,31 @@
 """
 JSON Schema publisher for NBA MCP tools.
+
 This module exports all tool parameter schemas as JSON Schema files,
 making them easily consumable by:
+- LLMs for function calling (GPT, Claude, Gemini)
+- OpenAPI/Swagger documentation
+- API clients and SDKs
+- Schema validation tools
+
+Features:
+- Exports individual JSON Schema files per tool
+- Generates comprehensive OpenAPI 3.1.0 specification
+- Supports programmatic schema access
+- Deterministic output (sorted keys)
+
+Usage:
+    # Export all schemas to files
+    from nba_mcp.schemas.publisher import export_all_schemas
+    export_all_schemas(output_dir="schemas/")
+
+    # Get a single tool's schema programmatically
+    from nba_mcp.schemas.publisher import get_tool_schema
+    schema = get_tool_schema("resolve_nba_entity")
+
+    # Generate OpenAPI spec
+    from nba_mcp.schemas.publisher import export_openapi_spec
+    export_openapi_spec(output_file="schemas/openapi.yaml")
 """
 
 import json
@@ -29,7 +53,10 @@ from nba_mcp.schemas.tool_params import (
     ResolveNBAEntityParams,
 )
 
+# ============================================================================
 # Tool Registry
+# ============================================================================
+
 
 # Map tool names to their parameter models and metadata
 TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {
@@ -125,7 +152,11 @@ TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {
     },
 }
 
+
+# ============================================================================
 # Schema Export Functions
+# ============================================================================
+
 
 def get_tool_schema(tool_name: str) -> Dict[str, Any]:
     """
@@ -140,6 +171,11 @@ def get_tool_schema(tool_name: str) -> Dict[str, Any]:
     Raises:
         ValueError: If tool_name not found in registry
 
+    Example:
+        >>> schema = get_tool_schema("resolve_nba_entity")
+        >>> print(schema["properties"]["query"]["description"])
+        'Player or team name to resolve...'
+    """
     if tool_name not in TOOL_REGISTRY:
         raise ValueError(
             f"Tool '{tool_name}' not found. Available tools: {list(TOOL_REGISTRY.keys())}"
@@ -159,6 +195,7 @@ def get_tool_schema(tool_name: str) -> Dict[str, Any]:
 
     return schema
 
+
 def export_all_schemas(output_dir: str = "schemas") -> Dict[str, Path]:
     """
     Export all tool schemas to individual JSON files.
@@ -172,6 +209,11 @@ def export_all_schemas(output_dir: str = "schemas") -> Dict[str, Path]:
     Returns:
         Dictionary mapping tool names to their file paths
 
+    Example:
+        >>> paths = export_all_schemas(output_dir="schemas/")
+        >>> print(paths["resolve_nba_entity"])
+        PosixPath('schemas/resolve_nba_entity.json')
+    """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -189,6 +231,7 @@ def export_all_schemas(output_dir: str = "schemas") -> Dict[str, Path]:
 
     return exported
 
+
 def list_available_tools() -> List[Dict[str, Any]]:
     """
     List all available tools with their metadata.
@@ -196,6 +239,13 @@ def list_available_tools() -> List[Dict[str, Any]]:
     Returns:
         List of tool information dictionaries
 
+    Example:
+        >>> tools = list_available_tools()
+        >>> for tool in tools:
+        ...     print(f"{tool['name']}: {tool['description']}")
+        resolve_nba_entity: Resolve ambiguous player/team names...
+        get_player_career_information: Get comprehensive career statistics...
+    """
     return [
         {
             "name": tool_name,
@@ -206,7 +256,11 @@ def list_available_tools() -> List[Dict[str, Any]]:
         for tool_name, info in TOOL_REGISTRY.items()
     ]
 
+
+# ============================================================================
 # OpenAPI Specification Export
+# ============================================================================
+
 
 def export_openapi_spec(output_file: str = "schemas/openapi.yaml") -> Path:
     """
@@ -223,6 +277,10 @@ def export_openapi_spec(output_file: str = "schemas/openapi.yaml") -> Path:
     Returns:
         Path to the generated OpenAPI file
 
+    Example:
+        >>> path = export_openapi_spec(output_file="schemas/openapi.yaml")
+        >>> print(f"OpenAPI spec written to: {path}")
+    """
     # OpenAPI 3.1.0 base structure
     openapi_spec = {
         "openapi": "3.1.0",
@@ -316,7 +374,11 @@ def export_openapi_spec(output_file: str = "schemas/openapi.yaml") -> Path:
 
     return output_path
 
+
+# ============================================================================
 # Utility Functions
+# ============================================================================
+
 
 def get_schema_summary() -> Dict[str, Any]:
     """
@@ -325,6 +387,11 @@ def get_schema_summary() -> Dict[str, Any]:
     Returns:
         Dictionary with schema statistics and metadata
 
+    Example:
+        >>> summary = get_schema_summary()
+        >>> print(f"Total tools: {summary['total_tools']}")
+        Total tools: 12
+    """
     categories = {}
     for tool_name, info in TOOL_REGISTRY.items():
         category = info["category"]
@@ -339,6 +406,7 @@ def get_schema_summary() -> Dict[str, Any]:
         "generated_at": datetime.utcnow().isoformat() + "Z",
     }
 
+
 def validate_schema(tool_name: str, params: Dict[str, Any]) -> bool:
     """
     Validate parameters against a tool's schema.
@@ -350,6 +418,10 @@ def validate_schema(tool_name: str, params: Dict[str, Any]) -> bool:
     Returns:
         True if valid, raises ValidationError if invalid
 
+    Example:
+        >>> validate_schema("resolve_nba_entity", {"query": "LeBron"})
+        True
+    """
     if tool_name not in TOOL_REGISTRY:
         raise ValueError(f"Tool '{tool_name}' not found")
 
@@ -357,7 +429,11 @@ def validate_schema(tool_name: str, params: Dict[str, Any]) -> bool:
     model(**params)  # Will raise ValidationError if invalid
     return True
 
+
+# ============================================================================
 # CLI for Schema Export
+# ============================================================================
+
 
 def main():
     """
@@ -405,6 +481,7 @@ def main():
     print("  - Use schemas for LLM function calling")
 
     return 0
+
 
 if __name__ == "__main__":
     import sys

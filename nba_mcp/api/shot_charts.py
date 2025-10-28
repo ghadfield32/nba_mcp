@@ -1,7 +1,24 @@
 """
 Shot chart data fetching and aggregation.
+
 Provides functions to:
 1. Fetch raw shot chart data from NBA API
+2. Validate shot coordinates
+3. Aggregate shots into hexagonal bins
+4. Calculate zone summary statistics
+5. Return formatted shot chart data for visualization
+
+NBA Court Coordinate System:
+- Origin (0, 0) = center of basket
+- X-axis: -250 to +250 (left to right, in tenths of feet)
+- Y-axis: -52.5 to +417.5 (baseline to opposite baseline)
+- Units: Tenths of feet (divide by 10 for feet)
+
+Shot Zones:
+- Paint: < 8 feet from basket
+- Short Mid-Range: 8-16 feet
+- Long Mid-Range: 16-23.75 feet (non-3PT)
+- Three-Point: >= 23.75 feet (corner 3 = 22 feet)
 """
 
 import logging
@@ -22,7 +39,11 @@ from .tools.nba_api_utils import normalize_season
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # Data Fetching
+# ============================================================================
+
 
 @retry_with_backoff(max_retries=3)
 async def fetch_shot_chart_data(
@@ -103,7 +124,11 @@ async def fetch_shot_chart_data(
             endpoint="shotchartdetail",
         )
 
+
+# ============================================================================
 # Coordinate Validation
+# ============================================================================
+
 
 def validate_shot_coordinates(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -149,7 +174,11 @@ def validate_shot_coordinates(df: pd.DataFrame) -> pd.DataFrame:
 
     return valid_df
 
+
+# ============================================================================
 # Hexbin Aggregation
+# ============================================================================
+
 
 def aggregate_to_hexbin(
     shots: pd.DataFrame, grid_size: int = 10, min_shots: int = 5
@@ -179,6 +208,17 @@ def aggregate_to_hexbin(
             "distance_avg": float,  # Average shot distance in feet
         }
 
+    Example:
+        >>> shots = pd.DataFrame({
+        ...     'LOC_X': [0, 5, 10, 15, 20],
+        ...     'LOC_Y': [0, 5, 10, 15, 20],
+        ...     'SHOT_MADE_FLAG': [1, 0, 1, 1, 0],
+        ...     'SHOT_DISTANCE': [10, 12, 15, 18, 20]
+        ... })
+        >>> bins = aggregate_to_hexbin(shots, grid_size=10, min_shots=2)
+        >>> len(bins) > 0
+        True
+    """
     if shots.empty:
         return []
 
@@ -255,7 +295,11 @@ def aggregate_to_hexbin(
     )
     return result
 
+
+# ============================================================================
 # Zone Summary
+# ============================================================================
+
 
 def calculate_zone_summary(shots: pd.DataFrame) -> Dict[str, Any]:
     """
@@ -336,7 +380,11 @@ def calculate_zone_summary(shots: pd.DataFrame) -> Dict[str, Any]:
 
     return zone_summary
 
+
+# ============================================================================
 # Main Entry Point
+# ============================================================================
+
 
 async def get_shot_chart(
     entity_name: str,

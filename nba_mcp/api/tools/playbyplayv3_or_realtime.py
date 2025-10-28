@@ -34,12 +34,15 @@ from nba_mcp.api.tools.nba_api_utils import (
 
 # (and your existing imports)
 
+
 # 1) configure the root logger
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
 
 # 2) ensure your module‐level logger is DEBUG
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
 
 def _is_game_live(status_text: str) -> bool:
     """Return True if status_text indicates a live, in-progress game."""
@@ -49,10 +52,12 @@ def _is_game_live(status_text: str) -> bool:
             return False
     return True
 
+
 def _camel_to_snake(name: str) -> str:
     """Convert CamelCase or mixedCase to snake_case."""
     s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
 
 def get_games_on_date(game_date: date) -> list[str]:
     """
@@ -63,6 +68,7 @@ def get_games_on_date(game_date: date) -> list[str]:
     sb = _SBv2.ScoreboardV2(game_date=date_str)
     df = sb.get_data_frames()[0]
     return df["GAME_ID"].astype(str).tolist()
+
 
 class PlayByPlayFetcher:
     """
@@ -138,6 +144,7 @@ class PlayByPlayFetcher:
             chunk = df.iloc[idx : idx + batch_size].to_dict(orient="records")
             yield chunk if batch_size > 1 else chunk[0]
             idx += batch_size
+
 
 def _snapshot_from_past_game(
     game_id: str,
@@ -219,10 +226,12 @@ def _snapshot_from_past_game(
         "recentPlays": recent,
     }
 
+
 # --------------------------------------------------------------------------- #
 # ──   CONSTANTS / UTILITIES                                                 ──
 # --------------------------------------------------------------------------- #
 _GAMEID_RE = re.compile(r"^\d{10}$")
+
 
 # ── internal helpers ──────────────────────────────────────────────────────
 def _scoreboard_df(
@@ -230,6 +239,7 @@ def _scoreboard_df(
 ) -> pd.DataFrame:
     sb = _SBv2.ScoreboardV2(game_date=gdate, timeout=timeout)
     return sb.get_data_frames()[0]  # 'GameHeader'
+
 
 def _create_game_dict_from_row(row: pd.Series) -> dict:
     """
@@ -266,12 +276,14 @@ def _create_game_dict_from_row(row: pd.Series) -> dict:
         "game_id": str(row["GAME_ID"]),
     }
 
+
 # Import centralized headers from nba_mcp.api.headers
 from nba_mcp.api.headers import get_stats_api_headers
 
 # Use centralized headers (replaces old _STATS_HEADERS)
 # This ensures we use professional NBA-MCP User-Agent and proper Referer
 _STATS_HEADERS = get_stats_api_headers()
+
 
 def get_today_games(timeout: float = 10.0) -> List[Dict[str, Any]]:
     url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json"
@@ -294,6 +306,7 @@ def get_today_games(timeout: float = 10.0) -> List[Dict[str, Any]]:
     logger.debug(f"[DEBUG] Unexpected payload structure: {payload}", file=sys.stderr)
     return []  # Always return an empty list if no games
 
+
 def fetch_json(
     url: str,
     *,
@@ -311,6 +324,7 @@ def fetch_json(
         raise RuntimeError(f"Non‑JSON response from {url!r}: {snippet}…")
     logger.debug(f"[DEBUG] {url!r} → keys: {list(payload.keys())}")
     return payload
+
 
 def get_playbyplay_v3(
     game_id: str, start_period: int, end_period: int, timeout: float = 10.0
@@ -334,6 +348,7 @@ def get_playbyplay_v3(
         "PlayByPlay": df.to_dict("records"),
     }
 
+
 def get_live_playbyplay(game_id: str, timeout: float = 5.0) -> List[Dict[str, Any]]:
     url = (
         f"https://cdn.nba.com/static/json/liveData/playbyplay/playbyplay_{game_id}.json"
@@ -351,6 +366,7 @@ def get_live_playbyplay(game_id: str, timeout: float = 5.0) -> List[Dict[str, An
     raise RuntimeError(
         f"Unrecognized live‑pbp shape for {game_id}: {list(payload.keys())}"
     )
+
 
 def get_live_boxscore(game_id: str, timeout: float = 5.0) -> Dict[str, Any]:
     """
@@ -427,6 +443,7 @@ def get_live_boxscore(game_id: str, timeout: float = 5.0) -> Dict[str, Any]:
         f"Unrecognized boxscore shape for {game_id}: {list(payload.keys())}"
     )
 
+
 def measure_update_frequency(
     game_id: str,
     fetch_fn: Callable[[str], Dict[str, Any]],
@@ -470,6 +487,7 @@ def measure_update_frequency(
 
     return intervals
 
+
 # ─── 4) EVENT DIFFING ─────────────────────────────────────────────────────────────
 def diff_new_events(
     old_events: List[Dict[str, Any]],
@@ -490,6 +508,7 @@ def diff_new_events(
 
     return new_filtered
 
+
 # ─── 5) POLLING LOOP EXAMPLE ──────────────────────────────────────────────────────
 def stream_live_pbp(game_id: str, interval: float = 3.0):
     """
@@ -504,12 +523,14 @@ def stream_live_pbp(game_id: str, interval: float = 3.0):
         cache = plays
         time.sleep(interval)
 
+
 import json
 import time
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
+
 
 def get_game_info(game_id: str, timeout: float = 5.0) -> Dict[str, Any]:
     """
@@ -535,6 +556,7 @@ def get_game_info(game_id: str, timeout: float = 5.0) -> Dict[str, Any]:
         return payload["game"]
 
     raise RuntimeError(f"Can't extract raw game info for {game_id}")
+
 
 def measure_content_changes(
     game_id: str,
@@ -569,6 +591,7 @@ def measure_content_changes(
             last_val, last_time = v, t
 
     return change_intervals
+
 
 def group_live_game(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
     """
@@ -620,6 +643,7 @@ def group_live_game(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
         "recentPlays": recent,
     }
 
+
 # ─── NEW HELPER #1 ───────────────────────────────────────────────────────────────
 def truncate_list(lst: List[Any], max_items: int = 3) -> List[Any]:
     """
@@ -630,8 +654,10 @@ def truncate_list(lst: List[Any], max_items: int = 3) -> List[Any]:
         return lst
     return lst[:max_items] + ["…"]
 
+
 # ─── NEW HELPER #2 ───────────────────────────────────────────────────────────────
 import re
+
 
 def parse_iso_clock(iso: str) -> str:
     """
@@ -644,6 +670,7 @@ def parse_iso_clock(iso: str) -> str:
         seconds = int(m.group(2))
         return f"{minutes}:{seconds:02d}"
     return iso
+
 
 def pretty_print_snapshot(
     snapshot: Dict[str, Any], max_players: int = 2, max_plays: int = 2
@@ -693,6 +720,7 @@ def pretty_print_snapshot(
         period = play.get("period", "?")
         logger.debug(f"[Q{period} {clock}] {desc}")
 
+
 def generate_tool_output(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
     """
     Gather all raw payloads and the grouped summary into one JSON-friendly dict.
@@ -738,12 +766,15 @@ def generate_tool_output(game_id: str, recent_n: int = 5) -> Dict[str, Any]:
         "summary": summary,
     }
 
+
 # ── NEW: markdown_helpers.py ──────────────────────────────────────────────
 from typing import Any, Dict, List
+
 
 def _fg_line(made: int, att: int) -> str:
     """Return `FGM / FGA` convenience string."""
     return f"{made} / {att}"
+
 
 def format_today_games(games: List[Dict[str, Any]]) -> str:
     """Markdown bullet list of today's games (section 1)."""
@@ -756,10 +787,12 @@ def format_today_games(games: List[Dict[str, Any]]) -> str:
         )
     return "\n".join(lines)
 
+
 def _leading(players: List[Dict[str, Any]], n: int = 3) -> List[str]:
     """Return first `n` players as 'Name X pts'."""
     out = [f"{p['name']} {p['statistics']['points']} pts" for p in players[:n]]
     return out
+
 
 def format_snapshot_markdown(
     snapshot: Dict[str, Any], game_id: str, max_players: int = 3, recent_n: int = 3
@@ -847,6 +880,7 @@ def format_snapshot_markdown(
 
     return "\n".join(parts)
 
+
 def print_markdown_summary(
     game_id: str, games_today: List[Dict[str, Any]], snapshot: Dict[str, Any]
 ) -> None:
@@ -858,6 +892,7 @@ def print_markdown_summary(
     md.append(format_snapshot_markdown(snapshot, game_id))
     print("\n".join(md))
 
+
 def debug_play_structure(game_id: str) -> None:
     """Fetches play-by-play and prints structure of the first play to find correct fields."""
     plays = get_live_playbyplay(game_id)
@@ -868,6 +903,7 @@ def debug_play_structure(game_id: str) -> None:
             logger.debug(f" - {key}: {value}")
     else:
         logger.debug("[DEBUG] No plays found.")
+
 
 class GameStream:
     def __init__(self, game_id: str):
@@ -980,6 +1016,7 @@ class GameStream:
             all_lines = all_lines[:max_events] + ["…"]
 
         return "\n".join(all_lines)
+
 
 # --------------------------------------------------------------------------- #
 # ──   MAIN DATA CLASS                                                       ──
@@ -1822,9 +1859,11 @@ class PastGamesPlaybyPlay:
                 )
                 yield f"[Q{period} {clk}] {home}–{away} | {desc}"
 
+
 # ── Orchestrator: date+team → Markdown ─────────────────────────────────────
 from datetime import date as _date
 from datetime import datetime
+
 
 def to_markdown_for_date_team(
     when: Union[str, _date],
@@ -1919,6 +1958,7 @@ def to_markdown_for_date_team(
         logger.debug(f"[to_md] Historical PBP failed for {game_id}: {e}")
         return f"_Play‑by‑play not available for finished game {game_id}._"
 
+
 # tests
 # ─── NEW: Historical Smoke-Test Runner via PastGamesPlaybyPlay ─────────────────
 # ─── UPDATED: Historical Smoke-Test Runner via PastGamesPlaybyPlay ─────────────────
@@ -1964,6 +2004,7 @@ def run_historical_smoke_tests_via_class():
                 logger.debug("Sample columns:", list(plays[0].keys()))
         except Exception as e:
             logger.debug(f"⚠️  Error: {e}")
+
 
 class PlaybyPlayLiveorPast:
     """
@@ -2082,6 +2123,7 @@ class PlaybyPlayLiveorPast:
         except (IndexError, RuntimeError) as e:
             logger.debug(f"[ToMarkdown] Historical PBP failed for {self.game_id}: {e}")
             return f"_Play‑by‑play not available for finished game {self.game_id}._"
+
 
 # ─── USAGE ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":

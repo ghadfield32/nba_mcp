@@ -1,8 +1,12 @@
 # nba_mcp/nlq/synthesizer.py
 """
 Response Synthesizer for NBA MCP NLQ.
+
 Formats tool execution results into natural language responses with:
 - Tables for comparisons
+- Narratives for game context
+- Lists for rankings
+- Metadata (sources, timestamps, confidence)
 """
 
 import logging
@@ -17,7 +21,11 @@ from .parser import ParsedQuery
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # SYNTHESIS RESULT
+# ============================================================================
+
 
 @dataclass
 class SynthesizedResponse:
@@ -50,7 +58,11 @@ class SynthesizedResponse:
         md += f"**Generated**: {self.metadata.get('timestamp', 'N/A')}\n"
         return md
 
+
+# ============================================================================
 # TABLE FORMATTING
+# ============================================================================
+
 
 def format_comparison_table(
     player1_data: Dict[str, Any], player2_data: Dict[str, Any], metrics: List[str]
@@ -98,6 +110,7 @@ def format_comparison_table(
 
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
+
 def format_standings_table(
     standings_data: List[Dict[str, Any]], top_n: int = 10
 ) -> str:
@@ -128,6 +141,7 @@ def format_standings_table(
 
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
+
 def format_leaders_table(leaders_data: List[Dict[str, Any]], stat_name: str) -> str:
     """
     Format league leaders as table.
@@ -149,7 +163,11 @@ def format_leaders_table(leaders_data: List[Dict[str, Any]], stat_name: str) -> 
 
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
+
+# ============================================================================
 # NARRATIVE FORMATTING
+# ============================================================================
+
 
 def format_team_comparison_narrative(
     team1_name: str,
@@ -229,7 +247,11 @@ def format_team_comparison_narrative(
 
     return "\n".join(lines)
 
+
+# ============================================================================
 # INTENT-SPECIFIC SYNTHESIS
+# ============================================================================
+
 
 def synthesize_leaders_query(
     parsed: ParsedQuery, execution_result: ExecutionResult
@@ -253,6 +275,7 @@ def synthesize_leaders_query(
     response = f"### NBA Leaders in {stat_name}\n\n{table}"
 
     return response
+
 
 def synthesize_comparison_query(
     parsed: ParsedQuery, execution_result: ExecutionResult
@@ -340,6 +363,7 @@ def synthesize_comparison_query(
 
         return narrative
 
+
 def synthesize_standings_query(
     parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> str:
@@ -358,6 +382,7 @@ def synthesize_standings_query(
 
     conference = parsed.modifiers.get("conference", "League")
     return f"### {conference} Standings\n\n{table}"
+
 
 def synthesize_player_stats_query(
     parsed: ParsedQuery, execution_result: ExecutionResult
@@ -394,7 +419,11 @@ def synthesize_player_stats_query(
 
     return "\n".join(lines)
 
+
+# ============================================================================
 # MAIN SYNTHESIS FUNCTION
+# ============================================================================
+
 
 async def synthesize_response(
     parsed: ParsedQuery, execution_result: ExecutionResult

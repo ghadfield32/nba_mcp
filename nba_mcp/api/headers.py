@@ -1,14 +1,35 @@
 """
 Centralized HTTP headers configuration for NBA MCP.
+
 This module provides standardized headers for all NBA API requests,
 ensuring we're a good API citizen by properly identifying ourselves
+and following best practices.
+
+Features:
+- Professional User-Agent string identifying NBA MCP
+- Proper Referer headers for NBA domains
+- Standard Accept headers for JSON responses
+- Configurable via environment variables
+- Version-aware (reads from package metadata)
+
+Usage:
+    from nba_mcp.api.headers import get_nba_headers
+
+    # Use in requests
+    response = requests.get(url, headers=get_nba_headers())
+
+    # Or access specific headers
+    from nba_mcp.api.headers import NBA_USER_AGENT, NBA_REFERER
 """
 
 import os
 from importlib.metadata import PackageNotFoundError, version
 from typing import Dict
 
+# ============================================================================
 # Version Detection
+# ============================================================================
+
 
 def _get_package_version() -> str:
     """
@@ -17,13 +38,21 @@ def _get_package_version() -> str:
     Returns:
         Version string (e.g., "1.0.0") or "dev" if not installed
 
+    Example:
+        >>> _get_package_version()
+        '1.0.0'
+    """
     try:
         return version("nba_mcp")
     except PackageNotFoundError:
         # Package not installed (development mode)
         return "dev"
 
+
+# ============================================================================
 # Header Constants
+# ============================================================================
+
 
 # Package version for User-Agent
 NBA_MCP_VERSION = _get_package_version()
@@ -48,7 +77,11 @@ NBA_ACCEPT_LANGUAGE = os.getenv("NBA_MCP_ACCEPT_LANGUAGE", "en-US,en;q=0.9")
 # Accept-Encoding (support compression)
 NBA_ACCEPT_ENCODING = os.getenv("NBA_MCP_ACCEPT_ENCODING", "gzip, deflate, br")
 
+
+# ============================================================================
 # Header Builder Functions
+# ============================================================================
+
 
 def get_nba_headers(
     include_referer: bool = True,
@@ -70,6 +103,13 @@ def get_nba_headers(
     Returns:
         Dictionary of HTTP headers ready for requests
 
+    Example:
+        >>> headers = get_nba_headers()
+        >>> requests.get("https://stats.nba.com/stats/...", headers=headers)
+
+        >>> # With custom headers
+        >>> headers = get_nba_headers(additional_headers={"X-Custom": "value"})
+    """
     headers = {
         "User-Agent": NBA_USER_AGENT,
     }
@@ -88,6 +128,7 @@ def get_nba_headers(
 
     return headers
 
+
 def get_live_data_headers() -> Dict[str, str]:
     """
     Get headers optimized for NBA Live Data API (cdn.nba.com).
@@ -99,11 +140,16 @@ def get_live_data_headers() -> Dict[str, str]:
     Returns:
         Dictionary of HTTP headers for live data endpoints
 
+    Example:
+        >>> headers = get_live_data_headers()
+        >>> requests.get("https://cdn.nba.com/static/json/...", headers=headers)
+    """
     return {
         "User-Agent": NBA_USER_AGENT,
         "Accept": NBA_ACCEPT,
         "Accept-Encoding": NBA_ACCEPT_ENCODING,
     }
+
 
 def get_stats_api_headers() -> Dict[str, str]:
     """
@@ -117,18 +163,30 @@ def get_stats_api_headers() -> Dict[str, str]:
     Returns:
         Dictionary of HTTP headers for stats API endpoints
 
+    Example:
+        >>> headers = get_stats_api_headers()
+        >>> requests.get("https://stats.nba.com/stats/...", headers=headers)
+    """
     return get_nba_headers(
         include_referer=True,
         include_accept=True,
     )
 
+
+# ============================================================================
 # Legacy Header Compatibility
+# ============================================================================
+
 
 # For backward compatibility with existing code
 # DEPRECATED: Use get_stats_api_headers() instead
 STATS_HEADERS = get_stats_api_headers()
 
+
+# ============================================================================
 # Header Validation
+# ============================================================================
+
 
 def validate_headers(headers: Dict[str, str]) -> bool:
     """
@@ -145,6 +203,11 @@ def validate_headers(headers: Dict[str, str]) -> bool:
     Returns:
         True if headers are valid, False otherwise
 
+    Example:
+        >>> headers = {"User-Agent": "MyApp/1.0"}
+        >>> validate_headers(headers)
+        False  # Missing Referer
+    """
     # User-Agent is required
     if "User-Agent" not in headers:
         return False
@@ -156,12 +219,26 @@ def validate_headers(headers: Dict[str, str]) -> bool:
 
     return True
 
+
+# ============================================================================
 # Environment Variable Documentation
+# ============================================================================
+
 
 def print_header_config():
     """
     Print current header configuration (useful for debugging).
 
+    Example:
+        >>> from nba_mcp.api.headers import print_header_config
+        >>> print_header_config()
+        NBA MCP Header Configuration
+        ============================
+        Version: 1.0.0
+        User-Agent: NBA-MCP/1.0.0 (https://github.com/your-org/nba_mcp)
+        Referer: https://stats.nba.com
+        ...
+    """
     print("NBA MCP Header Configuration")
     print("=" * 70)
     print(f"Version: {NBA_MCP_VERSION}")
@@ -178,7 +255,11 @@ def print_header_config():
     print("  NBA_MCP_ACCEPT_LANGUAGE - Custom Accept-Language")
     print("  NBA_MCP_ACCEPT_ENCODING - Custom Accept-Encoding")
 
+
+# ============================================================================
 # Export
+# ============================================================================
+
 
 __all__ = [
     "get_nba_headers",

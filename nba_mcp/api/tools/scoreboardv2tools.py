@@ -20,6 +20,7 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_stat_category,
 )
 
+
 def fetch_scoreboard_v2_full(
     target_date: Optional[Union[str, date, datetime]] = None,
     day_offset: int = 0,
@@ -188,6 +189,7 @@ def fetch_scoreboard_v2_full(
         records.append(rec)
 
     return pd.DataFrame(records)
+
 
 if __name__ == "__main__":
     df_live = fetch_scoreboard_v2_full()

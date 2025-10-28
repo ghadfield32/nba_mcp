@@ -1,8 +1,18 @@
 # nba_mcp/api/entity_resolver.py
 """
 Entity resolution with fuzzy matching and caching.
+
 Resolves ambiguous queries to specific NBA entities:
 - Players (active and historical)
+- Teams (with abbreviations and nicknames)
+- Referees (if data available)
+- Arenas (if data available)
+
+Features:
+- Fuzzy string matching with confidence scores
+- LRU cache for fast lookups (1000 entries)
+- Nickname/abbreviation support
+- Suggestion ranking for ambiguous queries
 """
 
 import logging
@@ -17,7 +27,11 @@ from .models import EntityReference
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # ENTITY CACHE
+# ============================================================================
+
 
 # LRU cache for resolved entities (1000 most recent lookups)
 @lru_cache(maxsize=1000)
@@ -43,6 +57,7 @@ def _cached_player_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
             return player
 
     return None
+
 
 @lru_cache(maxsize=1000)
 def _cached_team_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
@@ -76,7 +91,11 @@ def _cached_team_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
 
     return None
 
+
+# ============================================================================
 # CONFIDENCE SCORING
+# ============================================================================
+
 
 def calculate_match_confidence(query: str, candidate: str) -> float:
     """
@@ -85,6 +104,7 @@ def calculate_match_confidence(query: str, candidate: str) -> float:
     Uses SequenceMatcher for similarity scoring.
     """
     return SequenceMatcher(None, query.lower(), candidate.lower()).ratio()
+
 
 def rank_suggestions(
     query: str, candidates: List[Dict[str, Any]], name_key: str
@@ -111,7 +131,11 @@ def rank_suggestions(
     scored.sort(key=lambda x: x[1], reverse=True)
     return [candidate for candidate, _ in scored]
 
+
+# ============================================================================
 # ENTITY RESOLVERS
+# ============================================================================
+
 
 def resolve_player(
     query: str, min_confidence: float = 0.6
@@ -167,6 +191,7 @@ def resolve_player(
             "last_name": player["last_name"],
         },
     )
+
 
 def resolve_team(query: str, min_confidence: float = 0.6) -> Optional[EntityReference]:
     """
@@ -226,6 +251,7 @@ def resolve_team(query: str, min_confidence: float = 0.6) -> Optional[EntityRefe
         },
     )
 
+
 def suggest_players(query: str, top_n: int = 5) -> List[EntityReference]:
     """
     Get ranked player suggestions for ambiguous query.
@@ -275,6 +301,7 @@ def suggest_players(query: str, top_n: int = 5) -> List[EntityReference]:
         )
 
     return suggestions
+
 
 def suggest_teams(query: str, top_n: int = 5) -> List[EntityReference]:
     """
@@ -330,7 +357,11 @@ def suggest_teams(query: str, top_n: int = 5) -> List[EntityReference]:
 
     return suggestions
 
+
+# ============================================================================
 # UNIFIED ENTITY RESOLVER
+# ============================================================================
+
 
 def resolve_entity(
     query: str,
@@ -384,13 +415,18 @@ def resolve_entity(
         suggestions=suggestion_names,
     )
 
+
+# ============================================================================
 # CACHE MANAGEMENT
+# ============================================================================
+
 
 def clear_entity_cache():
     """Clear LRU cache for entity lookups."""
     _cached_player_lookup.cache_clear()
     _cached_team_lookup.cache_clear()
     logger.info("Entity cache cleared")
+
 
 def get_cache_info() -> Dict[str, Any]:
     """Get cache statistics."""

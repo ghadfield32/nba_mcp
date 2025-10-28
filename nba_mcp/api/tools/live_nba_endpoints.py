@@ -17,6 +17,7 @@ from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 
 logger = logging.getLogger(__name__)
 
+
 def fetch_game_live_data(
     game_id: str,
     proxy: str | None = None,
@@ -78,6 +79,7 @@ def fetch_game_live_data(
         "playByPlay": pbp_actions,
         "odds": odds_for_us,
     }
+
 
 def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
     game_date: str | None = None,
@@ -159,6 +161,7 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
 
     # ---------------- 3) Return ---------------------------------------------
     return {"date": date_label, "games": all_data}
+
 
 if __name__ == "__main__":
     # Example: real-time fetch

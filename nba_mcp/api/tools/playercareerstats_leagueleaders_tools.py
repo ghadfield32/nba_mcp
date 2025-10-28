@@ -1,7 +1,19 @@
 """
 Example Script for Pulling NBA Data Using nba_api
+
 This script demonstrates how to use two different kinds of endpoints:
+
 1. NBA Live Data:
+   - Live Scoreboard: Retrieves game data from NBA.com in real time.
+2. NBA Official Stats:
+   - Player Career Stats: Example for Nikola Jokić (player_id '203999').
+   - League Leaders: Retrieve season leader statistics.
+   - League Game Log: Retrieves game log data for a given season.
+
+The script prints some of the first few rows of each returned DataFrame,
+and for the player career stats it also shows how to fetch a JSON snippet.
+
+Ensure you have Python 3.7+ installed.
 """
 
 import logging
@@ -18,6 +30,7 @@ from nba_mcp.api.tools.nba_api_utils import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 def get_player_career_stats(
     player_name: str, season: Union[str, List[str]]
@@ -114,6 +127,7 @@ def get_player_career_stats(
         # Return empty DataFrame on error
         return pd.DataFrame()
 
+
 def get_league_leaders(
     season: str, stat_category: str, per_mode: str = "Totals"
 ) -> pd.DataFrame:
@@ -137,6 +151,7 @@ def get_league_leaders(
 
     leaders = LeagueLeaders(**params)
     return leaders.get_data_frames()[0]
+
 
 def main() -> None:
     """Run example queries for player career stats and league leaders."""
@@ -170,6 +185,7 @@ def main() -> None:
         print(leaders.head())
     except Exception as e:
         print("Error retrieving league leaders:", e)
+
 
 if __name__ == "__main__":
     main()

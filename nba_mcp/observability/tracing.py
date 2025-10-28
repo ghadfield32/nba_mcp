@@ -1,7 +1,14 @@
 """
 OpenTelemetry tracing for NBA MCP server.
+
 This module provides distributed tracing capabilities for:
 - NLQ pipeline stages (parse, plan, execute, synthesize)
+- Individual tool calls
+- Cache operations
+- Rate limit checks
+
+Traces can be exported to any OpenTelemetry-compatible backend
+(Jaeger, Zipkin, Honeycomb, etc.).
 """
 
 import functools
@@ -29,7 +36,11 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # TRACER MANAGER
+# ============================================================================
+
 
 class TracingManager:
     """
@@ -105,6 +116,10 @@ class TracingManager:
             attributes: Span attributes
             kind: Span kind (INTERNAL, CLIENT, SERVER, PRODUCER, CONSUMER)
 
+        Example:
+            with tracer.span("parse_query", attributes={"query": query_text}):
+                result = parse(query_text)
+        """
         if not self.is_enabled():
             yield None
             return
@@ -144,9 +159,13 @@ class TracingManager:
         if span and self.is_enabled():
             span.add_event(name, attributes=attributes)
 
+
+# ============================================================================
 # GLOBAL TRACING MANAGER
+# ============================================================================
 
 _tracing_manager: Optional[TracingManager] = None
+
 
 def initialize_tracing(
     service_name: str = "nba-mcp",
@@ -172,6 +191,7 @@ def initialize_tracing(
     )
     return _tracing_manager
 
+
 def get_tracing_manager() -> Optional[TracingManager]:
     """
     Get global tracing manager.
@@ -181,7 +201,11 @@ def get_tracing_manager() -> Optional[TracingManager]:
     """
     return _tracing_manager
 
+
+# ============================================================================
 # DECORATORS
+# ============================================================================
+
 
 def trace_function(
     span_name: Optional[str] = None,
@@ -195,6 +219,12 @@ def trace_function(
         span_name: Name of the span (defaults to function name)
         attributes: Static attributes to add to span
         capture_args: Whether to capture function arguments as attributes
+
+    Example:
+        @trace_function("parse_query", capture_args=True)
+        async def parse_query(query: str):
+            return parse(query)
+    """
 
     def decorator(func: Callable) -> Callable:
         actual_span_name = span_name or func.__name__
@@ -261,7 +291,11 @@ def trace_function(
 
     return decorator
 
+
+# ============================================================================
 # NLQ PIPELINE TRACING HELPERS
+# ============================================================================
+
 
 @contextmanager
 def trace_nlq_pipeline(query: str):
@@ -271,6 +305,10 @@ def trace_nlq_pipeline(query: str):
     Args:
         query: Natural language query
 
+    Example:
+        with trace_nlq_pipeline(query):
+            result = await answer_question(query)
+    """
     tracer = get_tracing_manager()
     if not tracer or not tracer.is_enabled():
         yield None
@@ -278,6 +316,7 @@ def trace_nlq_pipeline(query: str):
 
     with tracer.span("nlq_pipeline", attributes={"query": query}) as span:
         yield span
+
 
 @contextmanager
 def trace_nlq_stage(stage: str, attributes: Optional[Dict[str, Any]] = None):
@@ -288,6 +327,10 @@ def trace_nlq_stage(stage: str, attributes: Optional[Dict[str, Any]] = None):
         stage: Stage name (parse, plan, execute, synthesize)
         attributes: Additional attributes
 
+    Example:
+        with trace_nlq_stage("parse"):
+            parsed = await parse_query(query)
+    """
     tracer = get_tracing_manager()
     if not tracer or not tracer.is_enabled():
         yield None
@@ -309,6 +352,7 @@ def trace_nlq_stage(stage: str, attributes: Optional[Dict[str, Any]] = None):
             except:
                 pass
 
+
 @contextmanager
 def trace_tool_call(tool_name: str, params: Optional[Dict[str, Any]] = None):
     """
@@ -318,6 +362,10 @@ def trace_tool_call(tool_name: str, params: Optional[Dict[str, Any]] = None):
         tool_name: Name of the tool being called
         params: Tool parameters
 
+    Example:
+        with trace_tool_call("get_player_stats", {"player": "LeBron"}):
+            result = await get_player_stats("LeBron")
+    """
     tracer = get_tracing_manager()
     if not tracer or not tracer.is_enabled():
         yield None
@@ -334,6 +382,7 @@ def trace_tool_call(tool_name: str, params: Optional[Dict[str, Any]] = None):
     with tracer.span(span_name, attributes=attributes) as span:
         yield span
 
+
 @contextmanager
 def trace_cache_operation(operation: str, key: Optional[str] = None):
     """
@@ -343,6 +392,10 @@ def trace_cache_operation(operation: str, key: Optional[str] = None):
         operation: Operation type (get, set, delete)
         key: Cache key
 
+    Example:
+        with trace_cache_operation("get", key):
+            value = cache.get(key)
+    """
     tracer = get_tracing_manager()
     if not tracer or not tracer.is_enabled():
         yield None
@@ -356,7 +409,11 @@ def trace_cache_operation(operation: str, key: Optional[str] = None):
     with tracer.span(span_name, attributes=attributes) as span:
         yield span
 
+
+# ============================================================================
 # HELPER FUNCTIONS
+# ============================================================================
+
 
 def get_current_trace_id() -> Optional[str]:
     """
@@ -378,6 +435,7 @@ def get_current_trace_id() -> Optional[str]:
 
     return None
 
+
 def get_current_span_id() -> Optional[str]:
     """
     Get the current span ID.
@@ -397,6 +455,7 @@ def get_current_span_id() -> Optional[str]:
         pass
 
     return None
+
 
 def add_trace_attributes(**attributes):
     """

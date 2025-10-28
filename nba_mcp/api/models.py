@@ -1,8 +1,12 @@
 # nba_mcp/api/models.py
 """
 Standard response envelope and data models for NBA MCP.
+
 All MCP tool responses use the ResponseEnvelope structure to ensure:
 1. Consistent error handling
+2. Metadata tracking (version, cache status, source)
+3. JSON Schema validation for LLM function calling
+4. Type safety with Pydantic
 """
 
 import json
@@ -11,7 +15,10 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# ============================================================================
 # RESPONSE ENVELOPE
+# ============================================================================
+
 
 class ErrorDetail(BaseModel):
     """Structured error information."""
@@ -37,6 +44,7 @@ class ErrorDetail(BaseModel):
             }
         }
     )
+
 
 class ResponseMetadata(BaseModel):
     """Metadata for every response."""
@@ -72,6 +80,7 @@ class ResponseMetadata(BaseModel):
             }
         }
     )
+
 
 class ResponseEnvelope(BaseModel):
     """
@@ -120,7 +129,11 @@ class ResponseEnvelope(BaseModel):
             **kwargs,
         )
 
+
+# ============================================================================
 # ENTITY MODELS
+# ============================================================================
+
 
 class EntityReference(BaseModel):
     """
@@ -173,7 +186,11 @@ class EntityReference(BaseModel):
         }
     )
 
+
+# ============================================================================
 # STATS MODELS
+# ============================================================================
+
 
 class PlayerSeasonStats(BaseModel):
     """Player statistics for a single season."""
@@ -214,6 +231,7 @@ class PlayerSeasonStats(BaseModel):
             }
         }
     )
+
 
 class TeamStanding(BaseModel):
     """Team standing in conference/division."""
@@ -256,6 +274,7 @@ class TeamStanding(BaseModel):
         }
     )
 
+
 class PlayerComparison(BaseModel):
     """Side-by-side player comparison."""
 
@@ -282,7 +301,11 @@ class PlayerComparison(BaseModel):
         }
     )
 
+
+# ============================================================================
 # HELPER FUNCTIONS
+# ============================================================================
+
 
 def success_response(
     data: Any,
@@ -312,6 +335,7 @@ def success_response(
         ),
         errors=None,
     )
+
 
 def error_response(
     error_code: str,
@@ -344,6 +368,7 @@ def error_response(
             )
         ],
     )
+
 
 def partial_response(
     data: Any,

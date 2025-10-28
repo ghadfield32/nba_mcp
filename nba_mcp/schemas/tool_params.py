@@ -1,14 +1,32 @@
 """
 Parameter models for all NBA MCP tools.
+
 This module defines Pydantic models for every MCP tool's parameters,
 enabling automatic JSON Schema generation for LLM function calling.
+
+Each model includes:
+- Type validation via Pydantic
+- Field descriptions for schema documentation
+- Examples for LLM guidance
+- Default values where appropriate
+- Constraints (Literal types, Optional, etc.)
+
+Usage:
+    # Generate JSON Schema for a tool
+    schema = ResolveNBAEntityParams.model_json_schema()
+
+    # Validate parameters
+    params = ResolveNBAEntityParams(query="LeBron", entity_type="player")
 """
 
 from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
+# ============================================================================
 # Tool 1: resolve_nba_entity
+# ============================================================================
+
 
 class ResolveNBAEntityParams(BaseModel):
     """
@@ -33,7 +51,11 @@ class ResolveNBAEntityParams(BaseModel):
         description="If True, returns alternative suggestions when no exact match found",
     )
 
+
+# ============================================================================
 # Tool 2: get_player_career_information
+# ============================================================================
+
 
 class GetPlayerCareerInformationParams(BaseModel):
     """
@@ -56,7 +78,11 @@ class GetPlayerCareerInformationParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 3: get_league_leaders_info
+# ============================================================================
+
 
 class LeagueLeadersParams(BaseModel):
     """
@@ -89,7 +115,11 @@ class LeagueLeadersParams(BaseModel):
         ),
     )
 
+
+# ============================================================================
 # Tool 4: get_live_scores
+# ============================================================================
+
 
 class GetLiveScoresParams(BaseModel):
     """
@@ -105,7 +135,11 @@ class GetLiveScoresParams(BaseModel):
         pattern=r"^\d{4}-\d{2}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 5: get_date_range_game_log_or_team_game_log
+# ============================================================================
+
 
 class GetDateRangeGameLogParams(BaseModel):
     """
@@ -139,7 +173,11 @@ class GetDateRangeGameLogParams(BaseModel):
         pattern=r"^\d{4}-\d{2}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 6: play_by_play
+# ============================================================================
+
 
 class PlayByPlayParams(BaseModel):
     """
@@ -188,7 +226,11 @@ class PlayByPlayParams(BaseModel):
         le=1000,
     )
 
+
+# ============================================================================
 # Tool 7: get_team_standings
+# ============================================================================
+
 
 class GetTeamStandingsParams(BaseModel):
     """
@@ -209,7 +251,11 @@ class GetTeamStandingsParams(BaseModel):
         description="Filter by conference ('East' or 'West'). If None, returns both conferences.",
     )
 
+
+# ============================================================================
 # Tool 8: get_team_advanced_stats
+# ============================================================================
+
 
 class GetTeamAdvancedStatsParams(BaseModel):
     """
@@ -232,7 +278,11 @@ class GetTeamAdvancedStatsParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 9: get_player_advanced_stats
+# ============================================================================
+
 
 class GetPlayerAdvancedStatsParams(BaseModel):
     """
@@ -255,7 +305,11 @@ class GetPlayerAdvancedStatsParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 10: compare_players
+# ============================================================================
+
 
 class ComparePlayersParams(BaseModel):
     """
@@ -292,7 +346,11 @@ class ComparePlayersParams(BaseModel):
         ),
     )
 
+
+# ============================================================================
 # Tool 11: compare_players_era_adjusted
+# ============================================================================
+
 
 class ComparePlayersEraAdjustedParams(BaseModel):
     """
@@ -328,7 +386,11 @@ class ComparePlayersEraAdjustedParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$",
     )
 
+
+# ============================================================================
 # Tool 12: get_shot_chart
+# ============================================================================
+
 
 class GetShotChartParams(BaseModel):
     """
@@ -369,7 +431,11 @@ class GetShotChartParams(BaseModel):
         ),
     )
 
+
+# ============================================================================
 # Tool 13: get_game_context
+# ============================================================================
+
 
 class GetGameContextParams(BaseModel):
     """
@@ -398,7 +464,11 @@ class GetGameContextParams(BaseModel):
         pattern=r"^\d{4}-\d{2}$|^$",
     )
 
+
+# ============================================================================
 # Tool 14: answer_nba_question
+# ============================================================================
+
 
 class AnswerNBAQuestionParams(BaseModel):
     """
@@ -421,7 +491,11 @@ class AnswerNBAQuestionParams(BaseModel):
         min_length=5,
     )
 
+
+# ============================================================================
 # Tool 13: get_metrics_info
+# ============================================================================
+
 
 class GetMetricsInfoParams(BaseModel):
     """
@@ -433,7 +507,10 @@ class GetMetricsInfoParams(BaseModel):
 
     pass  # No parameters for this tool
 
+
+# ============================================================================
 # Export All Models
+# ============================================================================
 
 __all__ = [
     "ResolveNBAEntityParams",

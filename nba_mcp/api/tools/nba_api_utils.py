@@ -77,6 +77,7 @@ logger.debug("Static lookups loaded")
 # logger.debug(f"Team lookup: {json.dumps(list(_TEAM_LOOKUP.items())[:5])}")
 # logger.debug(f"Player lookup: {json.dumps(list(_PLAYER_LOOKUP.items())[:5])}")
 
+
 def format_game(game: dict) -> str:
     """
     Format a game record into a readable string.
@@ -97,6 +98,7 @@ def format_game(game: dict) -> str:
 
     return f"{home_team} vs {visitor_team} - Score: {home_score} to {visitor_score}{status_text}"
 
+
 # Build lookups directly from the nba_api's static players list
 _PLAYER_LOOKUP: Dict[int, str] = {}
 for p in players.get_players():
@@ -108,6 +110,7 @@ for p in players.get_players():
     _PLAYER_LOOKUP[p["id"]] = name or f"Player {p['id']}"
 
 _PLAYER_NAME_TO_ID = {name: pid for pid, name in _PLAYER_LOOKUP.items()}
+
 
 def get_player_id(player_name: str) -> Optional[int]:
     key = player_name.lower()
@@ -121,9 +124,11 @@ def get_player_id(player_name: str) -> Optional[int]:
             return pid
     return None
 
+
 def get_player_name(player_id: Union[int, str]) -> Optional[str]:
     """Convert player ID to name, using a centralized lookup."""
     return _PLAYER_LOOKUP.get(int(player_id))
+
 
 def get_team_id(team_name: str) -> Optional[int]:
     """Convert team name to ID, with case-insensitive partial matching."""
@@ -143,12 +148,14 @@ def get_team_id(team_name: str) -> Optional[int]:
 
     return None
 
+
 def get_team_name(team_id: Union[int, str]) -> Optional[str]:
     """
     Convert a team ID to its full name, using a centralized lookup.
     Accepts either int or str representations of the ID.
     """
     return _TEAM_LOOKUP.get(int(team_id))
+
 
 def get_static_lookup_schema() -> Dict:
     """
@@ -168,6 +175,7 @@ def get_static_lookup_schema() -> Dict:
         "tables": {"teams": teams_table, "players": players_table},
         "data": {"teams": _TEAM_LOOKUP, "players": _PLAYER_LOOKUP},
     }
+
 
 def normalize_season_type(raw: str) -> str:
     """
@@ -205,6 +213,7 @@ def normalize_season_type(raw: str) -> str:
         f"Unrecognized season_type: '{raw}'. "
         f"Expected one of: {sorted(set(mapping.values()))}"
     )
+
 
 def normalize_stat_category(stat_category: str) -> str:
     """
@@ -253,6 +262,7 @@ def normalize_stat_category(stat_category: str) -> str:
     else:
         raise ValueError(f"Unsupported stat category: {stat_category}")
 
+
 def normalize_per_mode(per_mode: str) -> str:
     """
     Normalize the per_mode parameter to one of the allowed values:
@@ -290,6 +300,7 @@ def normalize_per_mode(per_mode: str) -> str:
     else:
         raise ValueError(f"Unsupported per_mode value: {per_mode}")
 
+
 def normalize_single_season(season: str) -> str:
     """
     Normalize one season string into 'YYYY-YY' format.
@@ -317,6 +328,7 @@ def normalize_single_season(season: str) -> str:
         return s
     raise ValueError(f"Unsupported season format: {season!r}")
 
+
 def normalize_season(season: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
     """
     Normalize one or more seasons into a list of 'YYYY-YY' strings.
@@ -335,6 +347,7 @@ def normalize_season(season: Optional[Union[str, List[str]]]) -> Optional[List[s
         normalized.append(normalize_single_season(raw))
     return normalized
 
+
 # ---------------------------------------------------------------------------
 # Any dash‑like character we want to recognise as a hyphen
 # (list is not exhaustive – add more if you encounter them)
@@ -346,6 +359,7 @@ _DASHES = {
     "\u2014",  # EM DASH
     "\u2212",  # MINUS
 }
+
 
 def _clean_date_string(s: str) -> str:
     """
@@ -362,6 +376,7 @@ def _clean_date_string(s: str) -> str:
         else:
             cleaned.append(ch)
     return "".join(cleaned).strip()
+
 
 def normalize_date(target_date: Optional[Union[str, date, datetime]]) -> date:
     """
@@ -391,6 +406,7 @@ def normalize_date(target_date: Optional[Union[str, date, datetime]]) -> date:
         raise ValueError(
             f"Unable to parse target_date string after cleaning: {target_date!r}"
         ) from e
+
 
 def get_team_id_from_abbr(abbr: str) -> Optional[int]:
     """
@@ -443,9 +459,11 @@ def get_team_id_from_abbr(abbr: str) -> Optional[int]:
 
     return None
 
+
 # ---------------------------------------------------------------------------
 # ──  SMALL HELPER (outside the class — tiny, pure)                        ──
 # ---------------------------------------------------------------------------
+
 
 def _resolve_team_ids(label: str) -> set[int]:
     """
@@ -462,6 +480,7 @@ def _resolve_team_ids(label: str) -> set[int]:
         ids.add(int(tid2))
 
     return ids
+
 
 if __name__ == "__main__":
     print(normalize_stat_category("pts"))

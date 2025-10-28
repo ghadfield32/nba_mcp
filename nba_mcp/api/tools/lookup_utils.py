@@ -1,5 +1,6 @@
 from nba_api.stats.static import players
 
+
 def get_player_id(player_name: str):
     """Lookup a player's unique NBA ID by their full name (to avoid circular imports between server and client)."""
     # Normalize the input name for case-insensitive comparison

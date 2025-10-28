@@ -1,7 +1,14 @@
 """
 Prometheus metrics for NBA MCP server.
+
 This module provides comprehensive metrics tracking for:
 - Request counts and durations per tool
+- Error rates by type
+- Cache hit/miss rates
+- Rate limit events
+- Quota usage
+
+Metrics are exposed at /metrics endpoint for Prometheus scraping.
 """
 
 import functools
@@ -22,7 +29,10 @@ from prometheus_client import (
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # METRIC DEFINITIONS
+# ============================================================================
 
 # Request metrics
 REQUEST_COUNT = Counter(
@@ -98,7 +108,11 @@ SERVER_START_TIME = Gauge(
     "nba_mcp_server_start_time_seconds", "Server start time in unix timestamp"
 )
 
+
+# ============================================================================
 # METRICS MANAGER
+# ============================================================================
+
 
 class MetricsManager:
     """
@@ -264,9 +278,13 @@ class MetricsManager:
         """
         return CONTENT_TYPE_LATEST
 
+
+# ============================================================================
 # GLOBAL METRICS MANAGER
+# ============================================================================
 
 _metrics_manager: Optional[MetricsManager] = None
+
 
 def initialize_metrics() -> MetricsManager:
     """
@@ -278,6 +296,7 @@ def initialize_metrics() -> MetricsManager:
     global _metrics_manager
     _metrics_manager = MetricsManager()
     return _metrics_manager
+
 
 def get_metrics_manager() -> MetricsManager:
     """
@@ -293,7 +312,11 @@ def get_metrics_manager() -> MetricsManager:
         raise RuntimeError("Metrics not initialized. Call initialize_metrics() first.")
     return _metrics_manager
 
+
+# ============================================================================
 # DECORATORS
+# ============================================================================
+
 
 def track_metrics(tool_name: Optional[str] = None):
     """
@@ -303,6 +326,12 @@ def track_metrics(tool_name: Optional[str] = None):
 
     Args:
         tool_name: Name of the tool (defaults to function name)
+
+    Example:
+        @track_metrics("get_player_stats")
+        async def get_player_stats(player: str):
+            return await fetch_stats(player)
+    """
 
     def decorator(func: Callable) -> Callable:
         actual_tool_name = tool_name or func.__name__
@@ -369,7 +398,11 @@ def track_metrics(tool_name: Optional[str] = None):
 
     return decorator
 
+
+# ============================================================================
 # PERIODIC METRICS UPDATE
+# ============================================================================
+
 
 def update_infrastructure_metrics():
     """
@@ -417,7 +450,11 @@ def update_infrastructure_metrics():
     except Exception as e:
         logger.warning(f"Failed to update infrastructure metrics: {e}")
 
+
+# ============================================================================
 # HELPER FUNCTIONS
+# ============================================================================
+
 
 def get_metrics_snapshot() -> Dict[str, Any]:
     """

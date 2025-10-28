@@ -1,6 +1,7 @@
 # nba_mcp/nlq/executor.py
 """
 Tool Executor for NBA MCP NLQ.
+
 Executes tool calls with intelligent parallelization, error handling,
 and result aggregation.
 """
@@ -17,7 +18,11 @@ from .planner import ExecutionPlan, ToolCall
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # EXECUTION RESULT
+# ============================================================================
+
 
 @dataclass
 class ToolResult:
@@ -38,6 +43,7 @@ class ToolResult:
             "execution_time_ms": self.execution_time_ms,
         }
 
+
 @dataclass
 class ExecutionResult:
     """Aggregated results from executing an execution plan."""
@@ -55,11 +61,17 @@ class ExecutionResult:
             "all_success": self.all_success,
         }
 
+
+# ============================================================================
 # TOOL REGISTRY IMPORTS
+# ============================================================================
 
 from .tool_registry import get_tool, list_tools
 
+# ============================================================================
 # TOOL EXECUTION
+# ============================================================================
+
 
 async def execute_tool(tool_call: ToolCall) -> ToolResult:
     """
@@ -130,7 +142,11 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             execution_time_ms=execution_time_ms,
         )
 
+
+# ============================================================================
 # PARALLEL EXECUTION
+# ============================================================================
+
 
 async def execute_parallel_group(tool_calls: List[ToolCall]) -> List[ToolResult]:
     """
@@ -166,7 +182,11 @@ async def execute_parallel_group(tool_calls: List[ToolCall]) -> List[ToolResult]
 
     return processed_results
 
+
+# ============================================================================
 # EXECUTION ORCHESTRATION
+# ============================================================================
+
 
 async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
     """
@@ -239,7 +259,11 @@ async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
         all_success=all_success,
     )
 
+
+# ============================================================================
 # ERROR HANDLING & PARTIAL RESULTS
+# ============================================================================
+
 
 def extract_successful_results(execution_result: ExecutionResult) -> Dict[str, Any]:
     """
@@ -257,6 +281,7 @@ def extract_successful_results(execution_result: ExecutionResult) -> Dict[str, A
         if result.success
     }
 
+
 def get_failure_summary(execution_result: ExecutionResult) -> List[str]:
     """
     Get summary of failed tools.
@@ -273,7 +298,10 @@ def get_failure_summary(execution_result: ExecutionResult) -> List[str]:
             failures.append(f"{name}: {result.error}")
     return failures
 
+
+# ============================================================================
 # MOCK TOOLS (moved to mock_tools.py)
+# ============================================================================
 
 # For testing, import from mock_tools:
 # from .mock_tools import register_mock_tools

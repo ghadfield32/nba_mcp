@@ -104,10 +104,12 @@ else:
 # python nba_server.py --mode local       # runs on 8001
 # python nba_server.py --mode claude      # runs on 8000
 
+
 # import logger
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 # ── 1) Read configuration up‑front ────────────────────────
 HOST = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
@@ -116,8 +118,10 @@ PATH = os.getenv("FASTMCP_SSE_PATH", "/sse")
 # ── 2) Create the global server instance for decorator registration ──
 mcp_server = FastMCP(name="nba_mcp", host=HOST, port=BASE_PORT)
 
+# ===== ONE‑LINE ADDITION =====
 mcp = mcp_server  # Alias so the FastMCP CLI can auto‑discover the server
 import socket
+
 
 def port_available(port: int, host: str = HOST) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -132,9 +136,11 @@ def port_available(port: int, host: str = HOST) -> bool:
         except OSError:
             return False
 
+
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
 
 class LeagueLeadersParams(BaseModel):
     season: Optional[Union[str, List[str]]] = Field(
@@ -147,6 +153,7 @@ class LeagueLeadersParams(BaseModel):
         ..., description="One of 'Totals', 'PerGame', or 'Per48'"
     )
 
+
 # ── 3) Load & cache both JSON files once ───────────────────
 from pathlib import Path
 
@@ -154,6 +161,7 @@ from pathlib import Path
 _project_root = Path(__file__).resolve().parents[1]
 _root_docs = _project_root / "api_documentation"
 _pkg_docs = Path(__file__).resolve().parent / "api_documentation"
+
 
 def _load_cached(filename: str) -> str:
     for base in (_root_docs, _pkg_docs):
@@ -173,8 +181,10 @@ def _load_cached(filename: str) -> str:
     )
     sys.exit(1)
 
+
 _CACHED_OPENAPI = _load_cached("endpoints.json")
 _CACHED_STATIC = _load_cached("static_data.json")
+
 
 #########################################
 # MCP Resources
@@ -186,12 +196,15 @@ async def get_openapi_spec() -> str:
     logger.debug("Serving cached OpenAPI endpoints.json")
     return _CACHED_OPENAPI
 
+
 @mcp_server.resource("api-docs://static_data.json")
 async def get_static_data() -> str:
     logger.debug("Serving cached static_data.json")
     return _CACHED_STATIC
 
+
 # ── in nba_server.py, alongside your existing @mcp_server.resource defs ──
+
 
 @mcp_server.resource("nba://player/{player_name}/career/{season}")
 async def player_career_stats_resource(player_name: str, season: str):
@@ -212,6 +225,7 @@ async def player_career_stats_resource(player_name: str, season: str):
     # Otherwise it's already a list of dicts
     return {"data": result}
 
+
 @mcp_server.resource("nba://league/leaders/{stat_category}/{per_mode}/{season}")
 async def league_leaders_resource(stat_category: str, per_mode: str, season: str):
     """
@@ -228,6 +242,7 @@ async def league_leaders_resource(stat_category: str, per_mode: str, season: str
         return {"message": data}
     return {"data": data[:10]}
 
+
 @mcp_server.resource("nba://scores/{target_date}")
 async def live_scores_resource(target_date: str):
     """
@@ -241,6 +256,7 @@ async def live_scores_resource(target_date: str):
         return {"message": result}
     return {"data": result}
 
+
 @mcp_server.resource("nba://games-v2/{game_date}")
 async def games_by_date_resource(game_date: str):
     """
@@ -251,6 +267,7 @@ async def games_by_date_resource(game_date: str):
     if isinstance(data, dict) and "error" in data:
         return data
     return data
+
 
 @mcp_server.resource(
     "nba://playbyplay/"
@@ -301,9 +318,11 @@ async def playbyplay_resource(
     )
     return {"markdown": md}
 
+
 #########################################
 # MCP Tools
 #########################################
+
 
 @mcp_server.tool()
 async def resolve_nba_entity(
@@ -334,6 +353,11 @@ async def resolve_nba_entity(
         - confidence: Match confidence (0.0-1.0)
         - alternate_names: List of nicknames/abbreviations
         - metadata: Additional entity info
+
+    Examples:
+        resolve_nba_entity("LeBron") → LeBron James (confidence: 0.95)
+        resolve_nba_entity("LAL", entity_type="team") → Los Angeles Lakers (confidence: 1.0)
+        resolve_nba_entity("Durant") → Kevin Durant (confidence: 0.9)
 
     Raises:
         EntityNotFoundError: If no match found (includes suggestions if available)
@@ -378,6 +402,7 @@ async def resolve_nba_entity(
             error_message=f"Failed to resolve entity: {str(e)}",
         )
         return response.to_json_string()
+
 
 @mcp_server.tool()
 async def get_player_career_information(
@@ -496,6 +521,7 @@ async def get_player_career_information(
         logger.exception("Unexpected error in get_player_career_information")
         return f"Unexpected error in get_player_career_information: {e}"
 
+
 @mcp_server.tool()
 async def get_league_leaders_info(params: LeagueLeadersParams) -> str:
     """
@@ -532,6 +558,7 @@ async def get_league_leaders_info(params: LeagueLeadersParams) -> str:
             out.append(f"{i}. {name} ({team}): {value}")
         out.append("")
     return "\n".join(out).strip()
+
 
 @mcp_server.tool()
 async def get_live_scores(target_date: Optional[str] = None) -> str:
@@ -599,6 +626,7 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         logger.exception("Unexpected error in get_live_scores")
         return f"Unexpected error in get_live_scores: {e}"
 
+
 # Allowed season types per NBA API; we will always query all
 _ALLOWED_SEASON_TYPES = [
     "Regular Season",
@@ -607,6 +635,7 @@ _ALLOWED_SEASON_TYPES = [
     "All Star",
     "All-Star",
 ]
+
 
 @mcp_server.tool()
 async def get_date_range_game_log_or_team_game_log(
@@ -679,6 +708,7 @@ async def get_date_range_game_log_or_team_game_log(
         logger.exception("Unexpected error in get_date_range_game_log_or_team_game_log")
         return f"Unexpected error: {e}"
 
+
 @mcp_server.tool()
 async def play_by_play(
     game_date: Optional[str] = None,
@@ -741,6 +771,7 @@ async def play_by_play(
         return md
     return json.dumps(md, indent=2)
 
+
 @mcp_server.tool()
 async def get_team_standings(
     season: Optional[str] = None, conference: Optional[Literal["East", "West"]] = None
@@ -763,6 +794,9 @@ async def get_team_standings(
     Returns:
         JSON string with ResponseEnvelope containing list of TeamStanding objects
 
+    Examples:
+        get_team_standings()  # Current season, all teams
+        get_team_standings(season="2023-24", conference="East")  # 2023-24 Eastern Conference
     """
     start_time = time.time()
 
@@ -793,6 +827,7 @@ async def get_team_standings(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) -> str:
     """
@@ -811,6 +846,9 @@ async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) 
     Returns:
         JSON string with ResponseEnvelope containing team advanced stats
 
+    Examples:
+        get_team_advanced_stats("Lakers")
+        get_team_advanced_stats("BOS", season="2023-24")
     """
     start_time = time.time()
 
@@ -846,6 +884,7 @@ async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) 
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def get_player_advanced_stats(
     player_name: str, season: Optional[str] = None
@@ -868,6 +907,9 @@ async def get_player_advanced_stats(
     Returns:
         JSON string with ResponseEnvelope containing player advanced stats
 
+    Examples:
+        get_player_advanced_stats("LeBron James")
+        get_player_advanced_stats("Curry", season="2015-16")
     """
     start_time = time.time()
 
@@ -903,6 +945,7 @@ async def get_player_advanced_stats(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def compare_players(
     player1_name: str,
@@ -932,6 +975,9 @@ async def compare_players(
     Returns:
         JSON string with ResponseEnvelope containing PlayerComparison object
 
+    Examples:
+        compare_players("LeBron James", "Michael Jordan", season="2012-13")
+        compare_players("Curry", "Nash", normalization="per_75")
     """
     start_time = time.time()
 
@@ -970,6 +1016,7 @@ async def compare_players(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def compare_players_era_adjusted(
     player1_name: str,
@@ -1001,6 +1048,15 @@ async def compare_players_era_adjusted(
         - Side-by-side comparison table
         - Explanation of adjustments
 
+    Examples:
+        compare_players_era_adjusted("Michael Jordan", "LeBron James", "1995-96", "2012-13")
+        compare_players_era_adjusted("Kobe Bryant", "Luka Doncic", "2005-06", "2023-24")
+
+    Era Adjustments:
+        - 1990s: Slower pace, lower scoring (adjust upward)
+        - 2000s: Slowest era, defensive focus (adjust upward)
+        - 2010s: Gradual pace increase (minor adjustment)
+        - 2020s: Fast pace, high scoring (adjust downward)
     """
     start_time = time.time()
 
@@ -1102,6 +1158,7 @@ async def compare_players_era_adjusted(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def get_shot_chart(
     entity_name: str,
@@ -1129,6 +1186,10 @@ async def get_shot_chart(
 
     Returns:
         JSON string with ResponseEnvelope containing shot chart data
+
+    Examples:
+        get_shot_chart("Stephen Curry", season="2023-24", granularity="hexbin")
+        get_shot_chart("Lakers", entity_type="team", granularity="summary")
     """
     start_time = time.time()
 
@@ -1165,6 +1226,7 @@ async def get_shot_chart(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def get_game_context(
     team1_name: str,
@@ -1198,6 +1260,25 @@ async def get_game_context(
         - narrative: Markdown-formatted game preview with key storylines
         - metadata: Components loaded/failed status
 
+    Examples:
+        get_game_context("Lakers", "Warriors")
+        → Full matchup context with all components
+
+        get_game_context("Boston Celtics", "Miami Heat", season="2022-23")
+        → Historical matchup context from 2022-23 season
+
+    Features:
+        - Parallel API execution (4-6 calls simultaneously)
+        - Graceful degradation (returns partial data if some components fail)
+        - Auto-generated narrative with storylines
+        - Fuzzy team name matching
+
+    Narrative Sections:
+        1. Matchup Header: Team records, conference ranks
+        2. Season Series: Head-to-head record
+        3. Recent Form: Last 10 games, win/loss streaks
+        4. Statistical Edge: Net rating comparison
+        5. Key Storylines: Auto-generated insights (streaks, defensive struggles, etc.)
     """
     start_time = time.time()
 
@@ -1232,6 +1313,7 @@ async def get_game_context(
         )
         return response.to_json_string()
 
+
 @mcp_server.tool()
 async def answer_nba_question(question: str) -> str:
     """
@@ -1254,6 +1336,16 @@ async def answer_nba_question(question: str) -> str:
         5. Team Stats: "What is the Warriors offensive rating?", "Celtics defense"
         6. Standings: "Eastern Conference standings", "Western Conference playoff race"
         7. Game Context: "Lakers vs Celtics tonight", "What games are on today?"
+
+    Examples:
+        answer_nba_question("Who leads the NBA in assists?")
+        → Returns formatted table with top assist leaders
+
+        answer_nba_question("Compare LeBron James and Kevin Durant")
+        → Returns side-by-side comparison table
+
+        answer_nba_question("Show me Giannis stats from 2023-24")
+        → Returns formatted player stats card
 
     Note: The NLQ pipeline automatically:
     - Resolves player/team names (fuzzy matching)
@@ -1278,6 +1370,7 @@ async def answer_nba_question(question: str) -> str:
         logger.exception("Error in answer_nba_question")
         return f"Sorry, I encountered an error processing your question: {str(e)}\n\nPlease try rephrasing your question or being more specific."
 
+
 @mcp_server.tool()
 async def get_metrics_info() -> str:
     """
@@ -1294,6 +1387,9 @@ async def get_metrics_info() -> str:
         - Recent request statistics
         - Metrics endpoint information
 
+    Example:
+        get_metrics_info()
+        → Returns server metrics and health status
     """
     try:
         from nba_mcp.observability import get_metrics_snapshot
@@ -1346,9 +1442,11 @@ async def get_metrics_info() -> str:
     except Exception as e:
         return f"Error retrieving metrics: {str(e)}\n\nMetrics may not be initialized."
 
+
 #########################################
 # Running the Server
 #########################################
+
 
 # ------------------------------------------------------------------
 # nba_server.py
@@ -1573,6 +1671,7 @@ def main():
     except Exception:
         logger.exception("Failed to start MCP server (transport=%s)", transport)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

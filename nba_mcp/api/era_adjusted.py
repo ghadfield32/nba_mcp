@@ -1,7 +1,28 @@
 """
 Era-Adjusted Statistics for Fair Cross-Era Player Comparisons.
+
 This module provides tools for comparing players across different eras by adjusting
 for league-wide pace and scoring environment changes. This allows for fair comparisons
+like Michael Jordan (1990s) vs LeBron James (2010s).
+
+Key Concepts:
+1. **Pace Adjustment**: Account for faster/slower game pace across eras
+2. **Scoring Environment**: Adjust for league-wide scoring changes
+3. **Per-Possession Stats**: Normalize to per-75 possessions for fairness
+
+Example Usage:
+    # Compare MJ's 1995-96 season to LeBron's 2012-13 season
+    comparison = await compare_players_era_adjusted(
+        "Michael Jordan", "LeBron James",
+        season1="1995-96", season2="2012-13"
+    )
+
+League Averages by Era:
+- 1980s: ~105 PPG, ~99 Pace
+- 1990s: ~102 PPG, ~92 Pace (slower, more defensive)
+- 2000s: ~98 PPG, ~91 Pace (slowest era, post-handcheck rule)
+- 2010s: ~102 PPG, ~93 Pace (gradual increase)
+- 2020s: ~112 PPG, ~100 Pace (three-point revolution, fastest since 80s)
 """
 
 import logging
@@ -10,7 +31,10 @@ from typing import Dict, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # HISTORICAL LEAGUE AVERAGES BY SEASON
+# ============================================================================
 
 # League-wide averages for pace and scoring by season
 # Source: Basketball-Reference.com historical data
@@ -55,7 +79,11 @@ LEAGUE_AVERAGES = {
 # Baseline for normalization (modern era average)
 BASELINE = {"ppg": 108.0, "pace": 97.0}
 
+
+# ============================================================================
 # DATA CLASSES
+# ============================================================================
+
 
 @dataclass
 class EraAdjustment:
@@ -65,6 +93,7 @@ class EraAdjustment:
     pace_factor: float  # Multiplier for pace adjustment
     scoring_factor: float  # Multiplier for scoring environment
     era_description: str  # Human-readable era description
+
 
 @dataclass
 class AdjustedStats:
@@ -84,7 +113,11 @@ class AdjustedStats:
     scoring_factor: float
     era_description: str
 
+
+# ============================================================================
 # ERA ADJUSTMENT FUNCTIONS
+# ============================================================================
+
 
 def get_era_adjustment(season: str) -> EraAdjustment:
     """
@@ -96,6 +129,11 @@ def get_era_adjustment(season: str) -> EraAdjustment:
     Returns:
         EraAdjustment object with pace and scoring factors
 
+    Example:
+        >>> adj = get_era_adjustment("1995-96")
+        >>> print(f"Pace factor: {adj.pace_factor:.3f}")
+        Pace factor: 1.056  # 1990s were slower, so multiply by > 1.0
+    """
     # Get league averages for this season
     if season not in LEAGUE_AVERAGES:
         logger.warning(f"Season {season} not in historical data, using baseline")
@@ -135,6 +173,7 @@ def get_era_adjustment(season: str) -> EraAdjustment:
         era_description=era_desc,
     )
 
+
 def adjust_for_era(
     stats: Dict[str, float], season: str
 ) -> Tuple[Dict[str, float], EraAdjustment]:
@@ -148,6 +187,12 @@ def adjust_for_era(
     Returns:
         Tuple of (adjusted_stats_dict, adjustment_info)
 
+    Example:
+        >>> stats = {"ppg": 30.1, "rpg": 6.9, "apg": 5.3}
+        >>> adjusted, info = adjust_for_era(stats, "1995-96")
+        >>> print(f"Raw PPG: {stats['ppg']:.1f}, Adjusted: {adjusted['ppg']:.1f}")
+        Raw PPG: 30.1, Adjusted: 32.4  # Higher in modern era
+    """
     adjustment = get_era_adjustment(season)
 
     # Apply both pace and scoring adjustments
@@ -163,6 +208,7 @@ def adjust_for_era(
 
     return adjusted_stats, adjustment
 
+
 def create_adjusted_stats(stats: Dict[str, float], season: str) -> AdjustedStats:
     """
     Create AdjustedStats object with both raw and adjusted values.
@@ -174,6 +220,11 @@ def create_adjusted_stats(stats: Dict[str, float], season: str) -> AdjustedStats
     Returns:
         AdjustedStats object with all information
 
+    Example:
+        >>> stats = {"ppg": 30.1, "rpg": 6.9, "apg": 5.3}
+        >>> adjusted = create_adjusted_stats(stats, "1995-96")
+        >>> print(f"MJ 95-96: {adjusted.ppg_raw} PPG raw, {adjusted.ppg_adjusted:.1f} adjusted")
+    """
     adjusted, adj_info = adjust_for_era(stats, season)
 
     return AdjustedStats(
@@ -189,7 +240,11 @@ def create_adjusted_stats(stats: Dict[str, float], season: str) -> AdjustedStats
         era_description=adj_info.era_description,
     )
 
+
+# ============================================================================
 # COMPARISON FORMATTING
+# ============================================================================
+
 
 def format_era_comparison(
     player1_name: str,
@@ -209,6 +264,10 @@ def format_era_comparison(
     Returns:
         Formatted markdown string with comparison
 
+    Example:
+        >>> comparison = format_era_comparison("Michael Jordan", "LeBron James", mj_stats, lbj_stats)
+        >>> print(comparison)
+    """
     output = []
     output.append("# Era-Adjusted Player Comparison\n")
     output.append(f"## {player1_name} vs {player2_name}\n")
@@ -272,7 +331,10 @@ def format_era_comparison(
 
     return "\n".join(output)
 
+
+# ============================================================================
 # EXPORT
+# ============================================================================
 
 __all__ = [
     "get_era_adjustment",

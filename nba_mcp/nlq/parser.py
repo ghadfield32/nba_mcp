@@ -1,8 +1,14 @@
 # nba_mcp/nlq/parser.py
 """
 Natural Language Query Parser for NBA queries.
+
 Extracts structured components from natural language:
 - Entities (players, teams) using entity resolver
+- Stat categories (points, assists, advanced metrics)
+- Time ranges (season, date, "tonight", "last 10 games")
+- Query intent (comparison, leaders, game context, etc.)
+
+Uses pattern matching + optional LLM fallback for ambiguous queries.
 """
 
 import logging
@@ -16,7 +22,11 @@ from ..api.errors import EntityNotFoundError
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # DATA CLASSES
+# ============================================================================
+
 
 @dataclass
 class TimeRange:
@@ -34,6 +44,7 @@ class TimeRange:
             "season": self.season,
             "relative": self.relative,
         }
+
 
 @dataclass
 class ParsedQuery:
@@ -71,7 +82,10 @@ class ParsedQuery:
             "confidence": self.confidence,
         }
 
+
+# ============================================================================
 # STAT CATEGORY MAPPING
+# ============================================================================
 
 STAT_PATTERNS = {
     # Basic stats
@@ -104,6 +118,7 @@ STAT_PATTERNS = {
     "defense": ["STL", "BLK", "DEF_RATING"],
 }
 
+
 def extract_stat_types(query: str) -> List[str]:
     """
     Extract stat categories from query using pattern matching.
@@ -124,7 +139,10 @@ def extract_stat_types(query: str) -> List[str]:
     # If no specific stats mentioned, return empty (planner will decide)
     return sorted(list(stats))
 
+
+# ============================================================================
 # INTENT CLASSIFICATION
+# ============================================================================
 
 INTENT_PATTERNS = {
     "leaders": [
@@ -177,6 +195,7 @@ INTENT_PATTERNS = {
     ],
 }
 
+
 def classify_intent(
     query: str,
 ) -> Literal[
@@ -212,7 +231,11 @@ def classify_intent(
 
     return "unknown"
 
+
+# ============================================================================
 # TIME RANGE PARSING
+# ============================================================================
+
 
 def parse_time_range(query: str) -> Optional[TimeRange]:
     """
@@ -276,7 +299,11 @@ def parse_time_range(query: str) -> Optional[TimeRange]:
     season = f"{year}-{str(year + 1)[-2:]}"
     return TimeRange(season=season, relative="default")
 
+
+# ============================================================================
 # ENTITY EXTRACTION
+# ============================================================================
+
 
 async def extract_entities(query: str) -> List[Dict[str, Any]]:
     """
@@ -396,7 +423,11 @@ async def extract_entities(query: str) -> List[Dict[str, Any]]:
 
     return entities
 
+
+# ============================================================================
 # MODIFIER EXTRACTION
+# ============================================================================
+
 
 def extract_modifiers(query: str) -> Dict[str, Any]:
     """
@@ -437,7 +468,11 @@ def extract_modifiers(query: str) -> Dict[str, Any]:
 
     return modifiers
 
+
+# ============================================================================
 # MAIN PARSER
+# ============================================================================
+
 
 async def parse_query(query: str) -> ParsedQuery:
     """
@@ -457,6 +492,16 @@ async def parse_query(query: str) -> ParsedQuery:
     Returns:
         ParsedQuery with all structured components
 
+    Examples:
+        >>> await parse_query("Who leads the NBA in assists?")
+        ParsedQuery(intent="leaders", stat_types=["AST"], time_range=TimeRange(season="2024-25"))
+
+        >>> await parse_query("Compare LeBron James and Kevin Durant")
+        ParsedQuery(intent="comparison", entities=[LeBron, Durant], time_range=TimeRange(season="2024-25"))
+
+        >>> await parse_query("Lakers vs Celtics tonight")
+        ParsedQuery(intent="game_context", entities=[LAL, BOS], time_range=TimeRange(relative="tonight"))
+    """
     logger.info(f"Parsing query: '{query}'")
 
     # Step 1: Classify intent
@@ -515,7 +560,11 @@ async def parse_query(query: str) -> ParsedQuery:
         confidence=confidence,
     )
 
+
+# ============================================================================
 # VALIDATION
+# ============================================================================
+
 
 def validate_parsed_query(parsed: ParsedQuery) -> bool:
     """

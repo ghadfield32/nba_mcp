@@ -1,6 +1,7 @@
 # nba_mcp/cache/__init__.py
 """
 Caching layer for NBA MCP.
+
 Provides Redis-based caching with TTL tiers for different data types.
 """
 

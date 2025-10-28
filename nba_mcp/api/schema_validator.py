@@ -1,7 +1,28 @@
 """
 Schema drift detection for NBA API responses.
+
 This module validates NBA API responses against expected schemas to detect
 when the upstream API changes its data structure. This helps us:
+
+1. **Detect Breaking Changes**: Missing required fields
+2. **Detect Non-Breaking Changes**: New fields, type changes
+3. **Monitor API Stability**: Track schema changes over time
+4. **Graceful Degradation**: Handle changes without crashing
+
+The validator is optional and controlled by environment variables:
+- ENABLE_SCHEMA_VALIDATION=true (enables validation)
+- SCHEMA_VALIDATION_MODE=strict|warn|log (default: warn)
+
+Modes:
+- strict: Raise exception on any schema mismatch
+- warn: Log warnings for mismatches but continue
+- log: Silently log to debug level only
+
+Usage:
+    from nba_mcp.api.schema_validator import validate_response
+
+    response = nba_api.playercareerstats(player_id).get_dict()
+    validate_response("playercareerstats", response)
 """
 
 import json
@@ -15,7 +36,11 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # Configuration
+# ============================================================================
+
 
 # Enable/disable schema validation via environment variable
 ENABLE_SCHEMA_VALIDATION = (
@@ -28,7 +53,11 @@ SCHEMA_VALIDATION_MODE = os.getenv("SCHEMA_VALIDATION_MODE", "warn").lower()
 # Directory containing expected schemas
 EXPECTED_SCHEMAS_DIR = Path(__file__).parent / "expected_schemas"
 
+
+# ============================================================================
 # Validation Result Classes
+# ============================================================================
+
 
 @dataclass
 class FieldMismatch:
@@ -39,6 +68,7 @@ class FieldMismatch:
     expected: Optional[str] = None  # Expected type/value
     actual: Optional[str] = None  # Actual type/value
     severity: str = "warning"  # "error", "warning", "info"
+
 
 @dataclass
 class ValidationResult:
@@ -83,7 +113,11 @@ class ValidationResult:
             "validated_at": self.validated_at,
         }
 
+
+# ============================================================================
 # Schema Validator
+# ============================================================================
+
 
 class SchemaValidator:
     """
@@ -94,6 +128,13 @@ class SchemaValidator:
     - Missing required fields
     - Type mismatches
     - Unexpected new fields
+
+    Example:
+        validator = SchemaValidator()
+        result = validator.validate("playercareerstats", response)
+        if result.has_breaking_changes():
+            logger.error(f"Breaking changes detected: {result.errors}")
+    """
 
     def __init__(self, schemas_dir: Optional[Path] = None):
         """
@@ -134,6 +175,13 @@ class SchemaValidator:
         Returns:
             ValidationResult with details of any mismatches
 
+        Example:
+            >>> validator = SchemaValidator()
+            >>> response = {"resultSets": [{"name": "CareerTotalsRegularSeason", ...}]}
+            >>> result = validator.validate("playercareerstats", response)
+            >>> print(result.valid)
+            True
+        """
         result = ValidationResult(endpoint=endpoint, valid=True)
 
         # Check if we have an expected schema
@@ -303,9 +351,14 @@ class SchemaValidator:
 
         return unexpected
 
+
+# ============================================================================
 # Global Validator Instance
+# ============================================================================
+
 
 _validator: Optional[SchemaValidator] = None
+
 
 def get_validator() -> SchemaValidator:
     """
@@ -314,12 +367,20 @@ def get_validator() -> SchemaValidator:
     Returns:
         SchemaValidator instance
 
+    Example:
+        >>> validator = get_validator()
+        >>> result = validator.validate("playercareerstats", response)
+    """
     global _validator
     if _validator is None:
         _validator = SchemaValidator()
     return _validator
 
+
+# ============================================================================
 # Convenience Functions
+# ============================================================================
+
 
 def validate_response(endpoint: str, response: Dict[str, Any]) -> ValidationResult:
     """
@@ -338,6 +399,12 @@ def validate_response(endpoint: str, response: Dict[str, Any]) -> ValidationResu
     Raises:
         ValueError: If validation mode is "strict" and schema is invalid
 
+    Example:
+        >>> response = nba_api.playercareerstats(2544).get_dict()
+        >>> result = validate_response("playercareerstats", response)
+        >>> if result.has_warnings():
+        ...     logger.warning(f"Schema warnings: {result.warnings}")
+    """
     # Skip if validation is disabled
     if not ENABLE_SCHEMA_VALIDATION:
         return ValidationResult(endpoint=endpoint, valid=True)
@@ -364,6 +431,7 @@ def validate_response(endpoint: str, response: Dict[str, Any]) -> ValidationResu
 
     return result
 
+
 def create_expected_schema(
     endpoint: str,
     response: Dict[str, Any],
@@ -382,6 +450,15 @@ def create_expected_schema(
         required_fields: List of field names that are required
         output_dir: Directory to write schema file (default: expected_schemas/)
 
+    Example:
+        >>> response = nba_api.playercareerstats(2544).get_dict()
+        >>> create_expected_schema(
+        ...     "playercareerstats",
+        ...     response,
+        ...     required_fields=["resultSets"],
+        ... )
+        # Creates expected_schemas/playercareerstats.json
+    """
     output_dir = output_dir or EXPECTED_SCHEMAS_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -422,7 +499,11 @@ def create_expected_schema(
 
     logger.info(f"Created expected schema: {schema_file}")
 
+
+# ============================================================================
 # Export
+# ============================================================================
+
 
 __all__ = [
     "SchemaValidator",

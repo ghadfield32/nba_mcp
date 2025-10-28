@@ -1,6 +1,7 @@
 # nba_mcp/nlq/pipeline.py
 """
 Complete NLQ Pipeline Interface.
+
 Provides a simple async function to answer NBA questions in natural language.
 """
 
@@ -14,7 +15,11 @@ from .synthesizer import SynthesizedResponse, synthesize_response
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================================
 # MAIN PIPELINE
+# ============================================================================
+
 
 async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
     """
@@ -32,6 +37,13 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
 
     Returns:
         Formatted answer string (markdown) or full response dict if return_metadata=True
+
+    Examples:
+        >>> await answer_nba_question("Who leads the NBA in assists?")
+        "### NBA Leaders in AST\n\n| Rank | Player | AST |\n..."
+
+        >>> await answer_nba_question("Compare LeBron James and Kevin Durant")
+        "### Player Comparison\n\n| Metric | LeBron James | Kevin Durant | Advantage |\n..."
 
     Raises:
         ValueError: If query cannot be parsed or planned
@@ -85,7 +97,11 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
         logger.exception("Unexpected error in NLQ pipeline")
         return error_msg
 
+
+# ============================================================================
 # BATCH PROCESSING
+# ============================================================================
+
 
 async def answer_nba_questions(queries: list[str]) -> list[str]:
     """
@@ -102,7 +118,11 @@ async def answer_nba_questions(queries: list[str]) -> list[str]:
     tasks = [answer_nba_question(q) for q in queries]
     return await asyncio.gather(*tasks, return_exceptions=True)
 
+
+# ============================================================================
 # PIPELINE STATUS
+# ============================================================================
+
 
 def get_pipeline_status() -> dict:
     """
