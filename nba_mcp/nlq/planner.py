@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # TOOL CALL SPECIFICATION
 # ============================================================================
 
+
 @dataclass
 class ToolCall:
     """Specification for an MCP tool call."""
@@ -33,7 +34,7 @@ class ToolCall:
             "tool_name": self.tool_name,
             "params": self.params,
             "depends_on": self.depends_on or [],
-            "parallel_group": self.parallel_group
+            "parallel_group": self.parallel_group,
         }
 
 
@@ -51,7 +52,7 @@ class ExecutionPlan:
             "parsed_query": self.parsed_query.to_dict(),
             "tool_calls": [tc.to_dict() for tc in self.tool_calls],
             "template_used": self.template_used,
-            "can_parallelize": self.can_parallelize
+            "can_parallelize": self.can_parallelize,
         }
 
 
@@ -69,16 +70,17 @@ ANSWER_PACK_TEMPLATES = {
             ToolCall(
                 tool_name="get_league_leaders_info",
                 params={
-                    "stat_category": parsed.stat_types[0] if parsed.stat_types else "PTS",
+                    "stat_category": (
+                        parsed.stat_types[0] if parsed.stat_types else "PTS"
+                    ),
                     "season": _extract_season(parsed.time_range),
                     "per_mode": _extract_per_mode(parsed.modifiers),
-                    "season_type_all_star": _extract_season_type(parsed.modifiers)
+                    "season_type_all_star": _extract_season_type(parsed.modifiers),
                 },
-                parallel_group=0
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 2: Player Comparison (2 players)
     "comparison_players": {
         "description": "Compare two players side-by-side",
@@ -91,13 +93,12 @@ ANSWER_PACK_TEMPLATES = {
                     "player1_name": parsed.entities[0]["name"],
                     "player2_name": parsed.entities[1]["name"],
                     "season": _extract_season(parsed.time_range),
-                    "normalization": parsed.modifiers.get("normalization", "per_75")
+                    "normalization": parsed.modifiers.get("normalization", "per_75"),
                 },
-                parallel_group=0
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 3: Team Comparison (Game Context)
     "comparison_teams": {
         "description": "Compare two teams with standings and advanced stats",
@@ -108,29 +109,28 @@ ANSWER_PACK_TEMPLATES = {
                 tool_name="get_team_standings",
                 params={
                     "season": _extract_season(parsed.time_range),
-                    "conference": None
+                    "conference": None,
                 },
-                parallel_group=0
+                parallel_group=0,
             ),
             ToolCall(
                 tool_name="get_team_advanced_stats",
                 params={
                     "team_name": parsed.entities[0]["name"],
-                    "season": _extract_season(parsed.time_range)
+                    "season": _extract_season(parsed.time_range),
                 },
-                parallel_group=1
+                parallel_group=1,
             ),
             ToolCall(
                 tool_name="get_team_advanced_stats",
                 params={
                     "team_name": parsed.entities[1]["name"],
-                    "season": _extract_season(parsed.time_range)
+                    "season": _extract_season(parsed.time_range),
                 },
-                parallel_group=1
-            )
-        ]
+                parallel_group=1,
+            ),
+        ],
     },
-
     # Template 4: Tonight's Game
     "game_context": {
         "description": "Get live scores and game context",
@@ -139,14 +139,11 @@ ANSWER_PACK_TEMPLATES = {
         "tools": lambda parsed: [
             ToolCall(
                 tool_name="get_live_scores",
-                params={
-                    "target_date": _extract_date(parsed.time_range)
-                },
-                parallel_group=0
+                params={"target_date": _extract_date(parsed.time_range)},
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 5: Player Season Stats
     "player_stats": {
         "description": "Get a player's season statistics",
@@ -157,13 +154,12 @@ ANSWER_PACK_TEMPLATES = {
                 tool_name="get_player_advanced_stats",
                 params={
                     "player_name": parsed.entities[0]["name"],
-                    "season": _extract_season(parsed.time_range)
+                    "season": _extract_season(parsed.time_range),
                 },
-                parallel_group=0
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 6: Team Season Stats
     "team_stats": {
         "description": "Get a team's season statistics",
@@ -174,13 +170,12 @@ ANSWER_PACK_TEMPLATES = {
                 tool_name="get_team_advanced_stats",
                 params={
                     "team_name": parsed.entities[0]["name"],
-                    "season": _extract_season(parsed.time_range)
+                    "season": _extract_season(parsed.time_range),
                 },
-                parallel_group=0
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 7: Conference Standings
     "standings": {
         "description": "Get team standings",
@@ -191,26 +186,26 @@ ANSWER_PACK_TEMPLATES = {
                 tool_name="get_team_standings",
                 params={
                     "season": _extract_season(parsed.time_range),
-                    "conference": _extract_conference(parsed.raw_query)
+                    "conference": _extract_conference(parsed.raw_query),
                 },
-                parallel_group=0
+                parallel_group=0,
             )
-        ]
+        ],
     },
-
     # Template 8: Season Comparison (same player, different seasons)
     "season_comparison": {
         "description": "Compare a player across multiple seasons",
         "required": ["entities"],  # 1 player
         "optional": ["time_range"],
-        "tools": lambda parsed: _build_season_comparison_tools(parsed)
-    }
+        "tools": lambda parsed: _build_season_comparison_tools(parsed),
+    },
 }
 
 
 # ============================================================================
 # HELPER FUNCTIONS FOR PARAMETER EXTRACTION
 # ============================================================================
+
 
 def _extract_season(time_range: Optional[TimeRange]) -> Optional[str]:
     """Extract season string from time range."""
@@ -227,6 +222,7 @@ def _extract_date(time_range: Optional[TimeRange]) -> Optional[str]:
         return time_range.start_date.isoformat()
     if time_range.relative == "tonight":
         from datetime import date
+
         return date.today().isoformat()
     return None
 
@@ -269,6 +265,7 @@ def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
     """
     # Parse multiple seasons from query
     import re
+
     seasons = re.findall(r"(\d{4})-?(\d{2})?", parsed.raw_query)
 
     if len(seasons) >= 2:
@@ -279,20 +276,14 @@ def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
         return [
             ToolCall(
                 tool_name="get_player_advanced_stats",
-                params={
-                    "player_name": parsed.entities[0]["name"],
-                    "season": season1
-                },
-                parallel_group=0
+                params={"player_name": parsed.entities[0]["name"], "season": season1},
+                parallel_group=0,
             ),
             ToolCall(
                 tool_name="get_player_advanced_stats",
-                params={
-                    "player_name": parsed.entities[0]["name"],
-                    "season": season2
-                },
-                parallel_group=0
-            )
+                params={"player_name": parsed.entities[0]["name"], "season": season2},
+                parallel_group=0,
+            ),
         ]
 
     # Default: current season only
@@ -301,9 +292,9 @@ def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
             tool_name="get_player_advanced_stats",
             params={
                 "player_name": parsed.entities[0]["name"],
-                "season": _extract_season(parsed.time_range)
+                "season": _extract_season(parsed.time_range),
             },
-            parallel_group=0
+            parallel_group=0,
         )
     ]
 
@@ -311,6 +302,7 @@ def _build_season_comparison_tools(parsed: ParsedQuery) -> List[ToolCall]:
 # ============================================================================
 # TEMPLATE MATCHING
 # ============================================================================
+
 
 def match_template(parsed: ParsedQuery) -> Optional[str]:
     """
@@ -324,9 +316,13 @@ def match_template(parsed: ParsedQuery) -> Optional[str]:
     """
     intent = parsed.intent
     num_entities = len(parsed.entities)
-    entity_types = [e["entity_type"] for e in parsed.entities] if parsed.entities else []
+    entity_types = (
+        [e["entity_type"] for e in parsed.entities] if parsed.entities else []
+    )
 
-    logger.debug(f"Matching template: intent={intent}, entities={num_entities}, types={entity_types}")
+    logger.debug(
+        f"Matching template: intent={intent}, entities={num_entities}, types={entity_types}"
+    )
 
     # Leaders query
     if intent == "leaders":
@@ -345,6 +341,7 @@ def match_template(parsed: ParsedQuery) -> Optional[str]:
         elif num_entities == 1 and entity_types[0] == "player":
             # Check if query mentions multiple seasons
             import re
+
             if len(re.findall(r"\d{4}", parsed.raw_query)) >= 2:
                 return "season_comparison"
 
@@ -371,6 +368,7 @@ def match_template(parsed: ParsedQuery) -> Optional[str]:
 # ============================================================================
 # PLAN GENERATION
 # ============================================================================
+
 
 def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
     """
@@ -414,7 +412,7 @@ def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
             parsed_query=parsed,
             tool_calls=tool_calls,
             template_used=template_name,
-            can_parallelize=can_parallelize
+            can_parallelize=can_parallelize,
         )
 
         logger.debug(f"Execution plan: {plan.to_dict()}")
@@ -428,6 +426,7 @@ def generate_execution_plan(parsed: ParsedQuery) -> Optional[ExecutionPlan]:
 # ============================================================================
 # PLAN VALIDATION
 # ============================================================================
+
 
 def validate_execution_plan(plan: ExecutionPlan) -> bool:
     """
@@ -466,6 +465,7 @@ def validate_execution_plan(plan: ExecutionPlan) -> bool:
 # MAIN PLANNER FUNCTION
 # ============================================================================
 
+
 async def plan_query_execution(parsed: ParsedQuery) -> ExecutionPlan:
     """
     Main planner function: generate and validate execution plan.
@@ -482,9 +482,13 @@ async def plan_query_execution(parsed: ParsedQuery) -> ExecutionPlan:
     plan = generate_execution_plan(parsed)
 
     if not plan:
-        raise ValueError(f"No execution plan could be generated for query: '{parsed.raw_query}'")
+        raise ValueError(
+            f"No execution plan could be generated for query: '{parsed.raw_query}'"
+        )
 
     if not validate_execution_plan(plan):
-        raise ValueError(f"Generated plan failed validation for query: '{parsed.raw_query}'")
+        raise ValueError(
+            f"Generated plan failed validation for query: '{parsed.raw_query}'"
+        )
 
     return plan

@@ -1,4 +1,4 @@
-#nba_mcp\nba_server.py
+# nba_mcp\nba_server.py
 import os
 from mcp.server.fastmcp import FastMCP
 from nba_mcp.api.client import NBAApiClient
@@ -8,12 +8,23 @@ from datetime import datetime, timezone, date
 from typing import Optional, List, Dict, Union, Any
 import pandas as pd
 from nba_api.stats.static import teams, players
-from nba_mcp.api.tools.nba_api_utils import (get_player_id, get_team_id, get_team_name, get_player_name
-                           , get_static_lookup_schema, normalize_stat_category, normalize_per_mode, normalize_season, normalize_date, format_game
-                           )
+from nba_mcp.api.tools.nba_api_utils import (
+    get_player_id,
+    get_team_id,
+    get_team_name,
+    get_player_name,
+    get_static_lookup_schema,
+    normalize_stat_category,
+    normalize_per_mode,
+    normalize_season,
+    normalize_date,
+    format_game,
+)
 import json
+
 # nba_server.py (add near the top)
 from pydantic import BaseModel, Field
+
 # near the top of nba_server.py
 import argparse
 from fastmcp import Context
@@ -21,41 +32,69 @@ import time
 
 # Import new response models and error handling
 from nba_mcp.api.models import (
-    ResponseEnvelope, success_response, error_response, partial_response,
-    EntityReference, PlayerSeasonStats, TeamStanding, PlayerComparison
+    ResponseEnvelope,
+    success_response,
+    error_response,
+    partial_response,
+    EntityReference,
+    PlayerSeasonStats,
+    TeamStanding,
+    PlayerComparison,
 )
 from nba_mcp.api.errors import (
-    NBAMCPError, EntityNotFoundError, InvalidParameterError, RateLimitError,
-    retry_with_backoff, get_circuit_breaker
+    NBAMCPError,
+    EntityNotFoundError,
+    InvalidParameterError,
+    RateLimitError,
+    retry_with_backoff,
+    get_circuit_breaker,
 )
-from nba_mcp.api.entity_resolver import resolve_entity, suggest_players, suggest_teams, get_cache_info
+from nba_mcp.api.entity_resolver import (
+    resolve_entity,
+    suggest_players,
+    suggest_teams,
+    get_cache_info,
+)
 
 # Import NLQ pipeline components
-from nba_mcp.nlq.pipeline import answer_nba_question as nlq_answer_question, get_pipeline_status
+from nba_mcp.nlq.pipeline import (
+    answer_nba_question as nlq_answer_question,
+    get_pipeline_status,
+)
 from nba_mcp.nlq.tool_registry import initialize_tool_registry
 
 # Import Week 4 infrastructure (cache + rate limiting)
 from nba_mcp.cache.redis_cache import initialize_cache, get_cache, CacheTier, cached
-from nba_mcp.rate_limit.token_bucket import initialize_rate_limiter, get_rate_limiter, rate_limited
+from nba_mcp.rate_limit.token_bucket import (
+    initialize_rate_limiter,
+    get_rate_limiter,
+    rate_limited,
+)
 
 # Import Week 4 observability (metrics + tracing)
 from nba_mcp.observability import (
-    initialize_metrics, get_metrics_manager, track_metrics, update_infrastructure_metrics,
-    initialize_tracing, get_tracing_manager
+    initialize_metrics,
+    get_metrics_manager,
+    track_metrics,
+    update_infrastructure_metrics,
+    initialize_tracing,
+    get_tracing_manager,
 )
 
 # only grab "--mode" here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
-    "--mode", choices=["claude", "local"], default="claude",
-    help="Which port profile to use"
+    "--mode",
+    choices=["claude", "local"],
+    default="claude",
+    help="Which port profile to use",
 )
 args, _ = parser.parse_known_args()
 
 if args.mode == "claude":
-     BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8000"))
+    BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8000"))
 else:
-     BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8001"))
+    BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8001"))
 
 # python nba_server.py --mode local       # runs on 8001
 # python nba_server.py --mode claude      # runs on 8000
@@ -63,23 +102,21 @@ else:
 
 # import logger
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 # ── 1) Read configuration up‑front ────────────────────────
-HOST      = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
-PATH      = os.getenv("FASTMCP_SSE_PATH", "/sse")
+HOST = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
+PATH = os.getenv("FASTMCP_SSE_PATH", "/sse")
 
 # ── 2) Create the global server instance for decorator registration ──
-mcp_server = FastMCP(
-    name="nba_mcp",
-    host=HOST,
-    port=BASE_PORT
-)
+mcp_server = FastMCP(name="nba_mcp", host=HOST, port=BASE_PORT)
 
 # ===== ONE‑LINE ADDITION =====
 mcp = mcp_server  # Alias so the FastMCP CLI can auto‑discover the server
 import socket
+
 
 def port_available(port: int, host: str = HOST) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -95,27 +132,20 @@ def port_available(port: int, host: str = HOST) -> bool:
             return False
 
 
-
-
-
 from pydantic import BaseModel, Field
 from typing import Literal
 
+
 class LeagueLeadersParams(BaseModel):
     season: Optional[Union[str, List[str]]] = Field(
-        None,
-        description="Season in 'YYYY-YY' format or list thereof"
+        None, description="Season in 'YYYY-YY' format or list thereof"
     )
-    stat_category: Literal["PTS","REB","AST","STL","BLK","FG_PCT","FG3_PCT","FT_PCT"] = Field(
-        ...,
-        description="Stat code (e.g. 'AST')"
+    stat_category: Literal[
+        "PTS", "REB", "AST", "STL", "BLK", "FG_PCT", "FG3_PCT", "FT_PCT"
+    ] = Field(..., description="Stat code (e.g. 'AST')")
+    per_mode: Literal["Totals", "PerGame", "Per48"] = Field(
+        ..., description="One of 'Totals', 'PerGame', or 'Per48'"
     )
-    per_mode: Literal["Totals","PerGame","Per48"] = Field(
-        ...,
-        description="One of 'Totals', 'PerGame', or 'Per48'"
-    )
-
-
 
 
 # ── 3) Load & cache both JSON files once ───────────────────
@@ -123,8 +153,9 @@ from pathlib import Path
 
 # Possible locations for documentation files:
 _project_root = Path(__file__).resolve().parents[1]
-_root_docs    = _project_root / "api_documentation"
-_pkg_docs     = Path(__file__).resolve().parent / "api_documentation"
+_root_docs = _project_root / "api_documentation"
+_pkg_docs = Path(__file__).resolve().parent / "api_documentation"
+
 
 def _load_cached(filename: str) -> str:
     for base in (_root_docs, _pkg_docs):
@@ -140,14 +171,13 @@ def _load_cached(filename: str) -> str:
                 logger.error("Error parsing %s: %s", candidate, e)
                 break
     logger.error(
-        "Failed to load %s from either %s or %s",
-        filename, _root_docs, _pkg_docs
+        "Failed to load %s from either %s or %s", filename, _root_docs, _pkg_docs
     )
     sys.exit(1)
 
-_CACHED_OPENAPI = _load_cached("endpoints.json")
-_CACHED_STATIC  = _load_cached("static_data.json")
 
+_CACHED_OPENAPI = _load_cached("endpoints.json")
+_CACHED_STATIC = _load_cached("static_data.json")
 
 
 #########################################
@@ -160,6 +190,7 @@ async def get_openapi_spec() -> str:
     logger.debug("Serving cached OpenAPI endpoints.json")
     return _CACHED_OPENAPI
 
+
 @mcp_server.resource("api-docs://static_data.json")
 async def get_static_data() -> str:
     logger.debug("Serving cached static_data.json")
@@ -168,6 +199,7 @@ async def get_static_data() -> str:
 
 # ── in nba_server.py, alongside your existing @mcp_server.resource defs ──
 
+
 @mcp_server.resource("nba://player/{player_name}/career/{season}")
 async def player_career_stats_resource(player_name: str, season: str):
     """
@@ -175,7 +207,9 @@ async def player_career_stats_resource(player_name: str, season: str):
     """
     client = NBAApiClient()
     # always return list-of‑records
-    result = await client.get_player_career_stats(player_name, season, as_dataframe=False)
+    result = await client.get_player_career_stats(
+        player_name, season, as_dataframe=False
+    )
     # If error came back as dict, re‑raise it to the client
     if isinstance(result, dict) and "error" in result:
         return result
@@ -185,10 +219,9 @@ async def player_career_stats_resource(player_name: str, season: str):
     # Otherwise it's already a list of dicts
     return {"data": result}
 
+
 @mcp_server.resource("nba://league/leaders/{stat_category}/{per_mode}/{season}")
-async def league_leaders_resource(
-    stat_category: str, per_mode: str, season: str
-):
+async def league_leaders_resource(stat_category: str, per_mode: str, season: str):
     """
     Returns top-10 league leaders as JSON for given season, stat_category, per_mode.
     """
@@ -197,7 +230,7 @@ async def league_leaders_resource(
         season=season,
         stat_category=stat_category,
         per_mode=per_mode,
-        as_dataframe=False
+        as_dataframe=False,
     )
     if isinstance(data, str):
         return {"message": data}
@@ -211,8 +244,7 @@ async def live_scores_resource(target_date: str):
     """
     client = NBAApiClient()
     result = await client.get_live_scoreboard(
-        target_date=target_date,
-        as_dataframe=False
+        target_date=target_date, as_dataframe=False
     )
     if isinstance(result, str):
         return {"message": result}
@@ -225,14 +257,10 @@ async def games_by_date_resource(game_date: str):
     Returns list of games+scores from ScoreboardV2 for a date.
     """
     client = NBAApiClient()
-    data = await client.get_games_by_date(
-        target_date=game_date,
-        as_dataframe=False
-    )
+    data = await client.get_games_by_date(target_date=game_date, as_dataframe=False)
     if isinstance(data, dict) and "error" in data:
         return data
     return data
-
 
 
 @mcp_server.resource(
@@ -252,7 +280,7 @@ async def playbyplay_resource(
     end_period: int = 4,
     start_clock: Optional[str] = None,
     recent_n: int = 5,
-    max_lines: int = 200
+    max_lines: int = 200,
 ) -> Dict[str, Any]:
     """
     Unified MCP resource: returns play-by-play Markdown for a given date and team,
@@ -280,21 +308,21 @@ async def playbyplay_resource(
         end_period=end_period,
         start_clock=None if start_clock in ("", "None") else start_clock,
         recent_n=recent_n,
-        max_lines=max_lines
+        max_lines=max_lines,
     )
     return {"markdown": md}
-
 
 
 #########################################
 # MCP Tools
 #########################################
 
+
 @mcp_server.tool()
 async def resolve_nba_entity(
     query: str,
     entity_type: Optional[Literal["player", "team"]] = None,
-    return_suggestions: bool = True
+    return_suggestions: bool = True,
 ) -> str:
     """
     Universal entity resolver with fuzzy matching and confidence scoring.
@@ -337,7 +365,7 @@ async def resolve_nba_entity(
             entity_type=entity_type,
             min_confidence=0.6,
             return_suggestions=return_suggestions,
-            max_suggestions=5
+            max_suggestions=5,
         )
 
         # Calculate execution time
@@ -348,7 +376,7 @@ async def resolve_nba_entity(
             data=entity_ref.model_dump(),
             source="static",
             cache_status="hit",  # LRU cached
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
         return response.to_json_string()
@@ -356,9 +384,7 @@ async def resolve_nba_entity(
     except EntityNotFoundError as e:
         # Entity not found - return error with suggestions
         response = error_response(
-            error_code=e.code,
-            error_message=e.message,
-            details=e.details
+            error_code=e.code, error_message=e.message, details=e.details
         )
         return response.to_json_string()
 
@@ -367,15 +393,14 @@ async def resolve_nba_entity(
         logger.exception("Unexpected error in resolve_nba_entity")
         response = error_response(
             error_code="INTERNAL_ERROR",
-            error_message=f"Failed to resolve entity: {str(e)}"
+            error_message=f"Failed to resolve entity: {str(e)}",
         )
         return response.to_json_string()
 
 
 @mcp_server.tool()
 async def get_player_career_information(
-    player_name: str,
-    season: Optional[str] = None
+    player_name: str, season: Optional[str] = None
 ) -> str:
     logger.debug("get_player_career_information('%s', season=%s)", player_name, season)
     client = NBAApiClient()
@@ -399,9 +424,7 @@ async def get_player_career_information(
 
         # 4) If it's not a DataFrame, we have an unexpected payload
         if not isinstance(result, pd.DataFrame):
-            logger.error(
-                "Unexpected payload type (not DataFrame): %s", type(result)
-            )
+            logger.error("Unexpected payload type (not DataFrame): %s", type(result))
             return (
                 f"Unexpected response format from API tool: "
                 f"{type(result).__name__}. Please check server logs."
@@ -416,55 +439,81 @@ async def get_player_career_information(
         if len(df) == 1:
             # Single season data
             row = df.iloc[0]
-            team = row.get('TEAM_ABBREVIATION', 'N/A')
-            return "\n".join([
-                f"Player: {player_name}",
-                f"Season: {season_str} ({team})",
-                f"Games Played: {row.get('GP', 'N/A')}",
-                f"Minutes Per Game: {row.get('MIN', 'N/A')}",
-                f"Points Per Game: {row.get('PTS', 'N/A')}",
-                f"Rebounds Per Game: {row.get('REB', 'N/A')}",
-                f"Assists Per Game: {row.get('AST', 'N/A')}",
-                f"Steals Per Game: {row.get('STL', 'N/A')}",
-                f"Blocks Per Game: {row.get('BLK', 'N/A')}",
-                f"Field Goal %: {row.get('FG_PCT', 'N/A')}",
-                f"3-Point %: {row.get('FG3_PCT', 'N/A')}",
-                f"Free Throw %: {row.get('FT_PCT', 'N/A')}"
-            ])
+            team = row.get("TEAM_ABBREVIATION", "N/A")
+            return "\n".join(
+                [
+                    f"Player: {player_name}",
+                    f"Season: {season_str} ({team})",
+                    f"Games Played: {row.get('GP', 'N/A')}",
+                    f"Minutes Per Game: {row.get('MIN', 'N/A')}",
+                    f"Points Per Game: {row.get('PTS', 'N/A')}",
+                    f"Rebounds Per Game: {row.get('REB', 'N/A')}",
+                    f"Assists Per Game: {row.get('AST', 'N/A')}",
+                    f"Steals Per Game: {row.get('STL', 'N/A')}",
+                    f"Blocks Per Game: {row.get('BLK', 'N/A')}",
+                    f"Field Goal %: {row.get('FG_PCT', 'N/A')}",
+                    f"3-Point %: {row.get('FG3_PCT', 'N/A')}",
+                    f"Free Throw %: {row.get('FT_PCT', 'N/A')}",
+                ]
+            )
         else:
             # Multiple seasons - provide a career summary
             # Find the earliest and latest seasons
-            if 'SEASON_ID' in df.columns:
-                seasons = sorted(df['SEASON_ID'].unique())
-                season_range = f"{seasons[0]} to {seasons[-1]}" if seasons else "unknown"
+            if "SEASON_ID" in df.columns:
+                seasons = sorted(df["SEASON_ID"].unique())
+                season_range = (
+                    f"{seasons[0]} to {seasons[-1]}" if seasons else "unknown"
+                )
             else:
                 season_range = "unknown"
-                
+
             # Count total games and calculate career averages
-            total_games = df['GP'].sum() if 'GP' in df.columns else 'N/A'
-            
+            total_games = df["GP"].sum() if "GP" in df.columns else "N/A"
+
             # Build response with career averages
-            return "\n".join([
-                f"Player: {player_name}",
-                f"Seasons: {season_range}",
-                f"Career Games: {total_games}",
-                f"Career Stats:",
-                f"- Points Per Game: {df['PTS'].mean():.1f}" if 'PTS' in df.columns else "- Points Per Game: N/A",
-                f"- Rebounds Per Game: {df['REB'].mean():.1f}" if 'REB' in df.columns else "- Rebounds Per Game: N/A",
-                f"- Assists Per Game: {df['AST'].mean():.1f}" if 'AST' in df.columns else "- Assists Per Game: N/A", 
-                f"- Field Goal %: {df['FG_PCT'].mean():.3f}" if 'FG_PCT' in df.columns else "- Field Goal %: N/A",
-                f"- 3-Point %: {df['FG3_PCT'].mean():.3f}" if 'FG3_PCT' in df.columns else "- 3-Point %: N/A",
-                f"- Free Throw %: {df['FT_PCT'].mean():.3f}" if 'FT_PCT' in df.columns else "- Free Throw %: N/A"
-            ])
+            return "\n".join(
+                [
+                    f"Player: {player_name}",
+                    f"Seasons: {season_range}",
+                    f"Career Games: {total_games}",
+                    f"Career Stats:",
+                    (
+                        f"- Points Per Game: {df['PTS'].mean():.1f}"
+                        if "PTS" in df.columns
+                        else "- Points Per Game: N/A"
+                    ),
+                    (
+                        f"- Rebounds Per Game: {df['REB'].mean():.1f}"
+                        if "REB" in df.columns
+                        else "- Rebounds Per Game: N/A"
+                    ),
+                    (
+                        f"- Assists Per Game: {df['AST'].mean():.1f}"
+                        if "AST" in df.columns
+                        else "- Assists Per Game: N/A"
+                    ),
+                    (
+                        f"- Field Goal %: {df['FG_PCT'].mean():.3f}"
+                        if "FG_PCT" in df.columns
+                        else "- Field Goal %: N/A"
+                    ),
+                    (
+                        f"- 3-Point %: {df['FG3_PCT'].mean():.3f}"
+                        if "FG3_PCT" in df.columns
+                        else "- 3-Point %: N/A"
+                    ),
+                    (
+                        f"- Free Throw %: {df['FT_PCT'].mean():.3f}"
+                        if "FT_PCT" in df.columns
+                        else "- Free Throw %: N/A"
+                    ),
+                ]
+            )
 
     except Exception as e:
         # 7) Uncaught exception: log full traceback
         logger.exception("Unexpected error in get_player_career_information")
         return f"Unexpected error in get_player_career_information: {e}"
-
-
-
-
 
 
 @mcp_server.tool()
@@ -474,20 +523,15 @@ async def get_league_leaders_info(params: LeagueLeadersParams) -> str:
     Inputs are validated and coerced via LeagueLeadersParams.
     """
     # 1) Extract and normalize already-validated inputs
-    season       = params.season
+    season = params.season
     stat_category = params.stat_category
-    per_mode      = params.per_mode
+    per_mode = params.per_mode
 
-    logger.debug(
-        "get_league_leaders_info(params=%r)", params.dict()
-    )
+    logger.debug("get_league_leaders_info(params=%r)", params.dict())
 
     client = NBAApiClient()
     result = await client.get_league_leaders(
-        season=season,
-        stat_category=stat_category,
-        per_mode=per_mode,
-        as_dataframe=True
+        season=season, stat_category=stat_category, per_mode=per_mode, as_dataframe=True
     )
 
     if isinstance(result, str):
@@ -510,9 +554,6 @@ async def get_league_leaders_info(params: LeagueLeadersParams) -> str:
     return "\n".join(out).strip()
 
 
-
-
-
 @mcp_server.tool()
 async def get_live_scores(target_date: Optional[str] = None) -> str:
     """
@@ -531,8 +572,7 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
 
     try:
         result = await client.get_live_scoreboard(
-            target_date=target_date,
-            as_dataframe=False
+            target_date=target_date, as_dataframe=False
         )
         # result is either a list of dicts or an error string
         if isinstance(result, str):
@@ -553,17 +593,23 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
             if "teamName" in home:
                 home_team = home["teamName"]
                 away_team = away["teamName"]
-                home_pts  = home["score"]
-                away_pts  = away["score"]
+                home_pts = home["score"]
+                away_pts = away["score"]
             else:
                 # Historical if we got uppercase keys from Stats API
-                home_team = home.get("TEAM_ABBREVIATION") or get_team_name(home["TEAM_ID"])
-                away_team = away.get("TEAM_ABBREVIATION") or get_team_name(away["TEAM_ID"])
-                home_pts  = home.get("PTS")
-                away_pts  = away.get("PTS")
+                home_team = home.get("TEAM_ABBREVIATION") or get_team_name(
+                    home["TEAM_ID"]
+                )
+                away_team = away.get("TEAM_ABBREVIATION") or get_team_name(
+                    away["TEAM_ID"]
+                )
+                home_pts = home.get("PTS")
+                away_pts = away.get("PTS")
 
             status = summary.get("gameStatusText", "")
-            lines.append(f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})")
+            lines.append(
+                f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})"
+            )
 
         header = f"NBA Games for {target_date}:\n"
         return header + "\n".join(lines)
@@ -575,27 +621,29 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         return f"Unexpected error in get_live_scores: {e}"
 
 
-
-
 # Allowed season types per NBA API; we will always query all
 _ALLOWED_SEASON_TYPES = [
     "Regular Season",
     "Playoffs",
     "Pre Season",
     "All Star",
-    "All-Star"
+    "All-Star",
 ]
+
 
 @mcp_server.tool()
 async def get_date_range_game_log_or_team_game_log(
     season: str,
     team: Optional[str] = None,
     date_from: Optional[str] = None,
-    date_to: Optional[str] = None
+    date_to: Optional[str] = None,
 ) -> str:
     logger.debug(
         "get_date_range_game_log_or_team_game_log(season=%r, team=%r, from=%r, to=%r)",
-        season, team, date_from, date_to
+        season,
+        team,
+        date_from,
+        date_to,
     )
 
     client = NBAApiClient()
@@ -606,9 +654,12 @@ async def get_date_range_game_log_or_team_game_log(
     try:
         for st in _ALLOWED_SEASON_TYPES:
             df = await client.get_league_game_log(
-                season=season, team_name=team,
-                season_type=st, date_from=date_from,
-                date_to=date_to, as_dataframe=True
+                season=season,
+                team_name=team,
+                season_type=st,
+                date_from=date_from,
+                date_to=date_to,
+                as_dataframe=True,
             )
 
             if isinstance(df, str):
@@ -652,7 +703,6 @@ async def get_date_range_game_log_or_team_game_log(
         return f"Unexpected error: {e}"
 
 
-
 @mcp_server.tool()
 async def play_by_play(
     game_date: Optional[str] = None,
@@ -661,7 +711,7 @@ async def play_by_play(
     end_period: int = 4,
     start_clock: Optional[str] = None,
     recent_n: int = 5,
-    max_lines: int = 200
+    max_lines: int = 200,
 ) -> str:
     """
     Unified MCP tool: returns play-by-play for specified date/team,
@@ -690,7 +740,7 @@ async def play_by_play(
                 end_period=end_period,
                 start_clock=start_clock,
                 recent_n=recent_n,
-                max_lines=max_lines
+                max_lines=max_lines,
             )
             if isinstance(md, str):
                 output_blocks.append(f"{header}\n\n{md}")
@@ -709,7 +759,7 @@ async def play_by_play(
         end_period=end_period,
         start_clock=start_clock,
         recent_n=recent_n,
-        max_lines=max_lines
+        max_lines=max_lines,
     )
     if isinstance(md, str):
         return md
@@ -718,8 +768,7 @@ async def play_by_play(
 
 @mcp_server.tool()
 async def get_team_standings(
-    season: Optional[str] = None,
-    conference: Optional[Literal["East", "West"]] = None
+    season: Optional[str] = None, conference: Optional[Literal["East", "West"]] = None
 ) -> str:
     """
     Get NBA team standings with conference/division rankings.
@@ -759,7 +808,7 @@ async def get_team_standings(
             data=standings_data,
             source="historical",
             cache_status="miss",
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
         return response.to_json_string()
@@ -768,16 +817,13 @@ async def get_team_standings(
         logger.exception("Error in get_team_standings")
         response = error_response(
             error_code="NBA_API_ERROR",
-            error_message=f"Failed to fetch team standings: {str(e)}"
+            error_message=f"Failed to fetch team standings: {str(e)}",
         )
         return response.to_json_string()
 
 
 @mcp_server.tool()
-async def get_team_advanced_stats(
-    team_name: str,
-    season: Optional[str] = None
-) -> str:
+async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) -> str:
     """
     Get team advanced statistics (Offensive/Defensive Rating, Pace, Net Rating, Four Factors).
 
@@ -801,7 +847,9 @@ async def get_team_advanced_stats(
     start_time = time.time()
 
     try:
-        from nba_mcp.api.advanced_stats import get_team_advanced_stats as fetch_team_stats
+        from nba_mcp.api.advanced_stats import (
+            get_team_advanced_stats as fetch_team_stats,
+        )
 
         stats = await fetch_team_stats(team_name=team_name, season=season)
 
@@ -811,16 +859,14 @@ async def get_team_advanced_stats(
             data=stats,
             source="historical",
             cache_status="miss",
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
         return response.to_json_string()
 
     except EntityNotFoundError as e:
         response = error_response(
-            error_code=e.code,
-            error_message=e.message,
-            details=e.details
+            error_code=e.code, error_message=e.message, details=e.details
         )
         return response.to_json_string()
 
@@ -828,15 +874,14 @@ async def get_team_advanced_stats(
         logger.exception("Error in get_team_advanced_stats")
         response = error_response(
             error_code="NBA_API_ERROR",
-            error_message=f"Failed to fetch team advanced stats: {str(e)}"
+            error_message=f"Failed to fetch team advanced stats: {str(e)}",
         )
         return response.to_json_string()
 
 
 @mcp_server.tool()
 async def get_player_advanced_stats(
-    player_name: str,
-    season: Optional[str] = None
+    player_name: str, season: Optional[str] = None
 ) -> str:
     """
     Get player advanced statistics (Usage%, TS%, eFG%, PER, Offensive/Defensive Rating).
@@ -863,7 +908,9 @@ async def get_player_advanced_stats(
     start_time = time.time()
 
     try:
-        from nba_mcp.api.advanced_stats import get_player_advanced_stats as fetch_player_stats
+        from nba_mcp.api.advanced_stats import (
+            get_player_advanced_stats as fetch_player_stats,
+        )
 
         stats = await fetch_player_stats(player_name=player_name, season=season)
 
@@ -873,16 +920,14 @@ async def get_player_advanced_stats(
             data=stats,
             source="historical",
             cache_status="miss",
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
         return response.to_json_string()
 
     except EntityNotFoundError as e:
         response = error_response(
-            error_code=e.code,
-            error_message=e.message,
-            details=e.details
+            error_code=e.code, error_message=e.message, details=e.details
         )
         return response.to_json_string()
 
@@ -890,7 +935,7 @@ async def get_player_advanced_stats(
         logger.exception("Error in get_player_advanced_stats")
         response = error_response(
             error_code="NBA_API_ERROR",
-            error_message=f"Failed to fetch player advanced stats: {str(e)}"
+            error_message=f"Failed to fetch player advanced stats: {str(e)}",
         )
         return response.to_json_string()
 
@@ -900,7 +945,7 @@ async def compare_players(
     player1_name: str,
     player2_name: str,
     season: Optional[str] = None,
-    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75"
+    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75",
 ) -> str:
     """
     Compare two players side-by-side with shared metric registry.
@@ -937,7 +982,7 @@ async def compare_players(
             player1_name=player1_name,
             player2_name=player2_name,
             season=season,
-            normalization=normalization
+            normalization=normalization,
         )
 
         execution_time_ms = (time.time() - start_time) * 1000
@@ -946,16 +991,14 @@ async def compare_players(
             data=comparison.model_dump(),
             source="historical",
             cache_status="miss",
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
         return response.to_json_string()
 
     except EntityNotFoundError as e:
         response = error_response(
-            error_code=e.code,
-            error_message=e.message,
-            details=e.details
+            error_code=e.code, error_message=e.message, details=e.details
         )
         return response.to_json_string()
 
@@ -963,7 +1006,7 @@ async def compare_players(
         logger.exception("Error in compare_players")
         response = error_response(
             error_code="NBA_API_ERROR",
-            error_message=f"Failed to compare players: {str(e)}"
+            error_message=f"Failed to compare players: {str(e)}",
         )
         return response.to_json_string()
 
@@ -1055,7 +1098,9 @@ async def get_metrics_info() -> str:
         # Server uptime
         uptime_seconds = snapshot.get("server_uptime_seconds", 0)
         uptime_hours = uptime_seconds / 3600
-        lines.append(f"**Server Uptime**: {uptime_hours:.2f} hours ({uptime_seconds:.0f} seconds)")
+        lines.append(
+            f"**Server Uptime**: {uptime_hours:.2f} hours ({uptime_seconds:.0f} seconds)"
+        )
         lines.append("")
 
         # Cache metrics
@@ -1079,12 +1124,15 @@ async def get_metrics_info() -> str:
 
         # Metrics endpoint
         import os
+
         metrics_port = int(os.getenv("METRICS_PORT", 9090))
         lines.append("## Metrics Endpoint")
         lines.append(f"- **URL**: http://localhost:{metrics_port}/metrics")
         lines.append("- **Health Check**: http://localhost:{metrics_port}/health")
         lines.append("")
-        lines.append("Use Prometheus to scrape the /metrics endpoint for detailed metrics.")
+        lines.append(
+            "Use Prometheus to scrape the /metrics endpoint for detailed metrics."
+        )
 
         return "\n".join(lines)
 
@@ -1096,6 +1144,7 @@ async def get_metrics_info() -> str:
 # Running the Server
 #########################################
 
+
 # ------------------------------------------------------------------
 # nba_server.py
 # ------------------------------------------------------------------
@@ -1106,24 +1155,24 @@ def main():
         "--mode",
         choices=["claude", "local"],
         default="claude",
-        help="Which port profile to use"
+        help="Which port profile to use",
     )
     parser.add_argument(
         "--transport",
         choices=["stdio", "sse", "websocket"],
         default=os.getenv("MCP_TRANSPORT", "stdio"),
-        help="MCP transport to use"
+        help="MCP transport to use",
     )
     parser.add_argument(
         "--host",
         default=os.getenv("MCP_HOST", "127.0.0.1"),
-        help="Host to bind for SSE/WebSocket"
+        help="Host to bind for SSE/WebSocket",
     )
     parser.add_argument(
         "--port",
         type=int,
         default=int(os.getenv("MCP_PORT", "0")) or None,
-        help="Port for SSE/WebSocket (None for stdio)"
+        help="Port for SSE/WebSocket (None for stdio)",
     )
     args = parser.parse_args()
 
@@ -1174,12 +1223,16 @@ def main():
 
         # Configure rate limits for different tool categories
         # Live data: 10 requests/min (aggressive rate limiting)
-        limiter.add_limit("get_live_scores", capacity=10.0, refill_rate=0.167)  # 10/60sec
+        limiter.add_limit(
+            "get_live_scores", capacity=10.0, refill_rate=0.167
+        )  # 10/60sec
 
         # Moderate cost: 60 requests/min
         limiter.add_limit("get_league_leaders_info", capacity=60.0, refill_rate=1.0)
         limiter.add_limit("get_team_standings", capacity=60.0, refill_rate=1.0)
-        limiter.add_limit("get_player_career_information", capacity=60.0, refill_rate=1.0)
+        limiter.add_limit(
+            "get_player_career_information", capacity=60.0, refill_rate=1.0
+        )
 
         # Complex queries: 30 requests/min
         limiter.add_limit("compare_players", capacity=30.0, refill_rate=0.5)
@@ -1204,7 +1257,9 @@ def main():
     try:
         initialize_metrics()
         metrics = get_metrics_manager()
-        metrics.set_server_info(version="1.0.0", environment=os.getenv("ENVIRONMENT", "development"))
+        metrics.set_server_info(
+            version="1.0.0", environment=os.getenv("ENVIRONMENT", "development")
+        )
         logger.info("✓ Prometheus metrics initialized")
 
         # Start periodic metrics update
@@ -1236,11 +1291,13 @@ def main():
         initialize_tracing(
             service_name="nba-mcp",
             otlp_endpoint=otlp_endpoint,
-            console_export=console_export
+            console_export=console_export,
         )
 
         if otlp_endpoint:
-            logger.info(f"✓ OpenTelemetry tracing initialized (endpoint: {otlp_endpoint})")
+            logger.info(
+                f"✓ OpenTelemetry tracing initialized (endpoint: {otlp_endpoint})"
+            )
         else:
             logger.info("✓ OpenTelemetry tracing initialized (no export endpoint)")
 
@@ -1284,7 +1341,9 @@ def main():
 
         metrics_thread = threading.Thread(target=run_metrics_server, daemon=True)
         metrics_thread.start()
-        logger.info(f"✓ Metrics HTTP server started on port {metrics_port} (/metrics, /health)")
+        logger.info(
+            f"✓ Metrics HTTP server started on port {metrics_port} (/metrics, /health)"
+        )
 
     except Exception as e:
         logger.warning(f"Metrics HTTP server failed to start: {e}")
@@ -1296,7 +1355,7 @@ def main():
     if transport != "stdio" and port is not None and not port_available(port, host):
         logger.warning("Port %s:%s not available → falling back to stdio", host, port)
         transport = "stdio"
-        
+
         mcp_server.host = host
         mcp_server.port = port
     try:
@@ -1304,12 +1363,12 @@ def main():
             logger.info("Starting FastMCP server on STDIO")
             mcp.run()
         else:
-            logger.info("Starting FastMCP server on %s://%s:%s",
-                        transport, host, port)
+            logger.info("Starting FastMCP server on %s://%s:%s", transport, host, port)
             mcp.run(transport=transport)
     except Exception:
         logger.exception("Failed to start MCP server (transport=%s)", transport)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

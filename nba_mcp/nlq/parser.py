@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 # DATA CLASSES
 # ============================================================================
 
+
 @dataclass
 class TimeRange:
     """Parsed time range for query."""
@@ -41,7 +42,7 @@ class TimeRange:
             "start_date": self.start_date.isoformat() if self.start_date else None,
             "end_date": self.end_date.isoformat() if self.end_date else None,
             "season": self.season,
-            "relative": self.relative
+            "relative": self.relative,
         }
 
 
@@ -51,13 +52,23 @@ class ParsedQuery:
 
     raw_query: str
     intent: Literal[
-        "leaders", "comparison", "game_context", "season_stats",
-        "team_stats", "player_stats", "standings", "unknown"
+        "leaders",
+        "comparison",
+        "game_context",
+        "season_stats",
+        "team_stats",
+        "player_stats",
+        "standings",
+        "unknown",
     ]
-    entities: List[Dict[str, Any]] = field(default_factory=list)  # Resolved players/teams
+    entities: List[Dict[str, Any]] = field(
+        default_factory=list
+    )  # Resolved players/teams
     stat_types: List[str] = field(default_factory=list)  # ["PTS", "AST", "TS_PCT"]
     time_range: Optional[TimeRange] = None
-    modifiers: Dict[str, Any] = field(default_factory=dict)  # top_n, normalization, etc.
+    modifiers: Dict[str, Any] = field(
+        default_factory=dict
+    )  # top_n, normalization, etc.
     confidence: float = 1.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -68,7 +79,7 @@ class ParsedQuery:
             "stat_types": self.stat_types,
             "time_range": self.time_range.to_dict() if self.time_range else None,
             "modifiers": self.modifiers,
-            "confidence": self.confidence
+            "confidence": self.confidence,
         }
 
 
@@ -84,13 +95,11 @@ STAT_PATTERNS = {
     "steals": ["STL"],
     "blocks": ["BLK"],
     "turnovers": ["TOV"],
-
     # Shooting
     "field goal": ["FG_PCT"],
     "three point": ["FG3_PCT"],
     "free throw": ["FT_PCT"],
     "shooting": ["FG_PCT", "FG3_PCT"],
-
     # Advanced
     "true shooting": ["TS_PCT"],
     "effective field goal": ["EFG_PCT"],
@@ -100,7 +109,6 @@ STAT_PATTERNS = {
     "defensive rating": ["DEF_RATING"],
     "net rating": ["NET_RATING"],
     "pace": ["PACE"],
-
     # Aliases
     "ppg": ["PTS"],
     "rpg": ["REB"],
@@ -143,7 +151,7 @@ INTENT_PATTERNS = {
         r"best (?:player|scorer|rebounder)",
         r"leader(?:s)? in",
         r"highest",
-        r"most"
+        r"most",
     ],
     "comparison": [
         r"\bvs\b",
@@ -151,7 +159,7 @@ INTENT_PATTERNS = {
         r"compare",
         r"(?:better|worse) than",
         r"(\w+) or (\w+)",
-        r"difference between"
+        r"difference between",
     ],
     "game_context": [
         r"tonight",
@@ -159,38 +167,46 @@ INTENT_PATTERNS = {
         r"matchup",
         r"who will win",
         r"prediction",
-        r"preview"
+        r"preview",
     ],
     "standings": [
         r"standings?",
         r"playoff race",
         r"conference rank",
         r"division rank",
-        r"seed"
+        r"seed",
     ],
     "team_stats": [
         r"team (?:stats?|performance)",
         r"(?:offense|defense|pace) (?:of|for)",
-        r"(?:lakers|warriors|celtics|bulls)"  # Team name patterns
+        r"(?:lakers|warriors|celtics|bulls)",  # Team name patterns
     ],
     "player_stats": [
         r"(?:lebron|curry|durant|giannis)",  # Player name patterns
         r"player stats?",
         r"career (?:stats?|average)",
-        r"season average"
+        r"season average",
     ],
     "season_stats": [
         r"this season",
         r"current season",
         r"\d{4}-\d{2}",  # Season format
-        r"compared? to (?:last|previous) (?:season|year)"
-    ]
+        r"compared? to (?:last|previous) (?:season|year)",
+    ],
 }
 
 
-def classify_intent(query: str) -> Literal[
-    "leaders", "comparison", "game_context", "season_stats",
-    "team_stats", "player_stats", "standings", "unknown"
+def classify_intent(
+    query: str,
+) -> Literal[
+    "leaders",
+    "comparison",
+    "game_context",
+    "season_stats",
+    "team_stats",
+    "player_stats",
+    "standings",
+    "unknown",
 ]:
     """
     Classify query intent using pattern matching.
@@ -220,6 +236,7 @@ def classify_intent(query: str) -> Literal[
 # TIME RANGE PARSING
 # ============================================================================
 
+
 def parse_time_range(query: str) -> Optional[TimeRange]:
     """
     Parse time expressions from query.
@@ -242,11 +259,7 @@ def parse_time_range(query: str) -> Optional[TimeRange]:
 
     # Tonight/Today
     if "tonight" in query_lower or "today" in query_lower:
-        return TimeRange(
-            start_date=today,
-            end_date=today,
-            relative="tonight"
-        )
+        return TimeRange(start_date=today, end_date=today, relative="tonight")
 
     # This season / current season
     if "this season" in query_lower or "current season" in query_lower:
@@ -269,16 +282,12 @@ def parse_time_range(query: str) -> Optional[TimeRange]:
     # Last week/month
     if "last week" in query_lower:
         return TimeRange(
-            start_date=today - timedelta(days=7),
-            end_date=today,
-            relative="last_week"
+            start_date=today - timedelta(days=7), end_date=today, relative="last_week"
         )
 
     if "last month" in query_lower:
         return TimeRange(
-            start_date=today - timedelta(days=30),
-            end_date=today,
-            relative="last_month"
+            start_date=today - timedelta(days=30), end_date=today, relative="last_month"
         )
 
     # Career/all-time
@@ -294,6 +303,7 @@ def parse_time_range(query: str) -> Optional[TimeRange]:
 # ============================================================================
 # ENTITY EXTRACTION
 # ============================================================================
+
 
 async def extract_entities(query: str) -> List[Dict[str, Any]]:
     """
@@ -311,15 +321,53 @@ async def extract_entities(query: str) -> List[Dict[str, Any]]:
 
     # Common words to exclude from entity resolution
     STOP_WORDS = {
-        "the", "who", "what", "when", "where", "how", "is", "are", "was", "were",
-        "compare", "vs", "versus", "against", "leads", "leads", "leader", "tonight",
-        "today", "game", "stats", "statistics", "season", "career", "best", "top",
-        "show", "tell", "me", "about", "in", "of", "for", "to", "from", "with",
-        "will", "win", "lose", "score", "points", "assists", "rebounds"
+        "the",
+        "who",
+        "what",
+        "when",
+        "where",
+        "how",
+        "is",
+        "are",
+        "was",
+        "were",
+        "compare",
+        "vs",
+        "versus",
+        "against",
+        "leads",
+        "leads",
+        "leader",
+        "tonight",
+        "today",
+        "game",
+        "stats",
+        "statistics",
+        "season",
+        "career",
+        "best",
+        "top",
+        "show",
+        "tell",
+        "me",
+        "about",
+        "in",
+        "of",
+        "for",
+        "to",
+        "from",
+        "with",
+        "will",
+        "win",
+        "lose",
+        "score",
+        "points",
+        "assists",
+        "rebounds",
     }
 
     # Split query into tokens
-    tokens = re.findall(r'\b[A-Za-z]+\b', query)
+    tokens = re.findall(r"\b[A-Za-z]+\b", query)
 
     # Try to resolve each token or token pair as entity
     i = 0
@@ -336,14 +384,18 @@ async def extract_entities(query: str) -> List[Dict[str, Any]]:
             two_word = f"{tokens[i]} {tokens[i+1]}"
             try:
                 entity_ref = resolve_entity(two_word, min_confidence=0.7)
-                entities.append({
-                    "entity_type": entity_ref.entity_type,
-                    "entity_id": entity_ref.entity_id,
-                    "name": entity_ref.name,
-                    "abbreviation": entity_ref.abbreviation,
-                    "confidence": entity_ref.confidence
-                })
-                logger.info(f"Resolved entity: '{two_word}' → {entity_ref.name} (confidence: {entity_ref.confidence:.2f})")
+                entities.append(
+                    {
+                        "entity_type": entity_ref.entity_type,
+                        "entity_id": entity_ref.entity_id,
+                        "name": entity_ref.name,
+                        "abbreviation": entity_ref.abbreviation,
+                        "confidence": entity_ref.confidence,
+                    }
+                )
+                logger.info(
+                    f"Resolved entity: '{two_word}' → {entity_ref.name} (confidence: {entity_ref.confidence:.2f})"
+                )
                 i += 2  # Skip both tokens
                 continue
             except EntityNotFoundError:
@@ -352,14 +404,18 @@ async def extract_entities(query: str) -> List[Dict[str, Any]]:
         # Try single word
         try:
             entity_ref = resolve_entity(tokens[i], min_confidence=0.7)
-            entities.append({
-                "entity_type": entity_ref.entity_type,
-                "entity_id": entity_ref.entity_id,
-                "name": entity_ref.name,
-                "abbreviation": entity_ref.abbreviation,
-                "confidence": entity_ref.confidence
-            })
-            logger.info(f"Resolved entity: '{tokens[i]}' → {entity_ref.name} (confidence: {entity_ref.confidence:.2f})")
+            entities.append(
+                {
+                    "entity_type": entity_ref.entity_type,
+                    "entity_id": entity_ref.entity_id,
+                    "name": entity_ref.name,
+                    "abbreviation": entity_ref.abbreviation,
+                    "confidence": entity_ref.confidence,
+                }
+            )
+            logger.info(
+                f"Resolved entity: '{tokens[i]}' → {entity_ref.name} (confidence: {entity_ref.confidence:.2f})"
+            )
         except EntityNotFoundError:
             pass
 
@@ -371,6 +427,7 @@ async def extract_entities(query: str) -> List[Dict[str, Any]]:
 # ============================================================================
 # MODIFIER EXTRACTION
 # ============================================================================
+
 
 def extract_modifiers(query: str) -> Dict[str, Any]:
     """
@@ -415,6 +472,7 @@ def extract_modifiers(query: str) -> Dict[str, Any]:
 # ============================================================================
 # MAIN PARSER
 # ============================================================================
+
 
 async def parse_query(query: str) -> ParsedQuery:
     """
@@ -499,13 +557,14 @@ async def parse_query(query: str) -> ParsedQuery:
         stat_types=stat_types,
         time_range=time_range,
         modifiers=modifiers,
-        confidence=confidence
+        confidence=confidence,
     )
 
 
 # ============================================================================
 # VALIDATION
 # ============================================================================
+
 
 def validate_parsed_query(parsed: ParsedQuery) -> bool:
     """

@@ -1,4 +1,4 @@
-#leaguegamelog_tools.py
+# leaguegamelog_tools.py
 """
 Example Script for Pulling NBA Data Using nba_api
 
@@ -11,20 +11,21 @@ import pandas as pd
 
 from nba_api.stats.endpoints import leaguegamelog
 from nba_mcp.api.tools.nba_api_utils import (
-    get_team_id, normalize_season, normalize_date, normalize_season_type
+    get_team_id,
+    normalize_season,
+    normalize_date,
+    normalize_season_type,
 )
 
 
-
-    
 def fetch_league_game_log(
     season: str,
     team_name: Optional[str] = None,
-    season_type: str = 'Regular Season',
+    season_type: str = "Regular Season",
     date_from: Optional[Union[str, date, datetime]] = None,
-    date_to:   Optional[Union[str, date, datetime]] = None,
-    direction: str = 'DESC',
-    sorter:    str = 'DATE'
+    date_to: Optional[Union[str, date, datetime]] = None,
+    direction: str = "DESC",
+    sorter: str = "DATE",
 ) -> pd.DataFrame:
     """
     Fetch full-season or filtered game-log via LeagueGameLog.
@@ -52,13 +53,13 @@ def fetch_league_game_log(
     lg = leaguegamelog.LeagueGameLog(
         counter=0,
         direction=direction,
-        league_id='00',
-        player_or_team_abbreviation='T',
+        league_id="00",
+        player_or_team_abbreviation="T",
         season=season,
         season_type_all_star=season_type,
         sorter=sorter,
         date_from_nullable=(df_from.strftime("%Y-%m-%d") if df_from else ""),
-        date_to_nullable=(df_to.strftime("%Y-%m-%d") if df_to else "")
+        date_to_nullable=(df_to.strftime("%Y-%m-%d") if df_to else ""),
     )
     df = lg.get_data_frames()[0]
 
@@ -69,10 +70,9 @@ def fetch_league_game_log(
             df = df[df["TEAM_ID"] == tid]
         else:
             # fallback to matching in the API‑returned NAMEs
-            mask = (
-                df["TEAM_NAME"].str.contains(team_name, case=False, na=False) |
-                df["MATCHUP"].str.contains(team_name, case=False, na=False)
-            )
+            mask = df["TEAM_NAME"].str.contains(team_name, case=False, na=False) | df[
+                "MATCHUP"
+            ].str.contains(team_name, case=False, na=False)
             df = df[mask]
 
     return df.reset_index(drop=True)
@@ -99,12 +99,10 @@ if __name__ == "__main__":
 
     # 6) Date‑range: April 1–15, 2025
     april_df = fetch_league_game_log(
-        "2024-25",
-        date_from="2025-04-01",
-        date_to="2025-04-15"
+        "2024-25", date_from="2025-04-01", date_to="2025-04-15"
     )
     # sort by GAME_DATE
-    april_df = april_df.sort_values(by='GAME_DATE', ascending=False)
+    april_df = april_df.sort_values(by="GAME_DATE", ascending=False)
     print(f"\n📆 Games from 2025-04-01 to 2025-04-15: {april_df.shape[0]} rows")
     print(april_df.head())
 
@@ -112,16 +110,16 @@ if __name__ == "__main__":
 
     test_season_types = [
         "Regular Season",  # canonical
-        "regular",         # alias
-        "Playoffs",        # canonical
-        "playoff",         # alias
-        "Postseason",      # alias→Playoffs
-        "Pre Season",      # canonical
-        "preseason",       # alias
-        "pre",             # alias
-        "All Star",        # canonical
-        "allstar",         # alias
-        "All-Star",        # variant
+        "regular",  # alias
+        "Playoffs",  # canonical
+        "playoff",  # alias
+        "Postseason",  # alias→Playoffs
+        "Pre Season",  # canonical
+        "preseason",  # alias
+        "pre",  # alias
+        "All Star",  # canonical
+        "allstar",  # alias
+        "All-Star",  # variant
     ]
 
     season = "2024-25"
@@ -139,4 +137,3 @@ if __name__ == "__main__":
             pprint(df.head(3).to_dict(orient="records"))
         except Exception as e:
             print(f"  ❗ error: {e}")
-            

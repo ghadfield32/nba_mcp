@@ -13,27 +13,29 @@ from nba_api.stats.endpoints import (
     playercareerstats,
     LeagueLeaders,
     LeagueGameLog,
-    scoreboardv2
+    scoreboardv2,
 )
 from datetime import timedelta
 from nba_api.stats.static import teams, players
-from dateutil.parser import parse  # Make sure to install python-dateutil if not already installed
+from dateutil.parser import (
+    parse,
+)  # Make sure to install python-dateutil if not already installed
 import logging
 
 # Create explicit exports for these utility functions
 __all__ = [
-    'get_player_id', 
-    'get_team_id', 
-    'get_team_name', 
-    'get_player_name',
-    'get_static_lookup_schema', 
-    'normalize_stat_category', 
-    'normalize_per_mode', 
-    'normalize_season', 
-    'normalize_date',
-    'normalize_season_type',
-    'format_game',
-    'get_team_id_from_abbr'
+    "get_player_id",
+    "get_team_id",
+    "get_team_name",
+    "get_player_name",
+    "get_static_lookup_schema",
+    "normalize_stat_category",
+    "normalize_per_mode",
+    "normalize_season",
+    "normalize_date",
+    "normalize_season_type",
+    "format_game",
+    "get_team_id_from_abbr",
 ]
 
 # ---------------------------------------------------
@@ -48,7 +50,7 @@ for p in players.get_players():
     try:
         # Use ASCII-compatible representation for player names with special characters
         player_name = f"{p['first_name']} {p['last_name']}"
-        _PLAYER_LOOKUP[p["id"]] = player_name.encode('ascii', 'replace').decode('ascii')
+        _PLAYER_LOOKUP[p["id"]] = player_name.encode("ascii", "replace").decode("ascii")
     except Exception:
         # Fallback to a safe representation if there are encoding issues
         _PLAYER_LOOKUP[p["id"]] = f"Player {p['id']}"
@@ -84,7 +86,7 @@ def format_game(game: dict) -> str:
     visitor_team = game["visitor_team"]["full_name"]
     home_score = game["home_team_score"]
     visitor_score = game["visitor_team_score"]
-    
+
     # Add game status information
     status_text = ""
     if game.get("status") == 3:  # Finished game
@@ -93,8 +95,9 @@ def format_game(game: dict) -> str:
         period = game.get("period", 0)
         time = game.get("time", "")
         status_text = f" (Period {period}, {time})"
-    
+
     return f"{home_team} vs {visitor_team} - Score: {home_score} to {visitor_score}{status_text}"
+
 
 # Build lookups directly from the nba_api's static players list
 _PLAYER_LOOKUP: Dict[int, str] = {}
@@ -106,7 +109,8 @@ for p in players.get_players():
         name += " " + p["last_suffix"].strip()
     _PLAYER_LOOKUP[p["id"]] = name or f"Player {p['id']}"
 
-_PLAYER_NAME_TO_ID = { name: pid for pid, name in _PLAYER_LOOKUP.items() }
+_PLAYER_NAME_TO_ID = {name: pid for pid, name in _PLAYER_LOOKUP.items()}
+
 
 def get_player_id(player_name: str) -> Optional[int]:
     key = player_name.lower()
@@ -125,23 +129,25 @@ def get_player_name(player_id: Union[int, str]) -> Optional[str]:
     """Convert player ID to name, using a centralized lookup."""
     return _PLAYER_LOOKUP.get(int(player_id))
 
+
 def get_team_id(team_name: str) -> Optional[int]:
     """Convert team name to ID, with case-insensitive partial matching."""
     if not team_name:
         return None
-    
+
     team_name_lower = team_name.lower()
     # Try exact match first
     for name, id in _TEAM_REVLOOKUP.items():
         if name == team_name_lower:
             return id
-    
+
     # Try partial match
     for name, id in _TEAM_REVLOOKUP.items():
         if team_name_lower in name:
             return id
-    
+
     return None
+
 
 def get_team_name(team_id: Union[int, str]) -> Optional[str]:
     """
@@ -149,10 +155,6 @@ def get_team_name(team_id: Union[int, str]) -> Optional[str]:
     Accepts either int or str representations of the ID.
     """
     return _TEAM_LOOKUP.get(int(team_id))
-
-
-
-
 
 
 def get_static_lookup_schema() -> Dict:
@@ -167,21 +169,12 @@ def get_static_lookup_schema() -> Dict:
     # Build friendly table representations
     teams_table = "teams(" + ", ".join(["ID INTEGER", "TEAM_NAME TEXT"]) + ")"
     players_table = "players(" + ", ".join(["ID INTEGER", "PLAYER_NAME TEXT"]) + ")"
-    
+
     return {
         "description": "Static lookup tables for teams and players",
-        "tables": {
-            "teams": teams_table,
-            "players": players_table
-        },
-        "data": {
-            "teams": _TEAM_LOOKUP,
-            "players": _PLAYER_LOOKUP
-        }
+        "tables": {"teams": teams_table, "players": players_table},
+        "data": {"teams": _TEAM_LOOKUP, "players": _PLAYER_LOOKUP},
     }
-
-
-
 
 
 def normalize_season_type(raw: str) -> str:
@@ -196,38 +189,40 @@ def normalize_season_type(raw: str) -> str:
     Accepts e.g. "regular", "reg season", "playoff", "preseason", "allstar", etc.
     """
     mapping = {
-        "regular season":       "Regular Season",
-        "regular":              "Regular Season",
-        "reg season":           "Regular Season",
-        "playoffs":             "Playoffs",
-        "playoff":              "Playoffs",
-        "postseason":           "Playoffs",
-        "pre season":           "Pre Season",
-        "pre‑season":           "Pre Season",
-        "preseason":            "Pre Season",
-        "pre":                  "Pre Season",
-        "all star":             "All Star",
-        "all‑star":             "All Star",
-        "allstar":              "All Star",
-        "all-star":             "All Star",
-        "all star season":      "All Star",
-        "All-Star":             "All Star",
+        "regular season": "Regular Season",
+        "regular": "Regular Season",
+        "reg season": "Regular Season",
+        "playoffs": "Playoffs",
+        "playoff": "Playoffs",
+        "postseason": "Playoffs",
+        "pre season": "Pre Season",
+        "pre‑season": "Pre Season",
+        "preseason": "Pre Season",
+        "pre": "Pre Season",
+        "all star": "All Star",
+        "all‑star": "All Star",
+        "allstar": "All Star",
+        "all-star": "All Star",
+        "all star season": "All Star",
+        "All-Star": "All Star",
     }
     key = raw.strip().lower()
     if key in mapping:
         return mapping[key]
-    raise ValueError(f"Unrecognized season_type: '{raw}'. "
-                     f"Expected one of: {sorted(set(mapping.values()))}")
-    
+    raise ValueError(
+        f"Unrecognized season_type: '{raw}'. "
+        f"Expected one of: {sorted(set(mapping.values()))}"
+    )
+
 
 def normalize_stat_category(stat_category: str) -> str:
     """
     Normalize various string formats of a stat category to the NBA API's expected abbreviation.
-    
+
     For example:
       - "pts" or "points" -> "PTS"
       - "reb", "rebound", or "rebounds" -> "REB"
-    
+
     Adjust or extend the mapping as needed.
     """
     # Mapping: API abbreviation -> list of possible variants (all in lower-case without spaces)
@@ -252,7 +247,7 @@ def normalize_stat_category(stat_category: str) -> str:
         "AST_TOV": ["ast_tov", "assistturnover", "asttov"],
         "STL_TOV": ["stl_tov", "stealturnover", "stlttov"],
     }
-    
+
     # Build a reverse lookup: each synonym maps to the proper abbreviation.
     synonym_lookup = {}
     for abbr, synonyms in mapping.items():
@@ -261,29 +256,50 @@ def normalize_stat_category(stat_category: str) -> str:
 
     # Normalize the input: trim, lowercase, and remove extra spaces
     normalized_key = stat_category.strip().lower().replace(" ", "")
-    
+
     if normalized_key in synonym_lookup:
         return synonym_lookup[normalized_key]
     else:
         raise ValueError(f"Unsupported stat category: {stat_category}")
 
+
 def normalize_per_mode(per_mode: str) -> str:
     """
     Normalize the per_mode parameter to one of the allowed values:
     "Totals", "PerGame", or "Per48".
-    
+
     Accepts variations such as lower or upper case, and common synonyms.
     """
     normalized = per_mode.strip().lower()
-    if normalized in ["totals", "total", "total stats", "total per season", "total_per_season"]:
+    if normalized in [
+        "totals",
+        "total",
+        "total stats",
+        "total per season",
+        "total_per_season",
+    ]:
         return "Totals"
-    elif normalized in ["pergame", "per game", "per game average", "per game average stats", "per game per season", "per_game"]:
+    elif normalized in [
+        "pergame",
+        "per game",
+        "per game average",
+        "per game average stats",
+        "per game per season",
+        "per_game",
+    ]:
         return "PerGame"
-    elif normalized in ["per48", "per 48", "per 48 average", "per 48 average stats", "per 48 per season", "per_48"]:
+    elif normalized in [
+        "per48",
+        "per 48",
+        "per 48 average",
+        "per 48 average stats",
+        "per 48 per season",
+        "per_48",
+    ]:
         return "Per48"
     else:
         raise ValueError(f"Unsupported per_mode value: {per_mode}")
-    
+
 
 def normalize_single_season(season: str) -> str:
     """
@@ -312,9 +328,8 @@ def normalize_single_season(season: str) -> str:
         return s
     raise ValueError(f"Unsupported season format: {season!r}")
 
-def normalize_season(
-    season: Optional[Union[str, List[str]]]
-) -> Optional[List[str]]:
+
+def normalize_season(season: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
     """
     Normalize one or more seasons into a list of 'YYYY-YY' strings.
     """
@@ -333,8 +348,6 @@ def normalize_season(
     return normalized
 
 
-
-
 # ---------------------------------------------------------------------------
 # Any dash‑like character we want to recognise as a hyphen
 # (list is not exhaustive – add more if you encounter them)
@@ -347,11 +360,13 @@ _DASHES = {
     "\u2212",  # MINUS
 }
 
+
 def _clean_date_string(s: str) -> str:
     """
     Convert all fancy dash variants (and weird spaces) to ASCII '-' and regular spaces.
     """
     import unicodedata
+
     cleaned = []
     for ch in s:
         if ch in _DASHES:
@@ -362,9 +377,8 @@ def _clean_date_string(s: str) -> str:
             cleaned.append(ch)
     return "".join(cleaned).strip()
 
-def normalize_date(
-    target_date: Optional[Union[str, date, datetime]]
-) -> date:
+
+def normalize_date(target_date: Optional[Union[str, date, datetime]]) -> date:
     """
     Normalise an input into a `datetime.date`.
 
@@ -393,16 +407,17 @@ def normalize_date(
             f"Unable to parse target_date string after cleaning: {target_date!r}"
         ) from e
 
+
 def get_team_id_from_abbr(abbr: str) -> Optional[int]:
     """
     Convert a team abbreviation (e.g., 'LAL', 'NYK') to a team ID.
     Handles common NBA team abbreviations.
-    
+
     Returns None if the abbreviation isn't recognized.
     """
     if not abbr:
         return None
-    
+
     # Common NBA team abbreviations to ID mapping
     abbr_to_id = {
         "ATL": 1610612737,  # Atlanta Hawks
@@ -436,19 +451,19 @@ def get_team_id_from_abbr(abbr: str) -> Optional[int]:
         "UTA": 1610612762,  # Utah Jazz
         "WAS": 1610612764,  # Washington Wizards
     }
-    
+
     # Try exact match with uppercase
     upper_abbr = abbr.upper()
     if upper_abbr in abbr_to_id:
         return abbr_to_id[upper_abbr]
-    
-    return None
 
+    return None
 
 
 # ---------------------------------------------------------------------------
 # ──  SMALL HELPER (outside the class — tiny, pure)                        ──
 # ---------------------------------------------------------------------------
+
 
 def _resolve_team_ids(label: str) -> set[int]:
     """
@@ -467,17 +482,13 @@ def _resolve_team_ids(label: str) -> set[int]:
     return ids
 
 
-
 if __name__ == "__main__":
     print(normalize_stat_category("pts"))
     print(normalize_per_mode("pergame"))
     print(normalize_season("2024-25"))
     print(normalize_date("2024-12-25"))
     print(get_team_id_from_abbr("LAL"))
-    print(normalize_single_season("2023-24"))       # → "2023-24"
-    print(normalize_single_season("2023‑24"))       # → "2023-24"  (no-break hyphen)
-    print(normalize_single_season("24-25"))         # → "2024-25"
-    print(normalize_season("21-22, 22‑23,2024"))    # → ["2021-22","2022-23","2024-25"]
-
-
-
+    print(normalize_single_season("2023-24"))  # → "2023-24"
+    print(normalize_single_season("2023‑24"))  # → "2023-24"  (no-break hyphen)
+    print(normalize_single_season("24-25"))  # → "2024-25"
+    print(normalize_season("21-22, 22‑23,2024"))  # → ["2021-22","2022-23","2024-25"]

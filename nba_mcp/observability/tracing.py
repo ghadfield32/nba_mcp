@@ -27,6 +27,7 @@ try:
     from opentelemetry.sdk.resources import Resource, SERVICE_NAME
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
     from opentelemetry.trace import Status, StatusCode, Span
+
     OTEL_AVAILABLE = True
 except ImportError:
     OTEL_AVAILABLE = False
@@ -40,6 +41,7 @@ logger = logging.getLogger(__name__)
 # TRACER MANAGER
 # ============================================================================
 
+
 class TracingManager:
     """
     Centralized tracing management.
@@ -51,7 +53,7 @@ class TracingManager:
         self,
         service_name: str = "nba-mcp",
         otlp_endpoint: Optional[str] = None,
-        console_export: bool = False
+        console_export: bool = False,
     ):
         """
         Initialize tracing manager.
@@ -62,14 +64,14 @@ class TracingManager:
             console_export: Whether to export traces to console (for debugging)
         """
         if not OTEL_AVAILABLE:
-            logger.warning("OpenTelemetry not available. Install opentelemetry-api and opentelemetry-sdk.")
+            logger.warning(
+                "OpenTelemetry not available. Install opentelemetry-api and opentelemetry-sdk."
+            )
             self.tracer = None
             return
 
         # Create resource
-        resource = Resource(attributes={
-            SERVICE_NAME: service_name
-        })
+        resource = Resource(attributes={SERVICE_NAME: service_name})
 
         # Create tracer provider
         provider = TracerProvider(resource=resource)
@@ -104,7 +106,7 @@ class TracingManager:
         self,
         name: str,
         attributes: Optional[Dict[str, Any]] = None,
-        kind: Optional[Any] = None
+        kind: Optional[Any] = None,
     ):
         """
         Create a span context manager.
@@ -140,7 +142,12 @@ class TracingManager:
             span.record_exception(exception)
             span.set_status(Status(StatusCode.ERROR, str(exception)))
 
-    def add_event(self, span: Optional[Any], name: str, attributes: Optional[Dict[str, Any]] = None):
+    def add_event(
+        self,
+        span: Optional[Any],
+        name: str,
+        attributes: Optional[Dict[str, Any]] = None,
+    ):
         """
         Add an event to a span.
 
@@ -163,7 +170,7 @@ _tracing_manager: Optional[TracingManager] = None
 def initialize_tracing(
     service_name: str = "nba-mcp",
     otlp_endpoint: Optional[str] = None,
-    console_export: bool = False
+    console_export: bool = False,
 ) -> TracingManager:
     """
     Initialize global tracing manager.
@@ -180,7 +187,7 @@ def initialize_tracing(
     _tracing_manager = TracingManager(
         service_name=service_name,
         otlp_endpoint=otlp_endpoint,
-        console_export=console_export
+        console_export=console_export,
     )
     return _tracing_manager
 
@@ -199,10 +206,11 @@ def get_tracing_manager() -> Optional[TracingManager]:
 # DECORATORS
 # ============================================================================
 
+
 def trace_function(
     span_name: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
-    capture_args: bool = False
+    capture_args: bool = False,
 ):
     """
     Decorator to automatically trace a function.
@@ -217,6 +225,7 @@ def trace_function(
         async def parse_query(query: str):
             return parse(query)
     """
+
     def decorator(func: Callable) -> Callable:
         actual_span_name = span_name or func.__name__
 
@@ -230,6 +239,7 @@ def trace_function(
             if capture_args:
                 # Capture function arguments
                 import inspect
+
                 sig = inspect.signature(func)
                 bound_args = sig.bind(*args, **kwargs)
                 bound_args.apply_defaults()
@@ -255,6 +265,7 @@ def trace_function(
             span_attributes = dict(attributes or {})
             if capture_args:
                 import inspect
+
                 sig = inspect.signature(func)
                 bound_args = sig.bind(*args, **kwargs)
                 bound_args.apply_defaults()
@@ -272,6 +283,7 @@ def trace_function(
 
         # Return appropriate wrapper
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
@@ -283,6 +295,7 @@ def trace_function(
 # ============================================================================
 # NLQ PIPELINE TRACING HELPERS
 # ============================================================================
+
 
 @contextmanager
 def trace_nlq_pipeline(query: str):
@@ -333,6 +346,7 @@ def trace_nlq_stage(stage: str, attributes: Optional[Dict[str, Any]] = None):
             duration = time.time() - start_time
             try:
                 from nba_mcp.observability.metrics import get_metrics_manager
+
                 metrics = get_metrics_manager()
                 metrics.record_nlq_stage(stage, duration)
             except:
@@ -400,6 +414,7 @@ def trace_cache_operation(operation: str, key: Optional[str] = None):
 # HELPER FUNCTIONS
 # ============================================================================
 
+
 def get_current_trace_id() -> Optional[str]:
     """
     Get the current trace ID.
@@ -414,7 +429,7 @@ def get_current_trace_id() -> Optional[str]:
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
             trace_id = span.get_span_context().trace_id
-            return format(trace_id, '032x')
+            return format(trace_id, "032x")
     except:
         pass
 
@@ -435,7 +450,7 @@ def get_current_span_id() -> Optional[str]:
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
             span_id = span.get_span_context().span_id
-            return format(span_id, '016x')
+            return format(span_id, "016x")
     except:
         pass
 

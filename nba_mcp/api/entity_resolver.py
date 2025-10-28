@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ENTITY CACHE
 # ============================================================================
 
+
 # LRU cache for resolved entities (1000 most recent lookups)
 @lru_cache(maxsize=1000)
 def _cached_player_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
@@ -45,7 +46,7 @@ def _cached_player_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
 
     # Last name exact match
     for player in all_players:
-        if query_lower == player['last_name'].lower():
+        if query_lower == player["last_name"].lower():
             return player
 
     # Fuzzy match (first partial match)
@@ -64,27 +65,27 @@ def _cached_team_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
 
     # Exact full name match
     for team in all_teams:
-        if query_lower == team['full_name'].lower():
+        if query_lower == team["full_name"].lower():
             return team
 
     # Abbreviation match
     for team in all_teams:
-        if query_lower == team['abbreviation'].lower():
+        if query_lower == team["abbreviation"].lower():
             return team
 
     # City match
     for team in all_teams:
-        if query_lower == team['city'].lower():
+        if query_lower == team["city"].lower():
             return team
 
     # Nickname match
     for team in all_teams:
-        if query_lower == team['nickname'].lower():
+        if query_lower == team["nickname"].lower():
             return team
 
     # Fuzzy match on full name
     for team in all_teams:
-        if query_lower in team['full_name'].lower():
+        if query_lower in team["full_name"].lower():
             return team
 
     return None
@@ -93,6 +94,7 @@ def _cached_team_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
 # ============================================================================
 # CONFIDENCE SCORING
 # ============================================================================
+
 
 def calculate_match_confidence(query: str, candidate: str) -> float:
     """
@@ -103,7 +105,9 @@ def calculate_match_confidence(query: str, candidate: str) -> float:
     return SequenceMatcher(None, query.lower(), candidate.lower()).ratio()
 
 
-def rank_suggestions(query: str, candidates: List[Dict[str, Any]], name_key: str) -> List[Dict[str, Any]]:
+def rank_suggestions(
+    query: str, candidates: List[Dict[str, Any]], name_key: str
+) -> List[Dict[str, Any]]:
     """
     Rank entity suggestions by match confidence.
 
@@ -131,9 +135,9 @@ def rank_suggestions(query: str, candidates: List[Dict[str, Any]], name_key: str
 # ENTITY RESOLVERS
 # ============================================================================
 
+
 def resolve_player(
-    query: str,
-    min_confidence: float = 0.6
+    query: str, min_confidence: float = 0.6
 ) -> Optional[EntityReference]:
     """
     Resolve player name to EntityReference.
@@ -156,9 +160,9 @@ def resolve_player(
     # Calculate confidence: 1.0 for exact matches, fuzzy for partial
     if query_lower == full_name.lower():
         confidence = 1.0  # Exact full name match
-    elif query_lower == player['last_name'].lower():
+    elif query_lower == player["last_name"].lower():
         confidence = 0.9  # Last name match (high confidence but not perfect)
-    elif query_lower == player['first_name'].lower():
+    elif query_lower == player["first_name"].lower():
         confidence = 0.7  # First name only (lower confidence due to common first names)
     else:
         # Fuzzy match for partial queries
@@ -169,29 +173,26 @@ def resolve_player(
 
     # Build alternate names
     alternate_names = [
-        player['last_name'],
+        player["last_name"],
         f"{player['first_name'][0]}. {player['last_name']}",  # "L. James"
     ]
 
     return EntityReference(
         entity_type="player",
-        entity_id=player['id'],
+        entity_id=player["id"],
         name=full_name,
         abbreviation=None,
         confidence=confidence,
         alternate_names=alternate_names,
         metadata={
-            "is_active": player.get('is_active', True),
-            "first_name": player['first_name'],
-            "last_name": player['last_name']
-        }
+            "is_active": player.get("is_active", True),
+            "first_name": player["first_name"],
+            "last_name": player["last_name"],
+        },
     )
 
 
-def resolve_team(
-    query: str,
-    min_confidence: float = 0.6
-) -> Optional[EntityReference]:
+def resolve_team(query: str, min_confidence: float = 0.6) -> Optional[EntityReference]:
     """
     Resolve team name/abbreviation to EntityReference.
 
@@ -207,15 +208,15 @@ def resolve_team(
     if not team:
         return None
 
-    full_name = team['full_name']
+    full_name = team["full_name"]
     query_lower = query.lower()
 
     # Calculate confidence: 1.0 for exact matches, fuzzy for partial
-    if query_lower == team['abbreviation'].lower():
+    if query_lower == team["abbreviation"].lower():
         confidence = 1.0  # Exact abbreviation match
-    elif query_lower == team['city'].lower():
+    elif query_lower == team["city"].lower():
         confidence = 1.0  # Exact city match
-    elif query_lower == team['nickname'].lower():
+    elif query_lower == team["nickname"].lower():
         confidence = 1.0  # Exact nickname match
     elif query_lower == full_name.lower():
         confidence = 1.0  # Exact full name match
@@ -228,25 +229,25 @@ def resolve_team(
 
     # Build alternate names
     alternate_names = [
-        team['abbreviation'],
-        team['city'],
-        team['nickname'],
-        f"{team['city']} {team['nickname']}"
+        team["abbreviation"],
+        team["city"],
+        team["nickname"],
+        f"{team['city']} {team['nickname']}",
     ]
 
     return EntityReference(
         entity_type="team",
-        entity_id=team['id'],
+        entity_id=team["id"],
         name=full_name,
-        abbreviation=team['abbreviation'],
+        abbreviation=team["abbreviation"],
         confidence=confidence,
         alternate_names=list(set(alternate_names)),  # Remove duplicates
         metadata={
-            "city": team['city'],
-            "nickname": team['nickname'],
-            "year_founded": team.get('year_founded'),
-            "abbreviation": team['abbreviation']
-        }
+            "city": team["city"],
+            "nickname": team["nickname"],
+            "year_founded": team.get("year_founded"),
+            "abbreviation": team["abbreviation"],
+        },
     )
 
 
@@ -266,15 +267,14 @@ def suggest_players(query: str, top_n: int = 5) -> List[EntityReference]:
 
     # Filter to candidates containing query
     candidates = [
-        p for p in all_players
+        p
+        for p in all_players
         if query_lower in f"{p['first_name']} {p['last_name']}".lower()
     ]
 
     # Rank by confidence
     ranked = rank_suggestions(
-        query,
-        candidates,
-        name_key='full_name'  # Will be constructed
+        query, candidates, name_key="full_name"  # Will be constructed
     )
 
     # Convert to EntityReference
@@ -283,19 +283,21 @@ def suggest_players(query: str, top_n: int = 5) -> List[EntityReference]:
         full_name = f"{player_data['first_name']} {player_data['last_name']}"
         confidence = calculate_match_confidence(query, full_name)
 
-        suggestions.append(EntityReference(
-            entity_type="player",
-            entity_id=player_data['id'],
-            name=full_name,
-            abbreviation=None,
-            confidence=confidence,
-            alternate_names=[player_data['last_name']],
-            metadata={
-                "is_active": player_data.get('is_active', True),
-                "first_name": player_data['first_name'],
-                "last_name": player_data['last_name']
-            }
-        ))
+        suggestions.append(
+            EntityReference(
+                entity_type="player",
+                entity_id=player_data["id"],
+                name=full_name,
+                abbreviation=None,
+                confidence=confidence,
+                alternate_names=[player_data["last_name"]],
+                metadata={
+                    "is_active": player_data.get("is_active", True),
+                    "first_name": player_data["first_name"],
+                    "last_name": player_data["last_name"],
+                },
+            )
+        )
 
     return suggestions
 
@@ -316,38 +318,41 @@ def suggest_teams(query: str, top_n: int = 5) -> List[EntityReference]:
 
     # Filter to candidates
     candidates = [
-        t for t in all_teams
-        if query_lower in t['full_name'].lower()
-           or query_lower in t['city'].lower()
-           or query_lower in t['nickname'].lower()
-           or query_lower in t['abbreviation'].lower()
+        t
+        for t in all_teams
+        if query_lower in t["full_name"].lower()
+        or query_lower in t["city"].lower()
+        or query_lower in t["nickname"].lower()
+        or query_lower in t["abbreviation"].lower()
     ]
 
     # Rank by confidence
-    ranked = rank_suggestions(query, candidates, name_key='full_name')
+    ranked = rank_suggestions(query, candidates, name_key="full_name")
 
     # Convert to EntityReference
     suggestions = []
     for team_data in ranked[:top_n]:
-        confidence = calculate_match_confidence(query, team_data['full_name'])
+        confidence = calculate_match_confidence(query, team_data["full_name"])
 
-        suggestions.append(EntityReference(
-            entity_type="team",
-            entity_id=team_data['id'],
-            name=team_data['full_name'],
-            abbreviation=team_data['abbreviation'],
-            confidence=confidence,
-            alternate_names=[
-                team_data['abbreviation'],
-                team_data['city'],
-                team_data['nickname']
-            ],
-            metadata={
-                "city": team_data['city'],
-                "nickname": team_data['nickname'],
-                "abbreviation": team_data['abbreviation']
-            }
-        ))
+        suggestions.append(
+            EntityReference(
+                entity_type="team",
+                entity_id=team_data["id"],
+                name=team_data["full_name"],
+                abbreviation=team_data["abbreviation"],
+                confidence=confidence,
+                alternate_names=[
+                    team_data["abbreviation"],
+                    team_data["city"],
+                    team_data["nickname"],
+                ],
+                metadata={
+                    "city": team_data["city"],
+                    "nickname": team_data["nickname"],
+                    "abbreviation": team_data["abbreviation"],
+                },
+            )
+        )
 
     return suggestions
 
@@ -356,12 +361,13 @@ def suggest_teams(query: str, top_n: int = 5) -> List[EntityReference]:
 # UNIFIED ENTITY RESOLVER
 # ============================================================================
 
+
 def resolve_entity(
     query: str,
     entity_type: Optional[Literal["player", "team"]] = None,
     min_confidence: float = 0.6,
     return_suggestions: bool = True,
-    max_suggestions: int = 5
+    max_suggestions: int = 5,
 ) -> EntityReference:
     """
     Universal entity resolver with fuzzy matching.
@@ -405,13 +411,14 @@ def resolve_entity(
     raise EntityNotFoundError(
         entity_type=entity_type or "player/team",
         query=query,
-        suggestions=suggestion_names
+        suggestions=suggestion_names,
     )
 
 
 # ============================================================================
 # CACHE MANAGEMENT
 # ============================================================================
+
 
 def clear_entity_cache():
     """Clear LRU cache for entity lookups."""
@@ -424,5 +431,5 @@ def get_cache_info() -> Dict[str, Any]:
     """Get cache statistics."""
     return {
         "player_cache": _cached_player_lookup.cache_info()._asdict(),
-        "team_cache": _cached_team_lookup.cache_info()._asdict()
+        "team_cache": _cached_team_lookup.cache_info()._asdict(),
     }

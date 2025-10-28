@@ -13,7 +13,7 @@ from .redis_cache import (
     generate_cache_key,
     initialize_cache,
     get_cache,
-    close_cache
+    close_cache,
 )
 
 __all__ = [

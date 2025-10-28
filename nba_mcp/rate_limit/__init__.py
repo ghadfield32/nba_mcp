@@ -11,7 +11,7 @@ from .token_bucket import (
     QuotaTracker,
     rate_limited,
     initialize_rate_limiter,
-    get_rate_limiter
+    get_rate_limiter,
 )
 
 __all__ = [

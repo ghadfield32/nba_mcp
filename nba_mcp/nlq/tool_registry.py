@@ -57,15 +57,13 @@ def clear_registry():
 
 def get_registry_info() -> Dict[str, int]:
     """Get registry statistics."""
-    return {
-        "total_tools": len(_TOOL_REGISTRY),
-        "tools": list(_TOOL_REGISTRY.keys())
-    }
+    return {"total_tools": len(_TOOL_REGISTRY), "tools": list(_TOOL_REGISTRY.keys())}
 
 
 # ============================================================================
 # BATCH REGISTRATION
 # ============================================================================
+
 
 def register_all_tools(tools: Dict[str, Callable]):
     """
@@ -82,6 +80,7 @@ def register_all_tools(tools: Dict[str, Callable]):
 # ============================================================================
 # INITIALIZATION
 # ============================================================================
+
 
 def initialize_tool_registry(mcp_tools: Dict[str, Callable]):
     """

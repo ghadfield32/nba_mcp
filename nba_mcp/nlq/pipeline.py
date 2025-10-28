@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # MAIN PIPELINE
 # ============================================================================
 
+
 async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
     """
     Answer a natural language question about NBA data.
@@ -52,7 +53,9 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
     try:
         # Step 1: Parse
         parsed = await parse_query(query)
-        logger.debug(f"Parsed: intent={parsed.intent}, confidence={parsed.confidence:.2f}")
+        logger.debug(
+            f"Parsed: intent={parsed.intent}, confidence={parsed.confidence:.2f}"
+        )
 
         # Validate parse quality
         if not validate_parsed_query(parsed):
@@ -62,15 +65,21 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
 
         # Step 2: Plan
         plan = await plan_query_execution(parsed)
-        logger.debug(f"Plan: {len(plan.tool_calls)} tools, template={plan.template_used}")
+        logger.debug(
+            f"Plan: {len(plan.tool_calls)} tools, template={plan.template_used}"
+        )
 
         # Step 3: Execute
         result = await execute_plan(plan)
-        logger.debug(f"Execution: {result.total_time_ms:.1f}ms, success={result.all_success}")
+        logger.debug(
+            f"Execution: {result.total_time_ms:.1f}ms, success={result.all_success}"
+        )
 
         # Step 4: Synthesize
         response = await synthesize_response(parsed, result)
-        logger.info(f"Completed: {len(response.answer)} chars, confidence={response.confidence:.2f}")
+        logger.info(
+            f"Completed: {len(response.answer)} chars, confidence={response.confidence:.2f}"
+        )
 
         # Return answer or full response
         if return_metadata:
@@ -93,6 +102,7 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
 # BATCH PROCESSING
 # ============================================================================
 
+
 async def answer_nba_questions(queries: list[str]) -> list[str]:
     """
     Answer multiple NBA questions in parallel.
@@ -113,6 +123,7 @@ async def answer_nba_questions(queries: list[str]) -> list[str]:
 # PIPELINE STATUS
 # ============================================================================
 
+
 def get_pipeline_status() -> dict:
     """
     Get current pipeline status and statistics.
@@ -126,7 +137,12 @@ def get_pipeline_status() -> dict:
         "status": "ready",
         "tools": get_registry_info(),
         "supported_intents": [
-            "leaders", "comparison", "game_context", "season_stats",
-            "team_stats", "player_stats", "standings"
-        ]
+            "leaders",
+            "comparison",
+            "game_context",
+            "season_stats",
+            "team_stats",
+            "player_stats",
+            "standings",
+        ],
     }

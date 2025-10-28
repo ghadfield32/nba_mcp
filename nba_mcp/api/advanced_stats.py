@@ -21,12 +21,16 @@ from nba_api.stats.endpoints import (
     TeamDashboardByGeneralSplits,
     PlayerDashboardByGeneralSplits,
     LeagueDashTeamStats,
-    LeagueDashPlayerStats
+    LeagueDashPlayerStats,
 )
 
 from .models import (
-    TeamStanding, PlayerSeasonStats, PlayerComparison,
-    success_response, error_response, ResponseEnvelope
+    TeamStanding,
+    PlayerSeasonStats,
+    PlayerComparison,
+    success_response,
+    error_response,
+    ResponseEnvelope,
 )
 from .errors import NBAApiError, InvalidParameterError, retry_with_backoff
 from .tools.nba_api_utils import normalize_season, get_team_name, get_player_name
@@ -49,12 +53,10 @@ METRIC_REGISTRY = {
     "STL": {"name": "Steals Per Game", "dtype": "float64"},
     "BLK": {"name": "Blocks Per Game", "dtype": "float64"},
     "TOV": {"name": "Turnovers Per Game", "dtype": "float64"},
-
     # Shooting percentages
     "FG_PCT": {"name": "Field Goal %", "dtype": "float64"},
     "FG3_PCT": {"name": "Three-Point %", "dtype": "float64"},
     "FT_PCT": {"name": "Free Throw %", "dtype": "float64"},
-
     # Advanced metrics
     "TS_PCT": {"name": "True Shooting %", "dtype": "float64"},
     "EFG_PCT": {"name": "Effective FG %", "dtype": "float64"},
@@ -64,7 +66,6 @@ METRIC_REGISTRY = {
     "OFF_RATING": {"name": "Offensive Rating", "dtype": "float64"},
     "DEF_RATING": {"name": "Defensive Rating", "dtype": "float64"},
     "NET_RATING": {"name": "Net Rating", "dtype": "float64"},
-
     # Per-possession stats
     "PTS_PER_100": {"name": "Points Per 100 Possessions", "dtype": "float64"},
     "AST_PER_100": {"name": "Assists Per 100 Possessions", "dtype": "float64"},
@@ -76,10 +77,10 @@ METRIC_REGISTRY = {
 # TEAM STANDINGS
 # ============================================================================
 
+
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_team_standings(
-    season: Optional[str] = None,
-    conference: Optional[Literal["East", "West"]] = None
+    season: Optional[str] = None, conference: Optional[Literal["East", "West"]] = None
 ) -> List[TeamStanding]:
     """
     Get NBA team standings with conference/division rankings.
@@ -112,7 +113,7 @@ async def get_team_standings(
             LeagueStandings,
             league_id="00",
             season=season_str,
-            season_type="Regular Season"
+            season_type="Regular Season",
         )
 
         # Get standings dataframe
@@ -142,12 +143,16 @@ async def get_team_standings(
                 losses=int(row.get("LOSSES", 0)),
                 win_pct=float(row.get("WinPCT", 0.0)),
                 games_behind=float(row.get("ConferenceGamesBack", 0.0)),
-                conference_rank=int(row.get("ConferenceRecord", "0-0").split("-")[0]) if "ConferenceRecord" in row else 0,
+                conference_rank=(
+                    int(row.get("ConferenceRecord", "0-0").split("-")[0])
+                    if "ConferenceRecord" in row
+                    else 0
+                ),
                 division_rank=int(row.get("DivisionRank", 0)),
                 home_record=row.get("HOME", "0-0"),
                 away_record=row.get("ROAD", "0-0"),
                 last_10=row.get("L10", "0-0"),
-                streak=row.get("strCurrentStreak", "")
+                streak=row.get("strCurrentStreak", ""),
             )
             results.append(standing)
 
@@ -165,10 +170,10 @@ async def get_team_standings(
 # TEAM ADVANCED STATS
 # ============================================================================
 
+
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_team_advanced_stats(
-    team_name: str,
-    season: Optional[str] = None
+    team_name: str, season: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Get team advanced statistics (OffRtg, DefRtg, Pace, NetRtg, Four Factors).
@@ -206,7 +211,7 @@ async def get_team_advanced_stats(
             season=season_str,
             season_type_all_star="Regular Season",
             measure_type_detailed_defense="Advanced",
-            per_mode_detailed="PerGame"
+            per_mode_detailed="PerGame",
         )
 
         team_stats_df = dashboard.get_data_frames()[0]
@@ -225,23 +230,19 @@ async def get_team_advanced_stats(
             "team_name": str(row.get("TEAM_NAME", team_entity.name)),
             "season": season_str,
             "games_played": int(row.get("GP", 0)),
-
             # Ratings (per 100 possessions)
             "offensive_rating": float(row.get("OFF_RATING", 0.0)),
             "defensive_rating": float(row.get("DEF_RATING", 0.0)),
             "net_rating": float(row.get("NET_RATING", 0.0)),
-
             # Pace & efficiency
             "pace": float(row.get("PACE", 0.0)),
             "true_shooting_pct": float(row.get("TS_PCT", 0.0)),
             "effective_fg_pct": float(row.get("EFG_PCT", 0.0)),
-
             # Four Factors (offense)
             "efg_pct_off": float(row.get("EFG_PCT", 0.0)),
             "tov_pct_off": float(row.get("TM_TOV_PCT", 0.0)),
             "oreb_pct": float(row.get("OREB_PCT", 0.0)),
             "fta_rate": float(row.get("FTA_RATE", 0.0)),
-
             # Four Factors (defense)
             "opp_efg_pct": float(row.get("OPP_EFG_PCT", 0.0)),
             "opp_tov_pct": float(row.get("OPP_TOV_PCT", 0.0)),
@@ -260,10 +261,10 @@ async def get_team_advanced_stats(
 # PLAYER ADVANCED STATS
 # ============================================================================
 
+
 @retry_with_backoff(max_retries=3, base_delay=2.0)
 async def get_player_advanced_stats(
-    player_name: str,
-    season: Optional[str] = None
+    player_name: str, season: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Get player advanced statistics (Usage%, TS%, eFG%, PER, WS, BPM, VORP).
@@ -301,7 +302,7 @@ async def get_player_advanced_stats(
             season=season_str,
             season_type_all_star="Regular Season",
             measure_type_detailed_defense="Advanced",
-            per_mode_detailed="PerGame"
+            per_mode_detailed="PerGame",
         )
 
         player_stats_df = dashboard.get_data_frames()[0]
@@ -322,13 +323,11 @@ async def get_player_advanced_stats(
             "team_abbreviation": str(row.get("TEAM_ABBREVIATION", "")),
             "games_played": int(row.get("GP", 0)),
             "minutes_per_game": float(row.get("MIN", 0.0)),
-
             # Efficiency metrics
             "true_shooting_pct": float(row.get("TS_PCT", 0.0)),
             "effective_fg_pct": float(row.get("EFG_PCT", 0.0)),
             "usage_pct": float(row.get("USG_PCT", 0.0)),
             "pie": float(row.get("PIE", 0.0)),  # Player Impact Estimate
-
             # Advanced metrics (if available)
             "offensive_rating": float(row.get("OFF_RATING", 0.0)),
             "defensive_rating": float(row.get("DEF_RATING", 0.0)),
@@ -336,7 +335,6 @@ async def get_player_advanced_stats(
             "assist_pct": float(row.get("AST_PCT", 0.0)),
             "rebound_pct": float(row.get("REB_PCT", 0.0)),
             "turnover_pct": float(row.get("TM_TOV_PCT", 0.0)),
-
             # Basic counting stats (for context)
             "points_per_game": float(row.get("PTS", 0.0)),
             "rebounds_per_game": float(row.get("REB", 0.0)),
@@ -354,7 +352,10 @@ async def get_player_advanced_stats(
 # PLAYER COMPARISON WITH METRIC REGISTRY
 # ============================================================================
 
-def normalize_per_possession(stats: Dict[str, Any], possessions: float = 75.0) -> Dict[str, Any]:
+
+def normalize_per_possession(
+    stats: Dict[str, Any], possessions: float = 75.0
+) -> Dict[str, Any]:
     """
     Normalize counting stats to per-possession basis (default: per 75 possessions).
 
@@ -380,8 +381,14 @@ def normalize_per_possession(stats: Dict[str, Any], possessions: float = 75.0) -
     scaling_factor = possessions / possessions_per_game
 
     # Normalize counting stats
-    counting_stats = ["points_per_game", "rebounds_per_game", "assists_per_game",
-                     "steals_per_game", "blocks_per_game", "turnovers_per_game"]
+    counting_stats = [
+        "points_per_game",
+        "rebounds_per_game",
+        "assists_per_game",
+        "steals_per_game",
+        "blocks_per_game",
+        "turnovers_per_game",
+    ]
 
     for stat in counting_stats:
         if stat in normalized:
@@ -395,7 +402,7 @@ async def compare_players(
     player1_name: str,
     player2_name: str,
     season: Optional[str] = None,
-    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75"
+    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75",
 ) -> PlayerComparison:
     """
     Compare two players side-by-side with shared metric registry.
@@ -447,7 +454,7 @@ async def compare_players(
             blocks_per_game=stats1.get("blocks_per_game", 0.0),
             field_goal_pct=stats1.get("field_goal_pct", 0.0),
             three_point_pct=stats1.get("three_point_pct", 0.0),
-            free_throw_pct=stats1.get("free_throw_pct", 0.0)
+            free_throw_pct=stats1.get("free_throw_pct", 0.0),
         )
 
         player2_stats = PlayerSeasonStats(
@@ -464,18 +471,21 @@ async def compare_players(
             blocks_per_game=stats2.get("blocks_per_game", 0.0),
             field_goal_pct=stats2.get("field_goal_pct", 0.0),
             three_point_pct=stats2.get("three_point_pct", 0.0),
-            free_throw_pct=stats2.get("free_throw_pct", 0.0)
+            free_throw_pct=stats2.get("free_throw_pct", 0.0),
         )
 
         # Create metric registry subset (only metrics present in both)
-        metric_names = {k: v["name"] for k, v in METRIC_REGISTRY.items()
-                       if k in stats1 or k in stats2}
+        metric_names = {
+            k: v["name"]
+            for k, v in METRIC_REGISTRY.items()
+            if k in stats1 or k in stats2
+        }
 
         comparison = PlayerComparison(
             player1=player1_stats,
             player2=player2_stats,
             metric_registry=metric_names,
-            normalization_mode=normalization
+            normalization_mode=normalization,
         )
 
         return comparison
@@ -489,6 +499,7 @@ async def compare_players(
 # RESPONSE DETERMINISM HELPERS
 # ============================================================================
 
+
 def ensure_deterministic_response(data: Union[Dict, List]) -> Union[Dict, List]:
     """
     Ensure response has deterministic key ordering and numeric dtypes.
@@ -501,8 +512,9 @@ def ensure_deterministic_response(data: Union[Dict, List]) -> Union[Dict, List]:
     """
     if isinstance(data, dict):
         # Sort keys alphabetically
-        sorted_data = {k: ensure_deterministic_response(v)
-                      for k, v in sorted(data.items())}
+        sorted_data = {
+            k: ensure_deterministic_response(v) for k, v in sorted(data.items())
+        }
 
         # Ensure numeric types are consistent
         for key, value in sorted_data.items():

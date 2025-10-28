@@ -23,7 +23,7 @@ Example:
 import time
 import threading
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # TOKEN BUCKET
 # ============================================================================
+
 
 @dataclass
 class TokenBucket:
@@ -83,7 +84,9 @@ class TokenBucket:
                 logger.debug(f"Consumed {tokens} tokens, {self.tokens:.1f} remaining")
                 return True
             else:
-                logger.warning(f"Rate limit exceeded: {self.tokens:.1f} tokens, need {tokens}")
+                logger.warning(
+                    f"Rate limit exceeded: {self.tokens:.1f} tokens, need {tokens}"
+                )
                 return False
 
     def get_remaining(self) -> float:
@@ -123,6 +126,7 @@ class TokenBucket:
 # RATE LIMITER (manages multiple buckets)
 # ============================================================================
 
+
 class RateLimiter:
     """
     Rate limiter managing multiple token buckets for different tools.
@@ -137,12 +141,7 @@ class RateLimiter:
         self.global_quota: Optional[QuotaTracker] = None
         self.lock = threading.Lock()
 
-    def add_limit(
-        self,
-        name: str,
-        capacity: float,
-        refill_rate: float
-    ):
+    def add_limit(self, name: str, capacity: float, refill_rate: float):
         """
         Add rate limit for a tool.
 
@@ -157,13 +156,11 @@ class RateLimiter:
         """
         with self.lock:
             self.buckets[name] = TokenBucket(capacity, refill_rate)
-            logger.info(f"Added rate limit: {name} ({capacity} tokens, {refill_rate}/s)")
+            logger.info(
+                f"Added rate limit: {name} ({capacity} tokens, {refill_rate}/s)"
+            )
 
-    def set_global_quota(
-        self,
-        daily_limit: int,
-        warning_threshold: float = 0.8
-    ):
+    def set_global_quota(self, daily_limit: int, warning_threshold: float = 0.8):
         """
         Set global daily quota.
 
@@ -174,7 +171,9 @@ class RateLimiter:
         self.global_quota = QuotaTracker(daily_limit, warning_threshold)
         logger.info(f"Global daily quota set: {daily_limit} requests/day")
 
-    def check_limit(self, tool_name: str, tokens: int = 1) -> tuple[bool, Optional[float]]:
+    def check_limit(
+        self, tool_name: str, tokens: int = 1
+    ) -> tuple[bool, Optional[float]]:
         """
         Check if request is allowed.
 
@@ -225,7 +224,7 @@ class RateLimiter:
             stats[name] = {
                 "capacity": bucket.capacity,
                 "remaining": bucket.get_remaining(),
-                "refill_rate": bucket.refill_rate
+                "refill_rate": bucket.refill_rate,
             }
 
         # Global quota
@@ -250,6 +249,7 @@ class RateLimiter:
 # QUOTA TRACKER (daily limits)
 # ============================================================================
 
+
 @dataclass
 class QuotaTracker:
     """
@@ -261,7 +261,9 @@ class QuotaTracker:
     daily_limit: int
     warning_threshold: float = 0.8
     count: int = 0
-    reset_time: datetime = field(default_factory=lambda: datetime.now() + timedelta(days=1))
+    reset_time: datetime = field(
+        default_factory=lambda: datetime.now() + timedelta(days=1)
+    )
     lock: threading.Lock = field(default_factory=threading.Lock)
     warning_emitted: bool = False
 
@@ -308,7 +310,7 @@ class QuotaTracker:
                 "count": self.count,
                 "remaining": self.daily_limit - self.count,
                 "usage_pct": (self.count / self.daily_limit) * 100,
-                "reset_time": self.reset_time.isoformat()
+                "reset_time": self.reset_time.isoformat(),
             }
 
     def reset(self):
@@ -340,16 +342,28 @@ def initialize_rate_limiter() -> RateLimiter:
     # Format: (capacity, refill_rate) = (burst tokens, tokens/second)
 
     # High-cost tools (live data)
-    _rate_limiter.add_limit("get_live_scores", capacity=10, refill_rate=10/60)  # 10/min
+    _rate_limiter.add_limit(
+        "get_live_scores", capacity=10, refill_rate=10 / 60
+    )  # 10/min
 
     # Moderate-cost tools
-    _rate_limiter.add_limit("get_player_stats", capacity=60, refill_rate=60/60)  # 60/min
-    _rate_limiter.add_limit("get_team_stats", capacity=60, refill_rate=60/60)  # 60/min
-    _rate_limiter.add_limit("get_league_leaders", capacity=60, refill_rate=60/60)  # 60/min
+    _rate_limiter.add_limit(
+        "get_player_stats", capacity=60, refill_rate=60 / 60
+    )  # 60/min
+    _rate_limiter.add_limit(
+        "get_team_stats", capacity=60, refill_rate=60 / 60
+    )  # 60/min
+    _rate_limiter.add_limit(
+        "get_league_leaders", capacity=60, refill_rate=60 / 60
+    )  # 60/min
 
     # Complex tools (call multiple APIs)
-    _rate_limiter.add_limit("compare_players", capacity=30, refill_rate=30/60)  # 30/min
-    _rate_limiter.add_limit("answer_nba_question", capacity=20, refill_rate=20/60)  # 20/min
+    _rate_limiter.add_limit(
+        "compare_players", capacity=30, refill_rate=30 / 60
+    )  # 30/min
+    _rate_limiter.add_limit(
+        "answer_nba_question", capacity=20, refill_rate=20 / 60
+    )  # 20/min
 
     # Global daily quota
     _rate_limiter.set_global_quota(daily_limit=10000, warning_threshold=0.8)
@@ -384,6 +398,7 @@ def rate_limited(tool_name: str):
             # ... NBA API call
             pass
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -393,13 +408,19 @@ def rate_limited(tool_name: str):
                 allowed, retry_after = limiter.check_limit(tool_name)
 
                 if not allowed:
-                    logger.warning(f"Rate limit exceeded for {tool_name}, retry after {retry_after}s")
+                    logger.warning(
+                        f"Rate limit exceeded for {tool_name}, retry after {retry_after}s"
+                    )
                     # Raise rate limit error
                     from ..api.errors import RateLimitError
-                    raise RateLimitError(retry_after=int(retry_after) if retry_after else 60)
+
+                    raise RateLimitError(
+                        retry_after=int(retry_after) if retry_after else 60
+                    )
 
             # Call function
             return await func(*args, **kwargs)
 
         return wrapper
+
     return decorator

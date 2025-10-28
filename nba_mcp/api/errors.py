@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # ERROR CODES
 # ============================================================================
 
+
 class ErrorCode:
     """Standard error codes for NBA MCP."""
 
@@ -48,6 +49,7 @@ class ErrorCode:
 # EXCEPTION HIERARCHY
 # ============================================================================
 
+
 class NBAMCPError(Exception):
     """Base exception for all NBA MCP errors."""
 
@@ -56,7 +58,7 @@ class NBAMCPError(Exception):
         message: str,
         code: str = ErrorCode.INTERNAL_ERROR,
         retry_after: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None
+        details: Optional[Dict[str, Any]] = None,
     ):
         super().__init__(message)
         self.message = message
@@ -70,18 +72,24 @@ class NBAMCPError(Exception):
             "code": self.code,
             "message": self.message,
             "retry_after": self.retry_after,
-            "details": self.details
+            "details": self.details,
         }
 
 
 class EntityNotFoundError(NBAMCPError):
     """Raised when player/team/referee/arena cannot be resolved."""
 
-    def __init__(self, entity_type: str, query: str, suggestions: Optional[list] = None):
+    def __init__(
+        self, entity_type: str, query: str, suggestions: Optional[list] = None
+    ):
         super().__init__(
             message=f"{entity_type.capitalize()} '{query}' not found",
             code=ErrorCode.ENTITY_NOT_FOUND,
-            details={"entity_type": entity_type, "query": query, "suggestions": suggestions or []}
+            details={
+                "entity_type": entity_type,
+                "query": query,
+                "suggestions": suggestions or [],
+            },
         )
 
 
@@ -92,7 +100,11 @@ class InvalidParameterError(NBAMCPError):
         super().__init__(
             message=f"Invalid parameter '{param_name}': got {param_value}, expected {expected}",
             code=ErrorCode.INVALID_PARAMETER,
-            details={"param_name": param_name, "param_value": str(param_value), "expected": expected}
+            details={
+                "param_name": param_name,
+                "param_value": str(param_value),
+                "expected": expected,
+            },
         )
 
 
@@ -104,7 +116,7 @@ class RateLimitError(NBAMCPError):
             message=f"NBA API rate limit exceeded. Retry after {retry_after} seconds.",
             code=ErrorCode.RATE_LIMIT_EXCEEDED,
             retry_after=retry_after,
-            details={"quota_exceeded": True}
+            details={"quota_exceeded": True},
         )
 
 
@@ -118,8 +130,8 @@ class UpstreamSchemaError(NBAMCPError):
             details={
                 "endpoint": endpoint,
                 "missing_fields": missing_fields,
-                "unexpected_fields": unexpected_fields
-            }
+                "unexpected_fields": unexpected_fields,
+            },
         )
 
 
@@ -131,7 +143,7 @@ class CircuitBreakerOpenError(NBAMCPError):
             message=f"Circuit breaker open for {endpoint}. Endpoint temporarily disabled.",
             code=ErrorCode.CIRCUIT_BREAKER_OPEN,
             retry_after=retry_after,
-            details={"endpoint": endpoint}
+            details={"endpoint": endpoint},
         )
 
 
@@ -142,7 +154,7 @@ class NBAApiError(NBAMCPError):
         super().__init__(
             message=message,
             code=ErrorCode.NBA_API_ERROR,
-            details={"status_code": status_code}
+            details={"status_code": status_code},
         )
 
 
@@ -150,12 +162,13 @@ class NBAApiError(NBAMCPError):
 # RETRY LOGIC WITH EXPONENTIAL BACKOFF
 # ============================================================================
 
+
 def retry_with_backoff(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
     exponential_base: float = 2.0,
-    retry_on: tuple = (NBAApiError, asyncio.TimeoutError)
+    retry_on: tuple = (NBAApiError, asyncio.TimeoutError),
 ):
     """
     Decorator for retrying async functions with exponential backoff.
@@ -189,12 +202,12 @@ def retry_with_backoff(
                     if attempt == max_retries:
                         logger.error(
                             f"{func.__name__} failed after {max_retries} retries: {e}",
-                            exc_info=True
+                            exc_info=True,
                         )
                         raise
 
                     # Calculate delay with exponential backoff
-                    delay = min(base_delay * (exponential_base ** attempt), max_delay)
+                    delay = min(base_delay * (exponential_base**attempt), max_delay)
 
                     logger.warning(
                         f"{func.__name__} failed (attempt {attempt + 1}/{max_retries + 1}). "
@@ -205,7 +218,10 @@ def retry_with_backoff(
 
                 except Exception as e:
                     # Don't retry on non-retryable exceptions
-                    logger.error(f"{func.__name__} failed with non-retryable error: {e}", exc_info=True)
+                    logger.error(
+                        f"{func.__name__} failed with non-retryable error: {e}",
+                        exc_info=True,
+                    )
                     raise
 
             # Should never reach here, but just in case
@@ -219,6 +235,7 @@ def retry_with_backoff(
 # ============================================================================
 # CIRCUIT BREAKER
 # ============================================================================
+
 
 class CircuitBreaker:
     """
@@ -240,7 +257,7 @@ class CircuitBreaker:
         self,
         failure_threshold: int = 5,
         timeout_seconds: int = 60,
-        half_open_max_calls: int = 1
+        half_open_max_calls: int = 1,
     ):
         """
         Args:
@@ -270,11 +287,16 @@ class CircuitBreaker:
             # Check circuit state
             if self.state == "OPEN":
                 # Check if timeout elapsed
-                if self.last_failure_time and \
-                   datetime.now() - self.last_failure_time > timedelta(seconds=self.timeout_seconds):
+                if (
+                    self.last_failure_time
+                    and datetime.now() - self.last_failure_time
+                    > timedelta(seconds=self.timeout_seconds)
+                ):
                     self.state = "HALF_OPEN"
                     self.half_open_calls = 0
-                    logger.info(f"Circuit breaker for {func.__name__} entering HALF_OPEN state")
+                    logger.info(
+                        f"Circuit breaker for {func.__name__} entering HALF_OPEN state"
+                    )
                 else:
                     retry_after = self.timeout_seconds
                     if self.last_failure_time:
@@ -282,16 +304,14 @@ class CircuitBreaker:
                         retry_after = max(1, self.timeout_seconds - elapsed)
 
                     raise CircuitBreakerOpenError(
-                        endpoint=func.__name__,
-                        retry_after=retry_after
+                        endpoint=func.__name__, retry_after=retry_after
                     )
 
             # HALF_OPEN: Allow limited calls
             if self.state == "HALF_OPEN":
                 if self.half_open_calls >= self.half_open_max_calls:
                     raise CircuitBreakerOpenError(
-                        endpoint=func.__name__,
-                        retry_after=self.timeout_seconds
+                        endpoint=func.__name__, retry_after=self.timeout_seconds
                     )
                 self.half_open_calls += 1
 
@@ -303,7 +323,9 @@ class CircuitBreaker:
                 if self.state == "HALF_OPEN":
                     self.state = "CLOSED"
                     self.failure_count = 0
-                    logger.info(f"Circuit breaker for {func.__name__} closed (recovered)")
+                    logger.info(
+                        f"Circuit breaker for {func.__name__} closed (recovered)"
+                    )
                 elif self.state == "CLOSED":
                     self.failure_count = 0
 
@@ -327,7 +349,9 @@ class CircuitBreaker:
                 # If in HALF_OPEN, immediately return to OPEN
                 elif self.state == "HALF_OPEN":
                     self.state = "OPEN"
-                    logger.error(f"Circuit breaker for {func.__name__} reopened (half-open test failed)")
+                    logger.error(
+                        f"Circuit breaker for {func.__name__} reopened (half-open test failed)"
+                    )
 
                 raise
 
@@ -346,9 +370,7 @@ def get_circuit_breaker(endpoint_name: str) -> CircuitBreaker:
     """Get or create circuit breaker for endpoint."""
     if endpoint_name not in _circuit_breakers:
         _circuit_breakers[endpoint_name] = CircuitBreaker(
-            failure_threshold=5,
-            timeout_seconds=60,
-            half_open_max_calls=1
+            failure_threshold=5, timeout_seconds=60, half_open_max_calls=1
         )
     return _circuit_breakers[endpoint_name]
 
@@ -357,11 +379,12 @@ def get_circuit_breaker(endpoint_name: str) -> CircuitBreaker:
 # UPSTREAM SCHEMA VALIDATION
 # ============================================================================
 
+
 def validate_upstream_schema(
     endpoint: str,
     response_data: Dict[str, Any],
     expected_fields: set,
-    allow_extra_fields: bool = True
+    allow_extra_fields: bool = True,
 ) -> None:
     """
     Validate that upstream NBA API response matches expected schema.
@@ -387,5 +410,5 @@ def validate_upstream_schema(
         raise UpstreamSchemaError(
             endpoint=endpoint,
             missing_fields=list(missing_fields),
-            unexpected_fields=list(unexpected_fields)
+            unexpected_fields=list(unexpected_fields),
         )

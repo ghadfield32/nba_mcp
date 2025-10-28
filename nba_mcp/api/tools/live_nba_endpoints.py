@@ -8,10 +8,12 @@ from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 import json
 import pandas as pd
 from json import JSONDecodeError
+
 # --------------------------------------------------------------------------- #
 # ──   HELPERS                                                               ──
 # --------------------------------------------------------------------------- #
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -99,7 +101,7 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
         sb2 = ScoreboardV2(day_offset=0, game_date=game_date, league_id="00")
         dfs = sb2.get_data_frames()
         df_header = next(df for df in dfs if "GAME_STATUS_TEXT" in df.columns)
-        df_line   = next(df for df in dfs if "TEAM_ID"          in df.columns)
+        df_line = next(df for df in dfs if "TEAM_ID" in df.columns)
         games_list: list[dict] = []
 
         for _, row in df_header.iterrows():
@@ -107,19 +109,29 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
 
             def _line_for(team_id_col: str, abbrev_col: str) -> dict:
                 try:
-                    return df_line[df_line["TEAM_ID"] == row[team_id_col]].iloc[0].to_dict()
+                    return (
+                        df_line[df_line["TEAM_ID"] == row[team_id_col]]
+                        .iloc[0]
+                        .to_dict()
+                    )
                 except Exception:
                     abbrev = row.get(abbrev_col)
-                    return df_line[df_line["TEAM_ABBREVIATION"] == abbrev].iloc[0].to_dict()
+                    return (
+                        df_line[df_line["TEAM_ABBREVIATION"] == abbrev]
+                        .iloc[0]
+                        .to_dict()
+                    )
 
             games_list.append(
                 {
-                    "gameId":      gid,
+                    "gameId": gid,
                     "gameStatusText": row["GAME_STATUS_TEXT"],
-                    "period":         row.get("LIVE_PERIOD"),
-                    "gameClock":      row.get("LIVE_PC_TIME"),
+                    "period": row.get("LIVE_PERIOD"),
+                    "gameClock": row.get("LIVE_PC_TIME"),
                     "homeTeam": _line_for("HOME_TEAM_ID", "HOME_TEAM_ABBREVIATION"),
-                    "awayTeam": _line_for("VISITOR_TEAM_ID", "VISITOR_TEAM_ABBREVIATION"),
+                    "awayTeam": _line_for(
+                        "VISITOR_TEAM_ID", "VISITOR_TEAM_ABBREVIATION"
+                    ),
                 }
             )
         date_label = game_date
@@ -150,7 +162,6 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
     return {"date": date_label, "games": all_data}
 
 
-
 if __name__ == "__main__":
     # Example: real-time fetch
     print("\nReal-time today:\n")
@@ -159,4 +170,3 @@ if __name__ == "__main__":
     # # Example: historical fetch for testing (e.g., April 16, 2025)
     # print("\nHistorical snapshot (2025-04-16):\n")
     # print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores('2025-04-16'), indent=2))
-

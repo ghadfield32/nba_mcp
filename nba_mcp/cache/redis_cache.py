@@ -33,13 +33,14 @@ logger = logging.getLogger(__name__)
 # TTL TIERS
 # ============================================================================
 
+
 class CacheTier(Enum):
     """Cache TTL tiers based on data freshness requirements."""
 
-    LIVE = 30          # 30 seconds - live scores, in-progress games
-    DAILY = 3600       # 1 hour - today's stats, current standings
+    LIVE = 30  # 30 seconds - live scores, in-progress games
+    DAILY = 3600  # 1 hour - today's stats, current standings
     HISTORICAL = 86400  # 24 hours - past seasons, completed games
-    STATIC = 604800    # 7 days - player names, team info, entities
+    STATIC = 604800  # 7 days - player names, team info, entities
 
     def __str__(self):
         return self.name.lower()
@@ -49,10 +50,9 @@ class CacheTier(Enum):
 # CACHE KEY GENERATION
 # ============================================================================
 
+
 def generate_cache_key(
-    tool_name: str,
-    params: Dict[str, Any],
-    version: str = "v1"
+    tool_name: str, params: Dict[str, Any], version: str = "v1"
 ) -> str:
     """
     Generate deterministic cache key from tool name and parameters.
@@ -80,6 +80,7 @@ def generate_cache_key(
 # REDIS CACHE CLIENT
 # ============================================================================
 
+
 class RedisCache:
     """
     Redis cache client with TTL tiers and connection pooling.
@@ -90,7 +91,7 @@ class RedisCache:
         url: str = "redis://localhost:6379/0",
         password: Optional[str] = None,
         max_connections: int = 10,
-        decode_responses: bool = True
+        decode_responses: bool = True,
     ):
         """
         Initialize Redis cache client.
@@ -109,20 +110,14 @@ class RedisCache:
             url,
             password=password,
             max_connections=max_connections,
-            decode_responses=decode_responses
+            decode_responses=decode_responses,
         )
 
         # Create Redis client
         self.client = redis.Redis(connection_pool=self.pool)
 
         # Statistics
-        self.stats = {
-            "hits": 0,
-            "misses": 0,
-            "sets": 0,
-            "deletes": 0,
-            "errors": 0
-        }
+        self.stats = {"hits": 0, "misses": 0, "sets": 0, "deletes": 0, "errors": 0}
 
         logger.info(f"Redis cache initialized: {url}")
 
@@ -154,11 +149,7 @@ class RedisCache:
             return None
 
     def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: int,
-        tier: Optional[CacheTier] = None
+        self, key: str, value: Any, ttl: int, tier: Optional[CacheTier] = None
     ) -> bool:
         """
         Set value in cache with TTL.
@@ -225,7 +216,7 @@ class RedisCache:
             **self.stats,
             "total_requests": total_requests,
             "hit_ratio": hit_ratio,
-            "miss_ratio": 1.0 - hit_ratio
+            "miss_ratio": 1.0 - hit_ratio,
         }
 
     def ping(self) -> bool:
@@ -250,11 +241,8 @@ class RedisCache:
 # CACHE DECORATOR
 # ============================================================================
 
-def cached(
-    tier: CacheTier,
-    key_fn: Optional[Callable] = None,
-    version: str = "v1"
-):
+
+def cached(tier: CacheTier, key_fn: Optional[Callable] = None, version: str = "v1"):
     """
     Decorator to cache function results with specified TTL tier.
 
@@ -269,6 +257,7 @@ def cached(
             # ... expensive NBA API call
             return stats
     """
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -305,6 +294,7 @@ def cached(
             return result
 
         return wrapper
+
     return decorator
 
 
@@ -316,9 +306,7 @@ _cache_instance: Optional[RedisCache] = None
 
 
 def initialize_cache(
-    url: str = "redis://localhost:6379/0",
-    password: Optional[str] = None,
-    **kwargs
+    url: str = "redis://localhost:6379/0", password: Optional[str] = None, **kwargs
 ) -> RedisCache:
     """
     Initialize global cache instance.
@@ -353,12 +341,13 @@ def close_cache():
 # CACHE MIDDLEWARE
 # ============================================================================
 
+
 async def with_cache(
     tool_name: str,
     params: Dict[str, Any],
     tier: CacheTier,
     func: Callable,
-    version: str = "v1"
+    version: str = "v1",
 ) -> Any:
     """
     Execute function with caching.

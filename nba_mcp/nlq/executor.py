@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 # EXECUTION RESULT
 # ============================================================================
 
+
 @dataclass
 class ToolResult:
     """Result from executing a single tool."""
@@ -39,7 +40,7 @@ class ToolResult:
             "success": self.success,
             "data": self.data,
             "error": self.error,
-            "execution_time_ms": self.execution_time_ms
+            "execution_time_ms": self.execution_time_ms,
         }
 
 
@@ -57,7 +58,7 @@ class ExecutionResult:
             "plan": self.plan.to_dict(),
             "tool_results": {k: v.to_dict() for k, v in self.tool_results.items()},
             "total_time_ms": self.total_time_ms,
-            "all_success": self.all_success
+            "all_success": self.all_success,
         }
 
 
@@ -71,6 +72,7 @@ from .tool_registry import get_tool, list_tools
 # ============================================================================
 # TOOL EXECUTION
 # ============================================================================
+
 
 async def execute_tool(tool_call: ToolCall) -> ToolResult:
     """
@@ -98,7 +100,7 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
                 tool_name=tool_name,
                 success=False,
                 error=error_msg,
-                execution_time_ms=0.0
+                execution_time_ms=0.0,
             )
 
         # Execute tool
@@ -112,7 +114,7 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             tool_name=tool_name,
             success=True,
             data=result,
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
     except NBAMCPError as e:
@@ -125,7 +127,7 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             tool_name=tool_name,
             success=False,
             error=error_msg,
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
     except Exception as e:
@@ -138,13 +140,14 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             tool_name=tool_name,
             success=False,
             error=error_msg,
-            execution_time_ms=execution_time_ms
+            execution_time_ms=execution_time_ms,
         )
 
 
 # ============================================================================
 # PARALLEL EXECUTION
 # ============================================================================
+
 
 async def execute_parallel_group(tool_calls: List[ToolCall]) -> List[ToolResult]:
     """
@@ -167,12 +170,14 @@ async def execute_parallel_group(tool_calls: List[ToolCall]) -> List[ToolResult]
     for i, result in enumerate(results):
         if isinstance(result, Exception):
             logger.error(f"Tool {tool_calls[i].tool_name} raised exception: {result}")
-            processed_results.append(ToolResult(
-                tool_name=tool_calls[i].tool_name,
-                success=False,
-                error=f"Execution exception: {str(result)}",
-                execution_time_ms=0.0
-            ))
+            processed_results.append(
+                ToolResult(
+                    tool_name=tool_calls[i].tool_name,
+                    success=False,
+                    error=f"Execution exception: {str(result)}",
+                    execution_time_ms=0.0,
+                )
+            )
         else:
             processed_results.append(result)
 
@@ -182,6 +187,7 @@ async def execute_parallel_group(tool_calls: List[ToolCall]) -> List[ToolResult]
 # ============================================================================
 # EXECUTION ORCHESTRATION
 # ============================================================================
+
 
 async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
     """
@@ -200,7 +206,9 @@ async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
         ExecutionResult with all tool results
     """
     start_time = time.time()
-    logger.info(f"Executing plan with {len(plan.tool_calls)} tool calls (parallelizable: {plan.can_parallelize})")
+    logger.info(
+        f"Executing plan with {len(plan.tool_calls)} tool calls (parallelizable: {plan.can_parallelize})"
+    )
 
     # Group tool calls by parallel_group
     groups: Dict[int, List[ToolCall]] = {}
@@ -215,7 +223,9 @@ async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
     tool_call_index = 0
     for group_id in sorted(groups.keys()):
         group_tools = groups[group_id]
-        logger.info(f"Executing parallel group {group_id} with {len(group_tools)} tools")
+        logger.info(
+            f"Executing parallel group {group_id} with {len(group_tools)} tools"
+        )
 
         # Execute group in parallel
         group_results = await execute_parallel_group(group_tools)
@@ -239,19 +249,22 @@ async def execute_plan(plan: ExecutionPlan) -> ExecutionResult:
     # Check if all succeeded
     all_success = all(r.success for r in all_results.values())
 
-    logger.info(f"Plan execution complete: {len(all_results)} results, all_success={all_success}, time={total_time_ms:.1f}ms")
+    logger.info(
+        f"Plan execution complete: {len(all_results)} results, all_success={all_success}, time={total_time_ms:.1f}ms"
+    )
 
     return ExecutionResult(
         plan=plan,
         tool_results=all_results,
         total_time_ms=total_time_ms,
-        all_success=all_success
+        all_success=all_success,
     )
 
 
 # ============================================================================
 # ERROR HANDLING & PARTIAL RESULTS
 # ============================================================================
+
 
 def extract_successful_results(execution_result: ExecutionResult) -> Dict[str, Any]:
     """
@@ -285,7 +298,6 @@ def get_failure_summary(execution_result: ExecutionResult) -> List[str]:
         if not result.success:
             failures.append(f"{name}: {result.error}")
     return failures
-
 
 
 # ============================================================================

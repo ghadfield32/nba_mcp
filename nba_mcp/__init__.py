@@ -7,7 +7,7 @@ __all__ = [
     "get_live_scoreboard",
     "get_player_career_stats",
     "get_league_leaders",
-    "get_league_game_log"
+    "get_league_game_log",
 ]
 
 __version__ = "0.1.0"

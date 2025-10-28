@@ -15,9 +15,14 @@ import time
 import functools
 from typing import Optional, Callable, Any, Dict
 from prometheus_client import (
-    Counter, Histogram, Gauge, Info,
-    generate_latest, CONTENT_TYPE_LATEST,
-    CollectorRegistry, REGISTRY
+    Counter,
+    Histogram,
+    Gauge,
+    Info,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    REGISTRY,
 )
 import logging
 
@@ -30,98 +35,83 @@ logger = logging.getLogger(__name__)
 
 # Request metrics
 REQUEST_COUNT = Counter(
-    'nba_mcp_requests_total',
-    'Total number of requests by tool',
-    ['tool_name', 'status']  # status: success, error, rate_limited
+    "nba_mcp_requests_total",
+    "Total number of requests by tool",
+    ["tool_name", "status"],  # status: success, error, rate_limited
 )
 
 REQUEST_DURATION = Histogram(
-    'nba_mcp_request_duration_seconds',
-    'Request duration in seconds',
-    ['tool_name'],
-    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+    "nba_mcp_request_duration_seconds",
+    "Request duration in seconds",
+    ["tool_name"],
+    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
 )
 
 # Error metrics
 ERROR_COUNT = Counter(
-    'nba_mcp_errors_total',
-    'Total number of errors by type',
-    ['tool_name', 'error_type']
+    "nba_mcp_errors_total",
+    "Total number of errors by type",
+    ["tool_name", "error_type"],
 )
 
 # Cache metrics
 CACHE_OPERATIONS = Counter(
-    'nba_mcp_cache_operations_total',
-    'Total cache operations',
-    ['operation', 'result']  # operation: get, set; result: hit, miss, error
+    "nba_mcp_cache_operations_total",
+    "Total cache operations",
+    ["operation", "result"],  # operation: get, set; result: hit, miss, error
 )
 
-CACHE_HIT_RATE = Gauge(
-    'nba_mcp_cache_hit_rate',
-    'Current cache hit rate (0-1)'
-)
+CACHE_HIT_RATE = Gauge("nba_mcp_cache_hit_rate", "Current cache hit rate (0-1)")
 
-CACHE_SIZE = Gauge(
-    'nba_mcp_cache_size_items',
-    'Number of items in cache'
-)
+CACHE_SIZE = Gauge("nba_mcp_cache_size_items", "Number of items in cache")
 
 # Rate limiting metrics
 RATE_LIMIT_EVENTS = Counter(
-    'nba_mcp_rate_limit_events_total',
-    'Rate limit events',
-    ['tool_name', 'event_type']  # event_type: allowed, blocked
+    "nba_mcp_rate_limit_events_total",
+    "Rate limit events",
+    ["tool_name", "event_type"],  # event_type: allowed, blocked
 )
 
 QUOTA_USAGE = Gauge(
-    'nba_mcp_quota_usage',
-    'Current quota usage (0-1)',
-    ['quota_type']  # quota_type: daily, hourly
+    "nba_mcp_quota_usage",
+    "Current quota usage (0-1)",
+    ["quota_type"],  # quota_type: daily, hourly
 )
 
-QUOTA_REMAINING = Gauge(
-    'nba_mcp_quota_remaining',
-    'Remaining quota',
-    ['quota_type']
-)
+QUOTA_REMAINING = Gauge("nba_mcp_quota_remaining", "Remaining quota", ["quota_type"])
 
 # Token bucket metrics
 TOKEN_BUCKET_TOKENS = Gauge(
-    'nba_mcp_token_bucket_tokens',
-    'Available tokens in bucket',
-    ['tool_name']
+    "nba_mcp_token_bucket_tokens", "Available tokens in bucket", ["tool_name"]
 )
 
 # NLQ Pipeline metrics
 NLQ_PIPELINE_STAGE_DURATION = Histogram(
-    'nba_mcp_nlq_stage_duration_seconds',
-    'NLQ pipeline stage duration',
-    ['stage'],  # stage: parse, plan, execute, synthesize
-    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0)
+    "nba_mcp_nlq_stage_duration_seconds",
+    "NLQ pipeline stage duration",
+    ["stage"],  # stage: parse, plan, execute, synthesize
+    buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0),
 )
 
 NLQ_PIPELINE_TOOL_CALLS = Counter(
-    'nba_mcp_nlq_tool_calls_total',
-    'Number of tool calls per NLQ query',
-    ['query_intent']  # intent: leaders, comparison, stats, etc.
+    "nba_mcp_nlq_tool_calls_total",
+    "Number of tool calls per NLQ query",
+    ["query_intent"],  # intent: leaders, comparison, stats, etc.
 )
 
 # System info
-SERVER_INFO = Info(
-    'nba_mcp_server',
-    'NBA MCP server information'
-)
+SERVER_INFO = Info("nba_mcp_server", "NBA MCP server information")
 
 # Uptime
 SERVER_START_TIME = Gauge(
-    'nba_mcp_server_start_time_seconds',
-    'Server start time in unix timestamp'
+    "nba_mcp_server_start_time_seconds", "Server start time in unix timestamp"
 )
 
 
 # ============================================================================
 # METRICS MANAGER
 # ============================================================================
+
 
 class MetricsManager:
     """
@@ -146,7 +136,7 @@ class MetricsManager:
         tool_name: str,
         duration: float,
         status: str = "success",
-        error_type: Optional[str] = None
+        error_type: Optional[str] = None,
     ):
         """
         Record a request with duration and status.
@@ -263,10 +253,7 @@ class MetricsManager:
             version: Server version
             environment: Deployment environment
         """
-        SERVER_INFO.info({
-            'version': version,
-            'environment': environment
-        })
+        SERVER_INFO.info({"version": version, "environment": environment})
 
     # ────────────────────────────────────────────────────────────────────
     # Export
@@ -329,6 +316,7 @@ def get_metrics_manager() -> MetricsManager:
 # DECORATORS
 # ============================================================================
 
+
 def track_metrics(tool_name: Optional[str] = None):
     """
     Decorator to automatically track metrics for a function.
@@ -343,6 +331,7 @@ def track_metrics(tool_name: Optional[str] = None):
         async def get_player_stats(player: str):
             return await fetch_stats(player)
     """
+
     def decorator(func: Callable) -> Callable:
         actual_tool_name = tool_name or func.__name__
 
@@ -367,7 +356,7 @@ def track_metrics(tool_name: Optional[str] = None):
                         tool_name=actual_tool_name,
                         duration=duration,
                         status=status,
-                        error_type=error_type
+                        error_type=error_type,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to record metrics: {e}")
@@ -393,13 +382,14 @@ def track_metrics(tool_name: Optional[str] = None):
                         tool_name=actual_tool_name,
                         duration=duration,
                         status=status,
-                        error_type=error_type
+                        error_type=error_type,
                     )
                 except Exception as e:
                     logger.warning(f"Failed to record metrics: {e}")
 
         # Return appropriate wrapper based on function type
         import asyncio
+
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
@@ -411,6 +401,7 @@ def track_metrics(tool_name: Optional[str] = None):
 # ============================================================================
 # PERIODIC METRICS UPDATE
 # ============================================================================
+
 
 def update_infrastructure_metrics():
     """
@@ -425,6 +416,7 @@ def update_infrastructure_metrics():
         # Update cache metrics
         try:
             from nba_mcp.cache.redis_cache import get_cache
+
             cache = get_cache()
             cache_stats = cache.get_stats()
             metrics.update_cache_stats(cache_stats)
@@ -434,6 +426,7 @@ def update_infrastructure_metrics():
         # Update rate limiter metrics
         try:
             from nba_mcp.rate_limit.token_bucket import get_rate_limiter
+
             limiter = get_rate_limiter()
 
             # Update quota
@@ -441,15 +434,14 @@ def update_infrastructure_metrics():
             metrics.update_quota_usage(
                 used=quota_status["used"],
                 limit=quota_status["limit"],
-                quota_type="daily"
+                quota_type="daily",
             )
 
             # Update token buckets
             for tool_name in limiter.buckets.keys():
                 status = limiter.get_status(tool_name)
                 metrics.update_token_bucket(
-                    tool_name=tool_name,
-                    tokens=status["tokens_available"]
+                    tool_name=tool_name, tokens=status["tokens_available"]
                 )
         except Exception as e:
             logger.debug(f"Could not update rate limiter metrics: {e}")
@@ -462,6 +454,7 @@ def update_infrastructure_metrics():
 # HELPER FUNCTIONS
 # ============================================================================
 
+
 def get_metrics_snapshot() -> Dict[str, Any]:
     """
     Get a snapshot of current metrics for debugging.
@@ -470,11 +463,14 @@ def get_metrics_snapshot() -> Dict[str, Any]:
         Dictionary with current metric values
     """
     snapshot = {
-        "server_uptime_seconds": time.time() - _metrics_manager.start_time if _metrics_manager else 0,
+        "server_uptime_seconds": (
+            time.time() - _metrics_manager.start_time if _metrics_manager else 0
+        ),
     }
 
     try:
         from nba_mcp.cache.redis_cache import get_cache
+
         cache = get_cache()
         snapshot["cache"] = cache.get_stats()
     except:
@@ -482,6 +478,7 @@ def get_metrics_snapshot() -> Dict[str, Any]:
 
     try:
         from nba_mcp.rate_limit.token_bucket import get_rate_limiter
+
         limiter = get_rate_limiter()
         snapshot["quota"] = limiter.get_quota_status()
     except:

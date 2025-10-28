@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # SYNTHESIS RESULT
 # ============================================================================
 
+
 @dataclass
 class SynthesizedResponse:
     """Final synthesized response."""
@@ -43,7 +44,7 @@ class SynthesizedResponse:
             "answer": self.answer,
             "confidence": self.confidence,
             "sources": self.sources,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     def to_markdown(self) -> str:
@@ -61,10 +62,9 @@ class SynthesizedResponse:
 # TABLE FORMATTING
 # ============================================================================
 
+
 def format_comparison_table(
-    player1_data: Dict[str, Any],
-    player2_data: Dict[str, Any],
-    metrics: List[str]
+    player1_data: Dict[str, Any], player2_data: Dict[str, Any], metrics: List[str]
 ) -> str:
     """
     Format player comparison as table.
@@ -77,8 +77,12 @@ def format_comparison_table(
     Returns:
         Formatted table as string
     """
-    headers = ["Metric", player1_data.get("player_name", "Player 1"),
-               player2_data.get("player_name", "Player 2"), "Advantage"]
+    headers = [
+        "Metric",
+        player1_data.get("player_name", "Player 1"),
+        player2_data.get("player_name", "Player 2"),
+        "Advantage",
+    ]
 
     rows = []
     for metric in metrics:
@@ -106,7 +110,9 @@ def format_comparison_table(
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
 
-def format_standings_table(standings_data: List[Dict[str, Any]], top_n: int = 10) -> str:
+def format_standings_table(
+    standings_data: List[Dict[str, Any]], top_n: int = 10
+) -> str:
     """
     Format standings as table.
 
@@ -121,14 +127,16 @@ def format_standings_table(standings_data: List[Dict[str, Any]], top_n: int = 10
 
     rows = []
     for i, team in enumerate(standings_data[:top_n], 1):
-        rows.append([
-            i,
-            team.get("team_name", "Unknown"),
-            f"{team.get('wins', 0)}-{team.get('losses', 0)}",
-            f"{team.get('win_pct', 0.0):.3f}",
-            team.get('games_behind', 0.0),
-            team.get('streak', '')
-        ])
+        rows.append(
+            [
+                i,
+                team.get("team_name", "Unknown"),
+                f"{team.get('wins', 0)}-{team.get('losses', 0)}",
+                f"{team.get('win_pct', 0.0):.3f}",
+                team.get("games_behind", 0.0),
+                team.get("streak", ""),
+            ]
+        )
 
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
@@ -148,11 +156,9 @@ def format_leaders_table(leaders_data: List[Dict[str, Any]], stat_name: str) -> 
 
     rows = []
     for i, entry in enumerate(leaders_data, 1):
-        rows.append([
-            i,
-            entry.get("player", "Unknown"),
-            f"{entry.get('value', 0.0):.1f}"
-        ])
+        rows.append(
+            [i, entry.get("player", "Unknown"), f"{entry.get('value', 0.0):.1f}"]
+        )
 
     return tabulate(rows, headers=headers, tablefmt="pipe")
 
@@ -161,13 +167,14 @@ def format_leaders_table(leaders_data: List[Dict[str, Any]], stat_name: str) -> 
 # NARRATIVE FORMATTING
 # ============================================================================
 
+
 def format_team_comparison_narrative(
     team1_name: str,
     team2_name: str,
     team1_standing: Optional[Dict[str, Any]],
     team2_standing: Optional[Dict[str, Any]],
     team1_stats: Optional[Dict[str, Any]],
-    team2_stats: Optional[Dict[str, Any]]
+    team2_stats: Optional[Dict[str, Any]],
 ) -> str:
     """
     Format team comparison as narrative.
@@ -192,35 +199,49 @@ def format_team_comparison_narrative(
     # Standings
     if team1_standing and team2_standing:
         lines.append("### Records")
-        lines.append(f"- **{team1_name}**: {team1_standing.get('wins', 0)}-{team1_standing.get('losses', 0)} "
-                    f"({team1_standing.get('conference', 'N/A')} #{team1_standing.get('conference_rank', 'N/A')})")
-        lines.append(f"- **{team2_name}**: {team2_standing.get('wins', 0)}-{team2_standing.get('losses', 0)} "
-                    f"({team2_standing.get('conference', 'N/A')} #{team2_standing.get('conference_rank', 'N/A')})")
+        lines.append(
+            f"- **{team1_name}**: {team1_standing.get('wins', 0)}-{team1_standing.get('losses', 0)} "
+            f"({team1_standing.get('conference', 'N/A')} #{team1_standing.get('conference_rank', 'N/A')})"
+        )
+        lines.append(
+            f"- **{team2_name}**: {team2_standing.get('wins', 0)}-{team2_standing.get('losses', 0)} "
+            f"({team2_standing.get('conference', 'N/A')} #{team2_standing.get('conference_rank', 'N/A')})"
+        )
         lines.append("")
 
         # Recent form
         lines.append("### Recent Form")
-        lines.append(f"- **{team1_name}**: Last 10: {team1_standing.get('last_10', 'N/A')}, "
-                    f"Streak: {team1_standing.get('streak', 'N/A')}")
-        lines.append(f"- **{team2_name}**: Last 10: {team2_standing.get('last_10', 'N/A')}, "
-                    f"Streak: {team2_standing.get('streak', 'N/A')}")
+        lines.append(
+            f"- **{team1_name}**: Last 10: {team1_standing.get('last_10', 'N/A')}, "
+            f"Streak: {team1_standing.get('streak', 'N/A')}"
+        )
+        lines.append(
+            f"- **{team2_name}**: Last 10: {team2_standing.get('last_10', 'N/A')}, "
+            f"Streak: {team2_standing.get('streak', 'N/A')}"
+        )
         lines.append("")
 
     # Advanced stats
     if team1_stats and team2_stats:
         lines.append("### Advanced Stats")
 
-        off1 = team1_stats.get('offensive_rating', 0.0)
-        off2 = team2_stats.get('offensive_rating', 0.0)
-        def1 = team1_stats.get('defensive_rating', 0.0)
-        def2 = team2_stats.get('defensive_rating', 0.0)
+        off1 = team1_stats.get("offensive_rating", 0.0)
+        off2 = team2_stats.get("offensive_rating", 0.0)
+        def1 = team1_stats.get("defensive_rating", 0.0)
+        def2 = team2_stats.get("defensive_rating", 0.0)
 
-        lines.append(f"- **Offense**: {team1_name} ({off1:.1f} ORtg) vs {team2_name} ({off2:.1f} ORtg) "
-                    f"→ Advantage: {team1_name if off1 > off2 else team2_name}")
-        lines.append(f"- **Defense**: {team1_name} ({def1:.1f} DRtg) vs {team2_name} ({def2:.1f} DRtg) "
-                    f"→ Advantage: {team1_name if def1 < def2 else team2_name}")  # Lower is better for defense
-        lines.append(f"- **Pace**: {team1_name} ({team1_stats.get('pace', 0.0):.1f}) vs "
-                    f"{team2_name} ({team2_stats.get('pace', 0.0):.1f})")
+        lines.append(
+            f"- **Offense**: {team1_name} ({off1:.1f} ORtg) vs {team2_name} ({off2:.1f} ORtg) "
+            f"→ Advantage: {team1_name if off1 > off2 else team2_name}"
+        )
+        lines.append(
+            f"- **Defense**: {team1_name} ({def1:.1f} DRtg) vs {team2_name} ({def2:.1f} DRtg) "
+            f"→ Advantage: {team1_name if def1 < def2 else team2_name}"
+        )  # Lower is better for defense
+        lines.append(
+            f"- **Pace**: {team1_name} ({team1_stats.get('pace', 0.0):.1f}) vs "
+            f"{team2_name} ({team2_stats.get('pace', 0.0):.1f})"
+        )
         lines.append("")
 
     return "\n".join(lines)
@@ -230,9 +251,9 @@ def format_team_comparison_narrative(
 # INTENT-SPECIFIC SYNTHESIS
 # ============================================================================
 
+
 def synthesize_leaders_query(
-    parsed: ParsedQuery,
-    execution_result: ExecutionResult
+    parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> str:
     """Synthesize response for leaders query."""
     # Extract leaders data
@@ -256,8 +277,7 @@ def synthesize_leaders_query(
 
 
 def synthesize_comparison_query(
-    parsed: ParsedQuery,
-    execution_result: ExecutionResult
+    parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> str:
     """Synthesize response for comparison query."""
     # Check if player or team comparison
@@ -275,8 +295,13 @@ def synthesize_comparison_query(
         p2_data = data.get("player2", {})
 
         # Extract key metrics to compare
-        metrics = ["points_per_game", "rebounds_per_game", "assists_per_game",
-                  "true_shooting_pct", "usage_pct"]
+        metrics = [
+            "points_per_game",
+            "rebounds_per_game",
+            "assists_per_game",
+            "true_shooting_pct",
+            "usage_pct",
+        ]
 
         table = format_comparison_table(p1_data, p2_data, metrics)
 
@@ -284,17 +309,37 @@ def synthesize_comparison_query(
 
     else:
         # Team comparison
-        team1_name = parsed.entities[0]["name"] if len(parsed.entities) > 0 else "Team 1"
-        team2_name = parsed.entities[1]["name"] if len(parsed.entities) > 1 else "Team 2"
+        team1_name = (
+            parsed.entities[0]["name"] if len(parsed.entities) > 0 else "Team 1"
+        )
+        team2_name = (
+            parsed.entities[1]["name"] if len(parsed.entities) > 1 else "Team 2"
+        )
 
         standings_result = execution_result.tool_results.get("get_team_standings")
-        team1_stats_result = execution_result.tool_results.get("get_team_advanced_stats")
-        team2_stats_result = execution_result.tool_results.get("get_team_advanced_stats_2")
+        team1_stats_result = execution_result.tool_results.get(
+            "get_team_advanced_stats"
+        )
+        team2_stats_result = execution_result.tool_results.get(
+            "get_team_advanced_stats_2"
+        )
 
         # Extract data
-        standings_data = standings_result.data if standings_result and standings_result.success else []
-        team1_stats = team1_stats_result.data if team1_stats_result and team1_stats_result.success else None
-        team2_stats = team2_stats_result.data if team2_stats_result and team2_stats_result.success else None
+        standings_data = (
+            standings_result.data
+            if standings_result and standings_result.success
+            else []
+        )
+        team1_stats = (
+            team1_stats_result.data
+            if team1_stats_result and team1_stats_result.success
+            else None
+        )
+        team2_stats = (
+            team2_stats_result.data
+            if team2_stats_result and team2_stats_result.success
+            else None
+        )
 
         # Find standings for each team
         team1_standing = None
@@ -307,17 +352,19 @@ def synthesize_comparison_query(
                     team2_standing = standing
 
         narrative = format_team_comparison_narrative(
-            team1_name, team2_name,
-            team1_standing, team2_standing,
-            team1_stats, team2_stats
+            team1_name,
+            team2_name,
+            team1_standing,
+            team2_standing,
+            team1_stats,
+            team2_stats,
         )
 
         return narrative
 
 
 def synthesize_standings_query(
-    parsed: ParsedQuery,
-    execution_result: ExecutionResult
+    parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> str:
     """Synthesize response for standings query."""
     standings_result = execution_result.tool_results.get("get_team_standings")
@@ -337,8 +384,7 @@ def synthesize_standings_query(
 
 
 def synthesize_player_stats_query(
-    parsed: ParsedQuery,
-    execution_result: ExecutionResult
+    parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> str:
     """Synthesize response for player stats query."""
     stats_result = execution_result.tool_results.get("get_player_advanced_stats")
@@ -367,7 +413,7 @@ def synthesize_player_stats_query(
         "",
         "**Impact**:",
         f"- PIE: {data.get('pie', 0.0):.3f}",
-        f"- Net Rating: {data.get('net_rating', 0.0):.1f}"
+        f"- Net Rating: {data.get('net_rating', 0.0):.1f}",
     ]
 
     return "\n".join(lines)
@@ -377,9 +423,9 @@ def synthesize_player_stats_query(
 # MAIN SYNTHESIS FUNCTION
 # ============================================================================
 
+
 async def synthesize_response(
-    parsed: ParsedQuery,
-    execution_result: ExecutionResult
+    parsed: ParsedQuery, execution_result: ExecutionResult
 ) -> SynthesizedResponse:
     """
     Main synthesis function: format tool results into natural language.
@@ -409,14 +455,16 @@ async def synthesize_response(
 
     # Add disclaimer if not all tools succeeded
     if not execution_result.all_success:
-        answer += "\n\n*Note: Some data could not be retrieved. Results may be incomplete.*"
+        answer += (
+            "\n\n*Note: Some data could not be retrieved. Results may be incomplete.*"
+        )
 
     # Build metadata
     metadata = {
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "execution_time_ms": execution_result.total_time_ms,
         "tools_executed": len(execution_result.tool_results),
-        "all_success": execution_result.all_success
+        "all_success": execution_result.all_success,
     }
 
     # Build sources list
@@ -433,7 +481,7 @@ async def synthesize_response(
         answer=answer,
         confidence=confidence,
         sources=sources,
-        metadata=metadata
+        metadata=metadata,
     )
 
     logger.info(f"Synthesis complete: {len(answer)} chars, confidence={confidence:.2f}")
