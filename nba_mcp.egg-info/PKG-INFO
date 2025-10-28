@@ -23,6 +23,7 @@ Requires-Dist: tenacity>=8.2.0
 Requires-Dist: redis>=5.0.0
 Requires-Dist: prometheus-client>=0.19.0
 Requires-Dist: opentelemetry-api>=1.22.0
+Requires-Dist: tabulate>=0.9.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
@@ -34,158 +35,266 @@ Dynamic: requires-python
 
 # NBA MCP Server
 
-## Overview
-NBA MCP (Message Control Protocol) server provides NBA data services via a network-accessible API. Built on top of the official [NBA API](https://github.com/swar/nba_api) and [FastMCP](https://github.com/fastmcp/fastmcp) framework, this server offers real-time and historical NBA data through a simple interface.
-
-# Example Real Time Data Pull
-   ## It pulls in:
-      * live scores ahead of the broadcast
-      * live play by play ahead of nba.com
-      * assist leaders back to 1996 to compare to todays 
-
-https://github.com/user-attachments/assets/297eca7e-398b-4061-9fbb-7611a02b453c
-
-
-## Getting Started
-
-### Installation
-
-1. Create and activate a virtual environment using UV:
-```bash
-# Install UV if you haven't already
-pip install uv
-
-# Create virtual environment
-uv venv nbavenv
-
-# Activate the environment
-# On Windows:
-.\nbavenv\Scripts\activate
-# On Unix/MacOS:
-source nbavenv/bin/activate
-```
-
-2. Install the project:
-```bash
-# Clone the repository
-git clone <repository-url>
-cd nba_mcp
-
-# Install dependencies using UV
-uv pip install -r requirements.txt
-
-# For development installation (includes testing tools)
-uv pip install -e ".[dev]"
-```
-
-### Running the Server
-# python nba_server.py --mode local       # runs on 8001
-# python nba_server.py --mode claude      # runs on 8000
-
-The simplest way to run the server on Claude Desktop:
-```bash
-python -m nba_mcp.nba_server --mode claude      # runs on 8000
-```
-
-Using the local port is great for local llms through ollama and such:
-```bash
-python -m nba_mcp.nba_server --mode local      # runs on 8001
-```
+A production-ready MCP (Model Context Protocol) server that provides comprehensive NBA data access through a standardized API interface. Built on top of the official NBA API with advanced features including caching, rate limiting, metrics collection, and natural language query support.
 
 ## Features
 
-- Real-time NBA game scores and statistics
-- Historical game data and player statistics
-- League leaders and team performance metrics
-- Live scoreboard data for current games
-- Comprehensive play-by-play data
-- Team game logs and historical analysis
+- **Real-time & Historical Data**: Live scores, game stats, player/team information, and historical records
+- **Advanced Analytics**: Team and player advanced statistics, era-adjusted comparisons, shot charts
+- **Natural Language Queries**: Ask questions in plain English (e.g., "Who leads the NBA in assists?")
+- **Game Context**: Rich pre-game analysis with standings, form, head-to-head, and narrative synthesis
+- **Production Infrastructure**: Redis caching, rate limiting, Prometheus metrics, OpenTelemetry tracing
+- **Entity Resolution**: Fuzzy matching for player and team names with confidence scoring
+- **Robust Error Handling**: Retry logic, circuit breakers, graceful degradation
 
-## Usage
+## Quick Start
+
+### Prerequisites
+
+- Python 3.10 or higher
+- Git
+- (Optional) Redis for caching
+- (Optional) Ollama for local LLM usage
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/ghadfield32/nba_mcp.git
+cd nba_mcp
+```
+
+2. **Create and activate a virtual environment**
+```bash
+# Using UV (recommended)
+pip install uv
+uv venv nbavenv
+
+# Activate on Windows
+.\nbavenv\Scripts\activate
+
+# Activate on Unix/MacOS
+source nbavenv/bin/activate
+```
+
+3. **Install dependencies**
+```bash
+# Basic installation
+uv pip install -r requirements.txt
+
+# Or install from setup.py
+pip install -e .
+
+# For development (includes testing tools)
+pip install -e ".[dev]"
+```
 
 ### Running the Server
 
-You can run the NBA MCP server in two ways:
+The server can run in two modes:
 
-1. Directly through the terminal:
-   ```bash
-   python -m nba_mcp
-   ```
+**Claude Desktop Mode** (Port 8000)
+```bash
+python -m nba_mcp.nba_server --mode claude
+```
 
-2. Configure it in your MCP client's configuration file:
-   
-   Configuration file locations:
-   - VSCode: `%APPDATA%\Code\User\mcp.json` or `~/.config/Code/User/mcp.json`
-   - Cursor: `%APPDATA%\Cursor\User\mcp.json` or `~/.config/Cursor/User/mcp.json`
-   
-   ```json
-  {
-    "mcpServers": {
-      "nba_mcp Docs": {
-        "url": "https://gitmcp.io/ghadfield32/nba_mcp"
+**Local LLM Mode** (Port 8001 - for Ollama, etc.)
+```bash
+python -m nba_mcp.nba_server --mode local
+```
+
+The server will start and display available tools and configuration.
+
+## Configuration
+
+### MCP Client Setup
+
+#### For Claude Desktop
+
+Add to your Claude Desktop configuration file:
+
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**MacOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "nba": {
+      "command": "python",
+      "args": ["-m", "nba_mcp.nba_server", "--mode", "claude"],
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\nba_mcp"
       }
     }
   }
-   ```
-
-## Available MCP Tools
-
-### Game Information
-
-- `get_live_scores(target_date: Optional[str] = None)` - Get current or historical NBA scores
-- `get_game_scores(date: str)` - Get scores for a specific date
-- `get_nba_games(date: str, lookback_days: int)` - Get games with historical lookback
-
-### Player Statistics
-
-- `get_player_stats(player: str)` - Get player's current season stats
-- `get_player_career_information(player_name: str)` - Get comprehensive career information
-- `get_player_multi_season_stats(player: str, seasons: List[int])` - Get stats across multiple seasons
-
-### Team and League Data
-
-- `get_team_game_log(team_name: str, season: str)` - Get team's game history
-- `get_league_leaders(stat_category: str)` - Get league leaders for specific stat categories
-
-## Running LangGraph Bots
-
-### Prerequisites
-First, pull the required Ollama model:
-```bash
-# Pull the LLaMA 3.2 model
-python -m ollama pull llama3.2:3b
+}
 ```
 
-### Basic Agent
-```bash
-# Run the basic LangGraph agent with Ollama
-python examples/langgraph_ollama_agent.py
+#### For VS Code / Cursor
+
+Add to your MCP configuration file:
+
+**VS Code**: `%APPDATA%\Code\User\mcp.json` or `~/.config/Code/User/mcp.json`
+**Cursor**: `%APPDATA%\Cursor\User\mcp.json` or `~/.config/Cursor/User/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "nba": {
+      "url": "http://localhost:8000"
+    }
+  }
+}
 ```
 
-### Agent with Tools
+### Environment Variables
+
+Configure optional features through environment variables:
+
 ```bash
-# Run the agent with NBA MCP tools in local mode
-# This will:
-# 1. Start the NBA MCP server on port 8001
-# 2. Connect the LangGraph agent to it
+# Server configuration
+export NBA_MCP_PORT=8000
+export NBA_MCP_LOG_LEVEL=INFO
+
+# Redis caching (optional)
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+export REDIS_DB=0
+export ENABLE_REDIS_CACHE=true
+
+# Rate limiting
+export NBA_MCP_DAILY_QUOTA=10000
+export NBA_MCP_SIMPLE_RATE_LIMIT=60
+export NBA_MCP_COMPLEX_RATE_LIMIT=30
+
+# Observability (optional)
+export ENABLE_METRICS=true
+export ENABLE_TRACING=false
+export OTLP_ENDPOINT=http://localhost:4317
+```
+
+## Usage Guide
+
+### Available Tools
+
+#### Game Information
+- `get_live_scores(target_date)` - Get current or historical game scores
+- `play_by_play(game_id)` - Detailed play-by-play data for a specific game
+- `get_game_context(team1_name, team2_name, season)` - Rich pre-game context and analysis
+
+#### Player Statistics
+- `get_player_career_information(player_name, seasons)` - Comprehensive player career stats
+- `get_player_advanced_stats(player_name, season)` - Advanced metrics (TS%, Usage%, eFG%, etc.)
+- `compare_players(player1_name, player2_name, stat_categories)` - Head-to-head comparison
+- `compare_players_era_adjusted(player1_name, player2_name)` - Cross-era comparisons
+
+#### Team Statistics
+- `get_team_standings(season, conference)` - Conference and division standings
+- `get_team_advanced_stats(team_name, season)` - Team efficiency metrics
+- `get_date_range_game_log_or_team_game_log(team_name, season, date_from, date_to)` - Team game history
+
+#### League Data
+- `get_league_leaders_info(stat_category, per_mode, season)` - League leaders in any category
+
+#### Shot Charts
+- `get_shot_chart(player_or_team_name, season, granularity)` - Shot location data with hexagonal binning
+
+#### Natural Language Queries
+- `answer_nba_question(question)` - Ask questions in plain English
+
+#### Entity Resolution
+- `resolve_nba_entity(entity_name, entity_type)` - Fuzzy matching for players/teams
+
+### Example Queries
+
+#### Basic Queries
+
+```python
+# Get today's live scores
+get_live_scores()
+
+# Get scores for a specific date
+get_live_scores(target_date="2024-03-15")
+
+# Get player career stats
+get_player_career_information(player_name="LeBron James", seasons=[2023])
+
+# Get league leaders in points
+get_league_leaders_info(stat_category="PTS", per_mode="PerGame", season="2023-24")
+```
+
+#### Advanced Queries
+
+```python
+# Compare two players
+compare_players(
+    player1_name="Stephen Curry",
+    player2_name="Damian Lillard",
+    stat_categories=["PTS", "AST", "FG3M"]
+)
+
+# Cross-era comparison with adjustments
+compare_players_era_adjusted(
+    player1_name="Michael Jordan",
+    player2_name="LeBron James"
+)
+
+# Get shot chart with hexagonal aggregation
+get_shot_chart(
+    player_or_team_name="Kevin Durant",
+    season="2023-24",
+    granularity="hexbin"
+)
+
+# Rich game context
+get_game_context(
+    team1_name="Lakers",
+    team2_name="Warriors",
+    season="2023-24"
+)
+```
+
+#### Natural Language Queries
+
+```python
+# These all work with answer_nba_question()
+"Who leads the NBA in assists this season?"
+"Compare LeBron James and Michael Jordan career stats"
+"What are the Lakers standings?"
+"Show me Stephen Curry's shooting stats"
+"Who scored the most points last night?"
+```
+
+### Working with Local LLMs (Ollama)
+
+1. **Pull an Ollama model**
+```bash
+ollama pull llama3.2:3b
+```
+
+2. **Start the NBA MCP server in local mode**
+```bash
+python -m nba_mcp.nba_server --mode local
+```
+
+3. **Run the example agent**
+```bash
 python examples/langgraph_ollama_agent_w_tools.py --mode local
 ```
 
-Example interaction:
+4. **Interact with the agent**
 ```
-Starting NBA MCP server in 'local' mode (port 8001)…
-Langgraph agent starting…
-Loaded tools: ['get_league_leaders_info', 'get_player_career_information', 'get_live_scores', 'play_by_play_info_for_current_games']
 Enter a question:
 > who leads the nba in assists this season?
+
 AIMessage: Let me check the league leaders for assists this season.
 ToolMessage: [League leaders data for assists...]
-AIMessage: Based on the data, [Player Name] leads the NBA in assists this season...
+AIMessage: Based on the data, Tyrese Haliburton leads the NBA in assists...
 ```
 
-## Testing
+## Development
 
-Run the comprehensive test suite:
+### Running Tests
 
 ```bash
 # Run all tests
@@ -193,70 +302,214 @@ pytest tests/
 
 # Run specific test categories
 pytest tests/test_api_client.py
-pytest tests/test_nba_api_with_error_handling.py
 pytest tests/api/test_live_scores.py
 pytest tests/api/test_player_stats.py
+
+# Run integration tests
+pytest tests/integration/
+
+# Run with coverage
+pytest --cov=nba_mcp --cov-report=html tests/
 ```
 
-Run integration tests with NBA API:
+### Validation Script
+
+Run the comprehensive validation suite:
+
 ```bash
-pytest tests/integration/test_nba_api_integration.py
+python run_validation.py
 ```
 
-## Dependencies
+This runs 23 core tests covering:
+- Entity resolution
+- Live data fetching
+- Player and team statistics
+- Advanced analytics
+- Comparisons
+- Shot charts
+- Natural language queries
 
-- Python ≥ 3.10
-- nba_api ≥ 1.9.0
-- fastmcp ≥ 2.2.0
-- pandas ≥ 2.2.3
-- pydantic ≥ 2.11.3
+### Code Quality
 
-## Error Handling
+```bash
+# Format code
+black nba_mcp/
+isort nba_mcp/
 
-The API includes comprehensive error handling for:
-- Invalid dates or date formats
-- Player name mismatches
-- Network connectivity issues
-- API rate limiting
-- Missing or incomplete data
+# Type checking
+mypy nba_mcp/
 
-### Common Error Solutions
+# Linting
+flake8 nba_mcp/
+```
 
-1. Rate Limiting:
-   ```python
-   # Add delay between requests
-   await get_player_stats(player="LeBron James", delay=1.5)
-   ```
+## Monitoring & Observability
 
-2. Network Issues:
-   ```python
-   # Increase timeout and retries
-   await get_live_scores(timeout=30, max_retries=3)
-   ```
+### Metrics Endpoint
+
+When metrics are enabled, access Prometheus metrics at:
+
+```
+http://localhost:8000/metrics
+```
+
+Includes 14 metric types:
+- Request counts and durations
+- Error rates by type
+- Cache hit/miss rates
+- Rate limit usage
+- Tool execution times
+
+### Grafana Dashboard
+
+A pre-built Grafana dashboard is available in `grafana/`:
+
+```bash
+# Start Grafana (with Docker)
+cd grafana
+docker-compose up -d
+
+# Access at http://localhost:3000
+# Default credentials: admin/admin
+```
+
+## Performance
+
+- **Cache Performance**: 410x speedup with Redis (820ms → 2ms for cached responses)
+- **Parallel Execution**: Game context composition uses 4x parallel API calls
+- **Rate Limits**:
+  - Simple tools: 60 requests/minute
+  - Complex tools: 30 requests/minute
+  - Multi-API tools: 20 requests/minute
+  - Global quota: 10,000 requests/day
 
 ## Troubleshooting
 
-1. Verify your environment:
-   ```bash
-   # Check Python version
-   python --version
-   
-   # Verify dependencies
-   uv pip list
-   ```
+### Common Issues
 
-2. Test API connectivity:
-   ```bash
-   python tests/utils/test_api_connection.py
-   ```
+**1. Module Not Found Errors**
+```bash
+# Ensure PYTHONPATH is set correctly
+export PYTHONPATH=/path/to/nba_mcp
 
-3. Check logs:
-   ```bash
-   # Enable debug logging
-   export NBA_MCP_LOG_LEVEL=DEBUG
-   python -m nba_mcp
-   ```
+# Or reinstall in development mode
+pip install -e .
+```
+
+**2. API Rate Limiting**
+```bash
+# Check rate limit status in logs
+# Reduce request frequency
+# Wait for quota reset (daily)
+```
+
+**3. Redis Connection Issues**
+```bash
+# Verify Redis is running
+redis-cli ping
+
+# Or disable Redis caching
+export ENABLE_REDIS_CACHE=false
+```
+
+**4. NBA API Errors**
+```python
+# The NBA API can be flaky
+# The server includes automatic retries with exponential backoff
+# Check logs for specific error details
+```
+
+### Debug Mode
+
+Enable detailed logging:
+
+```bash
+export NBA_MCP_LOG_LEVEL=DEBUG
+python -m nba_mcp.nba_server --mode claude
+```
+
+### Verify Installation
+
+```bash
+# Check Python version
+python --version  # Should be 3.10+
+
+# Verify dependencies
+pip list | grep nba_api
+pip list | grep fastmcp
+
+# Test API connectivity
+python -c "from nba_api.stats.static import players; print(len(players.get_players()))"
+```
+
+## Architecture
+
+```
+NBA MCP Server
+├── nba_server.py           # Main FastMCP server
+├── api/                    # Core API layer
+│   ├── client.py           # NBA API client
+│   ├── advanced_stats.py   # Advanced statistics
+│   ├── entity_resolver.py  # Fuzzy entity matching
+│   ├── shot_charts.py      # Shot chart data
+│   ├── game_context.py     # Multi-source composition
+│   ├── era_adjusted.py     # Cross-era adjustments
+│   └── tools/              # API utilities
+├── nlq/                    # Natural language processing
+│   ├── parser.py           # Query parsing
+│   ├── planner.py          # Query planning
+│   ├── executor.py         # Parallel execution
+│   └── synthesizer.py      # Response formatting
+├── cache/                  # Redis caching layer
+├── rate_limit/             # Token bucket rate limiting
+├── observability/          # Metrics and tracing
+└── schemas/                # Pydantic models and schemas
+```
+
+## API Response Format
+
+All tools return a standardized response envelope:
+
+```json
+{
+  "status": "success",
+  "data": { ... },
+  "metadata": {
+    "version": "v1",
+    "schema_version": "2025-01",
+    "timestamp": "2024-03-15T10:30:00Z",
+    "source": "nba_api",
+    "cached": true,
+    "cache_ttl": 3600
+  },
+  "errors": []
+}
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Make your changes
+4. Run tests (`pytest tests/`)
+5. Format code (`black nba_mcp/ && isort nba_mcp/`)
+6. Commit your changes (`git commit -m "Add your feature"`)
+7. Push to the branch (`git push origin feature/your-feature`)
+8. Open a Pull Request
 
 ## License
 
-MIT
+MIT License - See LICENSE file for details
+
+## Acknowledgments
+
+- Built on [nba_api](https://github.com/swar/nba_api) by Swar Patel
+- Powered by [FastMCP](https://github.com/fastmcp/fastmcp) framework
+- NBA data provided by [NBA.com](https://www.nba.com/)
+
+## Support
+
+For issues, questions, or feature requests:
+- Open an issue on GitHub
+- Check existing documentation in the repository
+- Review the troubleshooting section above

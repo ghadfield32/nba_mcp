@@ -368,6 +368,25 @@ class NBAApiError(NBAMCPError):
         )
 
 
+class PartialDataError(NBAMCPError):
+    """Raised when some data components are available but others failed."""
+
+    def __init__(
+        self,
+        message: str,
+        components_loaded: Optional[list] = None,
+        components_failed: Optional[list] = None,
+    ):
+        super().__init__(
+            message=message,
+            code="PARTIAL_DATA",
+            details={
+                "components_loaded": components_loaded or [],
+                "components_failed": components_failed or [],
+            },
+        )
+
+
 # ============================================================================
 # RETRY LOGIC WITH EXPONENTIAL BACKOFF
 # ============================================================================

@@ -43,7 +43,7 @@ from nba_mcp.api.errors import (
     PartialDataError,
     retry_with_backoff,
 )
-from nba_mcp.api.tools.nba_api_client import NBAApiClient
+from nba_mcp.api.client import NBAApiClient
 from nba_mcp.api.tools.nba_api_utils import normalize_season
 
 logger = logging.getLogger(__name__)

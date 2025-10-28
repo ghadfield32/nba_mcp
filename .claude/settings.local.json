@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(gh pr list:*)",
+      "Bash(pip install:*)",
+      "Bash(python test_nba_mcp.py:*)",
+      "Bash(find:*)",
+      "Bash(python:*)",
+      "Bash(awk:*)",
+      "Bash(cat:*)",
+      "Bash(timeout 120 python:*)",
+      "Bash(uv pip install:*)",
+      "Bash(timeout 180 python:*)",
+      "Bash(source:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(timeout 10 .venv/Scripts/python.exe:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
