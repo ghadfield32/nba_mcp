@@ -82,13 +82,56 @@ class EntityNotFoundError(NBAMCPError):
     def __init__(
         self, entity_type: str, query: str, suggestions: Optional[list] = None
     ):
+        # Build helpful error message with suggestions
+        base_message = f"{entity_type.capitalize()} '{query}' not found"
+
+        # Add suggestions if available
+        if suggestions and len(suggestions) > 0:
+            suggestion_text = "\n\nDid you mean?"
+            for i, suggestion in enumerate(suggestions[:3], 1):
+                name = suggestion.get("name", "Unknown")
+                confidence = suggestion.get("confidence", 0.0)
+                suggestion_text += f"\n  {i}. {name} (match: {confidence:.0%})"
+
+            # Add usage example
+            example_name = suggestions[0].get("name", "")
+            suggestion_text += f"\n\nTry: resolve_nba_entity('{example_name}', entity_type='{entity_type}')"
+
+            message = base_message + suggestion_text
+        else:
+            # No suggestions - provide general help
+            if entity_type == "player":
+                message = (
+                    f"{base_message}\n\n"
+                    "Tips:\n"
+                    "  - Use full name: 'LeBron James' instead of 'Lebron'\n"
+                    "  - Check spelling: 'Stephen Curry' not 'Steven Curry'\n"
+                    "  - Try last name only: 'Curry' or 'James'\n"
+                    "  - Use partial match: 'Giannis' instead of full Greek name"
+                )
+            elif entity_type == "team":
+                message = (
+                    f"{base_message}\n\n"
+                    "Tips:\n"
+                    "  - Use full name: 'Los Angeles Lakers' or 'Lakers'\n"
+                    "  - Use abbreviation: 'LAL', 'GSW', 'BOS'\n"
+                    "  - Use city: 'Los Angeles' or 'Golden State'\n"
+                    "  - Use nickname: 'Lakers', 'Warriors', 'Celtics'"
+                )
+            else:
+                message = base_message
+
         super().__init__(
-            message=f"{entity_type.capitalize()} '{query}' not found",
+            message=message,
             code=ErrorCode.ENTITY_NOT_FOUND,
             details={
                 "entity_type": entity_type,
                 "query": query,
                 "suggestions": suggestions or [],
+                "how_to_fix": (
+                    f"Use resolve_nba_entity() to fuzzy-match names, or "
+                    f"check spelling and try again with a different query"
+                ),
             },
         )
 
@@ -96,14 +139,54 @@ class EntityNotFoundError(NBAMCPError):
 class InvalidParameterError(NBAMCPError):
     """Raised when tool parameters are invalid."""
 
-    def __init__(self, param_name: str, param_value: Any, expected: str):
+    def __init__(
+        self,
+        param_name: str,
+        param_value: Any,
+        expected: str,
+        examples: Optional[list] = None,
+    ):
+        # Build helpful error message
+        base_message = f"Invalid parameter '{param_name}': got '{param_value}', expected {expected}"
+
+        # Add examples if provided
+        if examples:
+            example_text = "\n\nValid examples:"
+            for ex in examples[:3]:
+                example_text += f"\n  - {ex}"
+            message = base_message + example_text
+        else:
+            # Provide context-specific help based on parameter name
+            if "season" in param_name.lower():
+                message = (
+                    f"{base_message}\n\n"
+                    "Season format: 'YYYY-YY' (e.g., '2023-24', '2024-25')\n"
+                    "Tip: Use current_season() helper or omit for current season"
+                )
+            elif "date" in param_name.lower():
+                message = (
+                    f"{base_message}\n\n"
+                    "Date format: 'YYYY-MM-DD' (e.g., '2024-01-15')\n"
+                    "Tip: Use date.today().isoformat() for today's date"
+                )
+            elif "stat" in param_name.lower() or "category" in param_name.lower():
+                message = (
+                    f"{base_message}\n\n"
+                    "Valid stat categories: PTS, REB, AST, STL, BLK, FG_PCT, FG3_PCT, FT_PCT\n"
+                    "Tip: Use uppercase abbreviations"
+                )
+            else:
+                message = base_message
+
         super().__init__(
-            message=f"Invalid parameter '{param_name}': got {param_value}, expected {expected}",
+            message=message,
             code=ErrorCode.INVALID_PARAMETER,
             details={
                 "param_name": param_name,
                 "param_value": str(param_value),
                 "expected": expected,
+                "examples": examples or [],
+                "how_to_fix": "Check parameter format and try again with a valid value",
             },
         )
 
@@ -111,12 +194,42 @@ class InvalidParameterError(NBAMCPError):
 class RateLimitError(NBAMCPError):
     """Raised when NBA API rate limit is exceeded."""
 
-    def __init__(self, retry_after: int = 60):
+    def __init__(self, retry_after: int = 60, daily_quota: Optional[int] = None):
+        # Build helpful error message with guidance
+        if retry_after < 60:
+            wait_time = f"{retry_after} seconds"
+        elif retry_after < 3600:
+            wait_time = f"{retry_after // 60} minutes"
+        else:
+            wait_time = f"{retry_after // 3600} hours"
+
+        message = (
+            f"NBA API rate limit exceeded. Please wait {wait_time} before retrying.\n\n"
+            "What happened:\n"
+            "  - Too many requests sent to NBA API in a short time\n"
+            "  - NBA API has temporarily blocked further requests\n\n"
+            "How to fix:\n"
+            "  1. Wait {wait_time} and try again\n"
+            "  2. Reduce request frequency (use caching)\n"
+            "  3. Batch multiple queries together\n"
+            "  4. Consider using cached data where possible\n\n"
+            "Tip: Enable caching with REDIS_URL environment variable to reduce API calls"
+        )
+
+        if daily_quota:
+            message += f"\n\nDaily quota: {daily_quota} requests/day"
+
         super().__init__(
-            message=f"NBA API rate limit exceeded. Retry after {retry_after} seconds.",
+            message=message,
             code=ErrorCode.RATE_LIMIT_EXCEEDED,
             retry_after=retry_after,
-            details={"quota_exceeded": True},
+            details={
+                "quota_exceeded": True,
+                "retry_after_seconds": retry_after,
+                "retry_after_human": wait_time,
+                "daily_quota": daily_quota,
+                "how_to_fix": f"Wait {wait_time}, then retry. Enable caching to reduce API calls.",
+            },
         )
 
 
@@ -124,13 +237,46 @@ class UpstreamSchemaError(NBAMCPError):
     """Raised when NBA API response schema changes unexpectedly."""
 
     def __init__(self, endpoint: str, missing_fields: list, unexpected_fields: list):
+        # Build detailed error message
+        message = f"NBA API schema changed for endpoint: {endpoint}\n\n"
+
+        if missing_fields:
+            message += "Missing fields (previously available):\n"
+            for field in missing_fields[:5]:
+                message += f"  - {field}\n"
+            if len(missing_fields) > 5:
+                message += f"  ... and {len(missing_fields) - 5} more\n"
+            message += "\n"
+
+        if unexpected_fields:
+            message += "New fields (not in schema):\n"
+            for field in unexpected_fields[:5]:
+                message += f"  + {field}\n"
+            if len(unexpected_fields) > 5:
+                message += f"  ... and {len(unexpected_fields) - 5} more\n"
+            message += "\n"
+
+        message += (
+            "What this means:\n"
+            "  - NBA has updated their API structure\n"
+            "  - Some data may be unavailable or in different format\n"
+            "  - This tool needs to be updated to handle new schema\n\n"
+            "What to do:\n"
+            "  1. Report this issue to NBA MCP maintainers\n"
+            "  2. Check for updates: pip install --upgrade nba_mcp\n"
+            "  3. Try alternative tools that may still work\n"
+            "  4. Enable graceful degradation mode if available\n\n"
+            "This is not your fault - NBA changed their API without notice."
+        )
+
         super().__init__(
-            message=f"NBA API schema changed for {endpoint}",
+            message=message,
             code=ErrorCode.UPSTREAM_SCHEMA_CHANGED,
             details={
                 "endpoint": endpoint,
                 "missing_fields": missing_fields,
                 "unexpected_fields": unexpected_fields,
+                "how_to_fix": "Update NBA MCP to latest version or report the issue",
             },
         )
 
@@ -150,11 +296,75 @@ class CircuitBreakerOpenError(NBAMCPError):
 class NBAApiError(NBAMCPError):
     """Generic NBA API error (network, timeout, unexpected response)."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None):
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        endpoint: Optional[str] = None,
+    ):
+        # Enhance message with status code context
+        enhanced_message = message
+
+        if status_code:
+            status_explanations = {
+                400: "Bad Request - Invalid parameters sent to NBA API",
+                401: "Unauthorized - API key or authentication failed",
+                403: "Forbidden - Access denied by NBA API (possible rate limit)",
+                404: "Not Found - Endpoint or resource doesn't exist",
+                429: "Too Many Requests - Rate limit exceeded",
+                500: "Internal Server Error - NBA API is experiencing issues",
+                502: "Bad Gateway - NBA API is temporarily unavailable",
+                503: "Service Unavailable - NBA API is down for maintenance",
+                504: "Gateway Timeout - NBA API took too long to respond",
+            }
+
+            explanation = status_explanations.get(status_code, "Unknown error")
+            enhanced_message = f"{message}\n\nHTTP {status_code}: {explanation}\n\n"
+
+            # Add specific guidance based on status code
+            if status_code in [429, 403]:
+                enhanced_message += (
+                    "This is likely a rate limiting issue.\n"
+                    "Try:\n"
+                    "  1. Wait a few minutes before retrying\n"
+                    "  2. Enable caching to reduce API calls\n"
+                    "  3. Reduce request frequency\n"
+                )
+            elif status_code in [500, 502, 503, 504]:
+                enhanced_message += (
+                    "NBA API is experiencing issues (not your fault).\n"
+                    "Try:\n"
+                    "  1. Wait a few minutes and retry\n"
+                    "  2. Check NBA.com/stats to see if site is down\n"
+                    "  3. Use cached data if available\n"
+                )
+            elif status_code == 404:
+                enhanced_message += (
+                    "The requested resource doesn't exist.\n"
+                    "Try:\n"
+                    "  1. Check player/team names for typos\n"
+                    "  2. Verify the season exists (e.g., '2023-24')\n"
+                    "  3. Use resolve_nba_entity() to verify names\n"
+                )
+            else:
+                enhanced_message += (
+                    "Try:\n"
+                    "  1. Check your parameters are correct\n"
+                    "  2. Wait a moment and retry\n"
+                    "  3. Report this if it persists\n"
+                )
+
+        if endpoint:
+            enhanced_message += f"\n\nEndpoint: {endpoint}"
+
         super().__init__(
-            message=message,
+            message=enhanced_message,
             code=ErrorCode.NBA_API_ERROR,
-            details={"status_code": status_code},
+            details={
+                "status_code": status_code,
+                "endpoint": endpoint,
+                "how_to_fix": "Check error details above for specific guidance",
+            },
         )
 
 

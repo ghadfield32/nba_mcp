@@ -1014,6 +1014,148 @@ async def compare_players(
 
 
 @mcp_server.tool()
+async def compare_players_era_adjusted(
+    player1_name: str,
+    player2_name: str,
+    season1: str,
+    season2: str,
+) -> str:
+    """
+    Compare two players across different eras with pace and scoring adjustments.
+
+    Provides fair cross-era player comparison by adjusting for:
+    - League-wide pace differences (possessions per game)
+    - Scoring environment changes (points per game)
+    - Different eras' playing styles
+
+    This allows for fair comparisons like Michael Jordan (1995-96) vs LeBron James (2012-13)
+    even though they played in vastly different pace and scoring environments.
+
+    Args:
+        player1_name: First player name (e.g., "Michael Jordan")
+        player2_name: Second player name (e.g., "LeBron James")
+        season1: Season for player 1 in 'YYYY-YY' format (e.g., "1995-96")
+        season2: Season for player 2 in 'YYYY-YY' format (e.g., "2012-13")
+
+    Returns:
+        Formatted markdown comparison with:
+        - Raw stats for both players
+        - Era-adjusted stats normalized to modern baseline
+        - Side-by-side comparison table
+        - Explanation of adjustments
+
+    Examples:
+        compare_players_era_adjusted("Michael Jordan", "LeBron James", "1995-96", "2012-13")
+        compare_players_era_adjusted("Kobe Bryant", "Luka Doncic", "2005-06", "2023-24")
+
+    Era Adjustments:
+        - 1990s: Slower pace, lower scoring (adjust upward)
+        - 2000s: Slowest era, defensive focus (adjust upward)
+        - 2010s: Gradual pace increase (minor adjustment)
+        - 2020s: Fast pace, high scoring (adjust downward)
+    """
+    start_time = time.time()
+
+    try:
+        from nba_mcp.api.era_adjusted import (
+            create_adjusted_stats,
+            format_era_comparison,
+        )
+
+        # Fetch player stats for both seasons
+        client = NBAApiClient()
+
+        # Get player 1 stats
+        try:
+            player1_data = await client.get_player_career_stats(
+                player1_name, season1, as_dataframe=True
+            )
+            if isinstance(player1_data, str) or not isinstance(
+                player1_data, pd.DataFrame
+            ):
+                raise EntityNotFoundError(
+                    "player",
+                    player1_name,
+                    suggestions=[{"name": player1_name, "confidence": 0.5}],
+                )
+            if player1_data.empty:
+                raise EntityNotFoundError("player", player1_name)
+
+            # Extract stats from DataFrame (per-game averages)
+            row1 = player1_data.iloc[0]
+            stats1 = {
+                "ppg": float(row1.get("PTS", 0)),
+                "rpg": float(row1.get("REB", 0)),
+                "apg": float(row1.get("AST", 0)),
+                "spg": float(row1.get("STL", 0)),
+                "bpg": float(row1.get("BLK", 0)),
+            }
+        except EntityNotFoundError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error fetching stats for {player1_name}")
+            raise EntityNotFoundError("player", player1_name)
+
+        # Get player 2 stats
+        try:
+            player2_data = await client.get_player_career_stats(
+                player2_name, season2, as_dataframe=True
+            )
+            if isinstance(player2_data, str) or not isinstance(
+                player2_data, pd.DataFrame
+            ):
+                raise EntityNotFoundError(
+                    "player",
+                    player2_name,
+                    suggestions=[{"name": player2_name, "confidence": 0.5}],
+                )
+            if player2_data.empty:
+                raise EntityNotFoundError("player", player2_name)
+
+            row2 = player2_data.iloc[0]
+            stats2 = {
+                "ppg": float(row2.get("PTS", 0)),
+                "rpg": float(row2.get("REB", 0)),
+                "apg": float(row2.get("AST", 0)),
+                "spg": float(row2.get("STL", 0)),
+                "bpg": float(row2.get("BLK", 0)),
+            }
+        except EntityNotFoundError:
+            raise
+        except Exception as e:
+            logger.exception(f"Error fetching stats for {player2_name}")
+            raise EntityNotFoundError("player", player2_name)
+
+        # Create era-adjusted stats for both players
+        adjusted1 = create_adjusted_stats(stats1, season1)
+        adjusted2 = create_adjusted_stats(stats2, season2)
+
+        # Format comparison
+        comparison_markdown = format_era_comparison(
+            player1_name, player2_name, adjusted1, adjusted2
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Return markdown response (not JSON envelope for readability)
+        return comparison_markdown
+
+    except EntityNotFoundError as e:
+        response = error_response(
+            error_code=e.code, error_message=e.message, details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in compare_players_era_adjusted")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to compare players across eras: {str(e)}",
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
 async def answer_nba_question(question: str) -> str:
     """
     Answer natural language questions about NBA data using the NLQ pipeline.

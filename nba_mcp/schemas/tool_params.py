@@ -348,7 +348,47 @@ class ComparePlayersParams(BaseModel):
 
 
 # ============================================================================
-# Tool 11: answer_nba_question
+# Tool 11: compare_players_era_adjusted
+# ============================================================================
+
+
+class ComparePlayersEraAdjustedParams(BaseModel):
+    """
+    Parameters for comparing two players across different eras with adjustments.
+
+    Returns fair cross-era comparison accounting for league-wide pace and scoring
+    environment changes. Allows comparing players from vastly different eras
+    (e.g., Michael Jordan 1990s vs LeBron James 2010s).
+    """
+
+    player1_name: str = Field(
+        ...,
+        description="First player name (full or partial)",
+        examples=["Michael Jordan", "LeBron James"],
+        min_length=2,
+    )
+    player2_name: str = Field(
+        ...,
+        description="Second player name (full or partial)",
+        examples=["LeBron James", "Kobe Bryant"],
+        min_length=2,
+    )
+    season1: str = Field(
+        ...,
+        description="Season for player 1 in 'YYYY-YY' format (e.g., '1995-96')",
+        examples=["1995-96", "2012-13"],
+        pattern=r"^\d{4}-\d{2}$",
+    )
+    season2: str = Field(
+        ...,
+        description="Season for player 2 in 'YYYY-YY' format (e.g., '2012-13')",
+        examples=["2012-13", "2023-24"],
+        pattern=r"^\d{4}-\d{2}$",
+    )
+
+
+# ============================================================================
+# Tool 12: answer_nba_question
 # ============================================================================
 
 
@@ -375,7 +415,7 @@ class AnswerNBAQuestionParams(BaseModel):
 
 
 # ============================================================================
-# Tool 12: get_metrics_info
+# Tool 13: get_metrics_info
 # ============================================================================
 
 
@@ -405,6 +445,7 @@ __all__ = [
     "GetTeamAdvancedStatsParams",
     "GetPlayerAdvancedStatsParams",
     "ComparePlayersParams",
+    "ComparePlayersEraAdjustedParams",
     "AnswerNBAQuestionParams",
     "GetMetricsInfoParams",
 ]

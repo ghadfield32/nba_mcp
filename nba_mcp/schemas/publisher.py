@@ -37,6 +37,7 @@ import yaml
 
 from nba_mcp.schemas.tool_params import (
     AnswerNBAQuestionParams,
+    ComparePlayersEraAdjustedParams,
     ComparePlayersParams,
     GetDateRangeGameLogParams,
     GetLiveScoresParams,
@@ -116,6 +117,12 @@ TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Compare two players side-by-side with normalized stats",
         "category": "Comparison",
         "returns": "Fair comparison with shared metrics and optional era adjustments",
+    },
+    "compare_players_era_adjusted": {
+        "model": ComparePlayersEraAdjustedParams,
+        "description": "Compare players across different eras with pace and scoring adjustments",
+        "category": "Comparison",
+        "returns": "Cross-era comparison with adjusted stats accounting for pace/scoring environment",
     },
     "answer_nba_question": {
         "model": AnswerNBAQuestionParams,
