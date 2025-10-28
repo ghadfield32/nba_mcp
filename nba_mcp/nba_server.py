@@ -30,7 +30,11 @@ from nba_mcp.api.errors import (
 )
 from nba_mcp.api.entity_resolver import resolve_entity, suggest_players, suggest_teams, get_cache_info
 
-# only grab “--mode” here and ignore any other flags
+# Import NLQ pipeline components
+from nba_mcp.nlq.pipeline import answer_nba_question as nlq_answer_question, get_pipeline_status
+from nba_mcp.nlq.tool_registry import initialize_tool_registry
+
+# only grab "--mode" here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
     "--mode", choices=["claude", "local"], default="claude",
@@ -954,6 +958,63 @@ async def compare_players(
         return response.to_json_string()
 
 
+@mcp_server.tool()
+async def answer_nba_question(question: str) -> str:
+    """
+    Answer natural language questions about NBA data using the NLQ pipeline.
+
+    This tool understands natural language and automatically orchestrates the right
+    NBA API calls to answer your question. It returns formatted, human-readable responses.
+
+    Args:
+        question: Natural language question about NBA data
+
+    Returns:
+        Formatted answer (markdown with tables/narratives)
+
+    Supported Question Types:
+        1. Leaders: "Who leads the NBA in assists?", "Top 10 scorers this season"
+        2. Player Comparison: "Compare LeBron James and Kevin Durant"
+        3. Team Comparison: "Lakers vs Celtics", "Warriors vs Bucks tonight"
+        4. Player Stats: "Show me Giannis stats from 2023-24", "How is Luka doing?"
+        5. Team Stats: "What is the Warriors offensive rating?", "Celtics defense"
+        6. Standings: "Eastern Conference standings", "Western Conference playoff race"
+        7. Game Context: "Lakers vs Celtics tonight", "What games are on today?"
+
+    Examples:
+        answer_nba_question("Who leads the NBA in assists?")
+        → Returns formatted table with top assist leaders
+
+        answer_nba_question("Compare LeBron James and Kevin Durant")
+        → Returns side-by-side comparison table
+
+        answer_nba_question("Show me Giannis stats from 2023-24")
+        → Returns formatted player stats card
+
+    Note: The NLQ pipeline automatically:
+    - Resolves player/team names (fuzzy matching)
+    - Extracts relevant stats and time periods
+    - Calls the right tools in optimal order
+    - Formats results as readable markdown
+    """
+    start_time = time.time()
+
+    try:
+        logger.info(f"NLQ question: '{question}'")
+
+        # Call the NLQ pipeline
+        answer = await nlq_answer_question(question, return_metadata=False)
+
+        execution_time_ms = (time.time() - start_time) * 1000
+        logger.info(f"NLQ completed in {execution_time_ms:.1f}ms")
+
+        return answer
+
+    except Exception as e:
+        logger.exception("Error in answer_nba_question")
+        return f"Sorry, I encountered an error processing your question: {str(e)}\n\nPlease try rephrasing your question or being more specific."
+
+
 #########################################
 # Running the Server
 #########################################
@@ -1001,6 +1062,20 @@ def main():
     # if they explicitly passed --port, override
     if args.port:
         port = args.port
+
+    # Initialize NLQ tool registry with real MCP tools
+    logger.info("Initializing NLQ tool registry...")
+    tool_map = {
+        "get_league_leaders_info": get_league_leaders_info,
+        "compare_players": compare_players,
+        "get_team_standings": get_team_standings,
+        "get_team_advanced_stats": get_team_advanced_stats,
+        "get_player_advanced_stats": get_player_advanced_stats,
+        "get_live_scores": get_live_scores,
+        "get_player_career_information": get_player_career_information,
+    }
+    initialize_tool_registry(tool_map)
+    logger.info(f"NLQ tool registry initialized with {len(tool_map)} tools")
 
     # if using network transport, check availability
     if transport != "stdio" and port is not None and not port_available(port, host):

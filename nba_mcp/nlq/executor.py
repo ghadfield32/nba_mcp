@@ -62,27 +62,10 @@ class ExecutionResult:
 
 
 # ============================================================================
-# TOOL REGISTRY
+# TOOL REGISTRY IMPORTS
 # ============================================================================
 
-# Global tool registry - will be populated by NBA MCP server
-_TOOL_REGISTRY: Dict[str, Callable] = {}
-
-
-def register_tool(name: str, func: Callable):
-    """Register a tool for execution."""
-    _TOOL_REGISTRY[name] = func
-    logger.debug(f"Registered tool: {name}")
-
-
-def get_tool(name: str) -> Optional[Callable]:
-    """Get a tool by name."""
-    return _TOOL_REGISTRY.get(name)
-
-
-def list_tools() -> List[str]:
-    """List all registered tools."""
-    return list(_TOOL_REGISTRY.keys())
+from .tool_registry import get_tool, list_tools
 
 
 # ============================================================================
@@ -304,86 +287,10 @@ def get_failure_summary(execution_result: ExecutionResult) -> List[str]:
     return failures
 
 
+
 # ============================================================================
-# MOCK TOOLS FOR TESTING
+# MOCK TOOLS (moved to mock_tools.py)
 # ============================================================================
 
-async def mock_get_league_leaders_info(
-    stat_category: str,
-    season: Optional[str] = None,
-    per_mode: str = "PerGame",
-    season_type_all_star: str = "Regular Season"
-) -> Dict[str, Any]:
-    """Mock implementation for testing."""
-    await asyncio.sleep(0.1)  # Simulate API call
-    return {
-        "stat_category": stat_category,
-        "season": season,
-        "leaders": [
-            {"player": "Player 1", "value": 10.5},
-            {"player": "Player 2", "value": 9.8}
-        ]
-    }
-
-
-async def mock_compare_players(
-    player1_name: str,
-    player2_name: str,
-    season: Optional[str] = None,
-    normalization: str = "per_75"
-) -> Dict[str, Any]:
-    """Mock implementation for testing."""
-    await asyncio.sleep(0.1)
-    return {
-        "player1": {"name": player1_name, "ppg": 25.5},
-        "player2": {"name": player2_name, "ppg": 27.3}
-    }
-
-
-async def mock_get_team_standings(
-    season: Optional[str] = None,
-    conference: Optional[str] = None
-) -> List[Dict[str, Any]]:
-    """Mock implementation for testing."""
-    await asyncio.sleep(0.1)
-    return [
-        {"team": "Team 1", "wins": 40, "losses": 20},
-        {"team": "Team 2", "wins": 35, "losses": 25}
-    ]
-
-
-async def mock_get_team_advanced_stats(
-    team_name: str,
-    season: Optional[str] = None
-) -> Dict[str, Any]:
-    """Mock implementation for testing."""
-    await asyncio.sleep(0.1)
-    return {
-        "team_name": team_name,
-        "offensive_rating": 115.5,
-        "defensive_rating": 108.2
-    }
-
-
-async def mock_get_player_advanced_stats(
-    player_name: str,
-    season: Optional[str] = None
-) -> Dict[str, Any]:
-    """Mock implementation for testing."""
-    await asyncio.sleep(0.1)
-    return {
-        "player_name": player_name,
-        "true_shooting_pct": 0.625,
-        "usage_pct": 28.5
-    }
-
-
-# Register mock tools for testing
-def register_mock_tools():
-    """Register all mock tools."""
-    register_tool("get_league_leaders_info", mock_get_league_leaders_info)
-    register_tool("compare_players", mock_compare_players)
-    register_tool("get_team_standings", mock_get_team_standings)
-    register_tool("get_team_advanced_stats", mock_get_team_advanced_stats)
-    register_tool("get_player_advanced_stats", mock_get_player_advanced_stats)
-    logger.info("Registered mock tools for testing")
+# For testing, import from mock_tools:
+# from .mock_tools import register_mock_tools
