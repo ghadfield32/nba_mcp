@@ -34,6 +34,10 @@ from nba_mcp.api.entity_resolver import resolve_entity, suggest_players, suggest
 from nba_mcp.nlq.pipeline import answer_nba_question as nlq_answer_question, get_pipeline_status
 from nba_mcp.nlq.tool_registry import initialize_tool_registry
 
+# Import Week 4 infrastructure (cache + rate limiting)
+from nba_mcp.cache.redis_cache import initialize_cache, get_cache, CacheTier, cached
+from nba_mcp.rate_limit.token_bucket import initialize_rate_limiter, get_rate_limiter, rate_limited
+
 # only grab "--mode" here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
@@ -1076,6 +1080,49 @@ def main():
     }
     initialize_tool_registry(tool_map)
     logger.info(f"NLQ tool registry initialized with {len(tool_map)} tools")
+
+    # Initialize Week 4 infrastructure (cache + rate limiting)
+    logger.info("Initializing Week 4 infrastructure...")
+
+    # Initialize Redis cache
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+    redis_db = int(os.getenv("REDIS_DB", "0"))
+    try:
+        initialize_cache(redis_url=redis_url, db=redis_db)
+        logger.info(f"✓ Redis cache initialized (url={redis_url}, db={redis_db})")
+    except Exception as e:
+        logger.warning(f"Redis cache initialization failed: {e}")
+        logger.warning("Continuing without cache (performance may be reduced)")
+
+    # Initialize rate limiter with per-tool limits
+    try:
+        initialize_rate_limiter()
+        limiter = get_rate_limiter()
+
+        # Configure rate limits for different tool categories
+        # Live data: 10 requests/min (aggressive rate limiting)
+        limiter.add_limit("get_live_scores", capacity=10.0, refill_rate=0.167)  # 10/60sec
+
+        # Moderate cost: 60 requests/min
+        limiter.add_limit("get_league_leaders_info", capacity=60.0, refill_rate=1.0)
+        limiter.add_limit("get_team_standings", capacity=60.0, refill_rate=1.0)
+        limiter.add_limit("get_player_career_information", capacity=60.0, refill_rate=1.0)
+
+        # Complex queries: 30 requests/min
+        limiter.add_limit("compare_players", capacity=30.0, refill_rate=0.5)
+        limiter.add_limit("get_team_advanced_stats", capacity=30.0, refill_rate=0.5)
+        limiter.add_limit("get_player_advanced_stats", capacity=30.0, refill_rate=0.5)
+
+        # Set global daily quota (10,000 requests/day)
+        daily_quota = int(os.getenv("NBA_API_DAILY_QUOTA", "10000"))
+        limiter.set_global_quota(daily_limit=daily_quota)
+
+        logger.info(f"✓ Rate limiter initialized (daily quota: {daily_quota})")
+    except Exception as e:
+        logger.warning(f"Rate limiter initialization failed: {e}")
+        logger.warning("Continuing without rate limiting (API quota may be exhausted)")
+
+    logger.info("Week 4 infrastructure initialization complete")
 
     # if using network transport, check availability
     if transport != "stdio" and port is not None and not port_available(port, host):
