@@ -17,6 +17,18 @@ from pydantic import BaseModel, Field
 # near the top of nba_server.py
 import argparse
 from fastmcp import Context
+import time
+
+# Import new response models and error handling
+from nba_mcp.api.models import (
+    ResponseEnvelope, success_response, error_response, partial_response,
+    EntityReference, PlayerSeasonStats, TeamStanding, PlayerComparison
+)
+from nba_mcp.api.errors import (
+    NBAMCPError, EntityNotFoundError, InvalidParameterError, RateLimitError,
+    retry_with_backoff, get_circuit_breaker
+)
+from nba_mcp.api.entity_resolver import resolve_entity, suggest_players, suggest_teams, get_cache_info
 
 # only grab “--mode” here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
@@ -48,8 +60,7 @@ PATH      = os.getenv("FASTMCP_SSE_PATH", "/sse")
 mcp_server = FastMCP(
     name="nba_mcp",
     host=HOST,
-    port=BASE_PORT,
-    path=PATH
+    port=BASE_PORT
 )
 
 # ===== ONE‑LINE ADDITION =====
@@ -264,6 +275,88 @@ async def playbyplay_resource(
 #########################################
 # MCP Tools
 #########################################
+
+@mcp_server.tool()
+async def resolve_nba_entity(
+    query: str,
+    entity_type: Optional[Literal["player", "team"]] = None,
+    return_suggestions: bool = True
+) -> str:
+    """
+    Universal entity resolver with fuzzy matching and confidence scoring.
+
+    Resolves ambiguous player/team names to specific entities with:
+    - Fuzzy string matching
+    - Confidence scores (0.0-1.0)
+    - Alternative name suggestions
+    - Cached lookups (LRU cache, 1000 entries)
+
+    Args:
+        query: Player or team name (supports partial names, abbreviations, nicknames)
+        entity_type: Optional filter ("player" or "team"). If None, searches both.
+        return_suggestions: If True, returns suggestions when no exact match found
+
+    Returns:
+        JSON string with resolved entity details:
+        - entity_type: "player" or "team"
+        - entity_id: NBA API ID
+        - name: Full canonical name
+        - abbreviation: Team abbreviation (teams only)
+        - confidence: Match confidence (0.0-1.0)
+        - alternate_names: List of nicknames/abbreviations
+        - metadata: Additional entity info
+
+    Examples:
+        resolve_nba_entity("LeBron") → LeBron James (confidence: 0.95)
+        resolve_nba_entity("LAL", entity_type="team") → Los Angeles Lakers (confidence: 1.0)
+        resolve_nba_entity("Durant") → Kevin Durant (confidence: 0.9)
+
+    Raises:
+        EntityNotFoundError: If no match found (includes suggestions if available)
+    """
+    start_time = time.time()
+
+    try:
+        # Resolve entity using fuzzy matching
+        entity_ref = resolve_entity(
+            query=query,
+            entity_type=entity_type,
+            min_confidence=0.6,
+            return_suggestions=return_suggestions,
+            max_suggestions=5
+        )
+
+        # Calculate execution time
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Return success response with entity data
+        response = success_response(
+            data=entity_ref.model_dump(),
+            source="static",
+            cache_status="hit",  # LRU cached
+            execution_time_ms=execution_time_ms
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        # Entity not found - return error with suggestions
+        response = error_response(
+            error_code=e.code,
+            error_message=e.message,
+            details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        # Unexpected error
+        logger.exception("Unexpected error in resolve_nba_entity")
+        response = error_response(
+            error_code="INTERNAL_ERROR",
+            error_message=f"Failed to resolve entity: {str(e)}"
+        )
+        return response.to_json_string()
+
 
 @mcp_server.tool()
 async def get_player_career_information(

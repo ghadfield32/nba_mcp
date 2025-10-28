@@ -12,3 +12,6 @@ nba_mcp.egg-info/requires.txt
 nba_mcp.egg-info/top_level.txt
 nba_mcp/api/__init__.py
 nba_mcp/api/client.py
+nba_mcp/api/entity_resolver.py
+nba_mcp/api/errors.py
+nba_mcp/api/models.py
