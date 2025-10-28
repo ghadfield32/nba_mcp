@@ -38,6 +38,12 @@ from nba_mcp.nlq.tool_registry import initialize_tool_registry
 from nba_mcp.cache.redis_cache import initialize_cache, get_cache, CacheTier, cached
 from nba_mcp.rate_limit.token_bucket import initialize_rate_limiter, get_rate_limiter, rate_limited
 
+# Import Week 4 observability (metrics + tracing)
+from nba_mcp.observability import (
+    initialize_metrics, get_metrics_manager, track_metrics, update_infrastructure_metrics,
+    initialize_tracing, get_tracing_manager
+)
+
 # only grab "--mode" here and ignore any other flags
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
@@ -1019,6 +1025,73 @@ async def answer_nba_question(question: str) -> str:
         return f"Sorry, I encountered an error processing your question: {str(e)}\n\nPlease try rephrasing your question or being more specific."
 
 
+@mcp_server.tool()
+async def get_metrics_info() -> str:
+    """
+    Get current metrics and observability information from the NBA MCP server.
+
+    Returns system health, performance metrics, cache statistics, and rate limit status.
+    Useful for monitoring and debugging.
+
+    Returns:
+        Formatted metrics report with:
+        - Server uptime
+        - Cache hit rate and size
+        - Quota usage and remaining
+        - Recent request statistics
+        - Metrics endpoint information
+
+    Example:
+        get_metrics_info()
+        → Returns server metrics and health status
+    """
+    try:
+        from nba_mcp.observability import get_metrics_snapshot
+
+        snapshot = get_metrics_snapshot()
+
+        lines = ["# NBA MCP Server Metrics", ""]
+
+        # Server uptime
+        uptime_seconds = snapshot.get("server_uptime_seconds", 0)
+        uptime_hours = uptime_seconds / 3600
+        lines.append(f"**Server Uptime**: {uptime_hours:.2f} hours ({uptime_seconds:.0f} seconds)")
+        lines.append("")
+
+        # Cache metrics
+        if "cache" in snapshot:
+            cache = snapshot["cache"]
+            lines.append("## Cache Statistics")
+            lines.append(f"- **Hit Rate**: {cache.get('hit_rate', 0):.1%}")
+            lines.append(f"- **Hits**: {cache.get('hits', 0)}")
+            lines.append(f"- **Misses**: {cache.get('misses', 0)}")
+            lines.append(f"- **Stored Items**: {cache.get('stored_items', 0)}")
+            lines.append("")
+
+        # Quota metrics
+        if "quota" in snapshot:
+            quota = snapshot["quota"]
+            lines.append("## Daily Quota")
+            lines.append(f"- **Used**: {quota.get('used', 0)}/{quota.get('limit', 0)}")
+            lines.append(f"- **Remaining**: {quota.get('remaining', 0)}")
+            lines.append(f"- **Usage**: {quota.get('usage_percent', 0):.1f}%")
+            lines.append("")
+
+        # Metrics endpoint
+        import os
+        metrics_port = int(os.getenv("METRICS_PORT", 9090))
+        lines.append("## Metrics Endpoint")
+        lines.append(f"- **URL**: http://localhost:{metrics_port}/metrics")
+        lines.append("- **Health Check**: http://localhost:{metrics_port}/health")
+        lines.append("")
+        lines.append("Use Prometheus to scrape the /metrics endpoint for detailed metrics.")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"Error retrieving metrics: {str(e)}\n\nMetrics may not be initialized."
+
+
 #########################################
 # Running the Server
 #########################################
@@ -1123,6 +1196,101 @@ def main():
         logger.warning("Continuing without rate limiting (API quota may be exhausted)")
 
     logger.info("Week 4 infrastructure initialization complete")
+
+    # Initialize Week 4 observability (metrics + tracing)
+    logger.info("Initializing Week 4 observability...")
+
+    # Initialize metrics
+    try:
+        initialize_metrics()
+        metrics = get_metrics_manager()
+        metrics.set_server_info(version="1.0.0", environment=os.getenv("ENVIRONMENT", "development"))
+        logger.info("✓ Prometheus metrics initialized")
+
+        # Start periodic metrics update
+        import asyncio
+        import threading
+
+        def metrics_updater():
+            """Background thread to update infrastructure metrics."""
+            while True:
+                try:
+                    update_infrastructure_metrics()
+                except Exception as e:
+                    logger.debug(f"Metrics update failed: {e}")
+                time.sleep(10)  # Update every 10 seconds
+
+        metrics_thread = threading.Thread(target=metrics_updater, daemon=True)
+        metrics_thread.start()
+        logger.info("✓ Metrics updater started (10s interval)")
+
+    except Exception as e:
+        logger.warning(f"Metrics initialization failed: {e}")
+        logger.warning("Continuing without metrics")
+
+    # Initialize tracing
+    try:
+        otlp_endpoint = os.getenv("OTLP_ENDPOINT")  # e.g., "localhost:4317"
+        console_export = os.getenv("OTEL_CONSOLE_EXPORT", "false").lower() == "true"
+
+        initialize_tracing(
+            service_name="nba-mcp",
+            otlp_endpoint=otlp_endpoint,
+            console_export=console_export
+        )
+
+        if otlp_endpoint:
+            logger.info(f"✓ OpenTelemetry tracing initialized (endpoint: {otlp_endpoint})")
+        else:
+            logger.info("✓ OpenTelemetry tracing initialized (no export endpoint)")
+
+    except Exception as e:
+        logger.warning(f"Tracing initialization failed: {e}")
+        logger.warning("Continuing without tracing")
+
+    # Start metrics HTTP server (for Prometheus scraping)
+    metrics_port = int(os.getenv("METRICS_PORT", port + 1 if port else 9090))
+    try:
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        import threading
+
+        class MetricsHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/metrics":
+                    try:
+                        metrics = get_metrics_manager()
+                        data = metrics.get_metrics()
+                        self.send_response(200)
+                        self.send_header("Content-Type", metrics.get_content_type())
+                        self.end_headers()
+                        self.wfile.write(data)
+                    except Exception as e:
+                        self.send_error(500, f"Metrics error: {e}")
+                elif self.path == "/health":
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"status": "healthy"}')
+                else:
+                    self.send_error(404)
+
+            def log_message(self, format, *args):
+                pass  # Suppress HTTP logs
+
+        metrics_server = HTTPServer(("0.0.0.0", metrics_port), MetricsHandler)
+
+        def run_metrics_server():
+            metrics_server.serve_forever()
+
+        metrics_thread = threading.Thread(target=run_metrics_server, daemon=True)
+        metrics_thread.start()
+        logger.info(f"✓ Metrics HTTP server started on port {metrics_port} (/metrics, /health)")
+
+    except Exception as e:
+        logger.warning(f"Metrics HTTP server failed to start: {e}")
+        logger.warning("Metrics will not be available for Prometheus scraping")
+
+    logger.info("Week 4 observability initialization complete")
 
     # if using network transport, check availability
     if transport != "stdio" and port is not None and not port_available(port, host):
