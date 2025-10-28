@@ -388,7 +388,52 @@ class ComparePlayersEraAdjustedParams(BaseModel):
 
 
 # ============================================================================
-# Tool 12: answer_nba_question
+# Tool 12: get_shot_chart
+# ============================================================================
+
+
+class GetShotChartParams(BaseModel):
+    """
+    Parameters for retrieving shot chart data.
+
+    Returns shooting data with coordinates and optional hexbin aggregation
+    for visualizing shooting patterns and hot zones.
+    """
+
+    entity_name: str = Field(
+        ...,
+        description="Player or team name (full or partial, e.g., 'Stephen Curry', 'Warriors', 'LAL')",
+        examples=["Stephen Curry", "LeBron James", "Warriors", "Lakers"],
+        min_length=2,
+    )
+    entity_type: Literal["player", "team"] = Field(
+        "player",
+        description="Entity type: 'player' for individual, 'team' for entire team",
+    )
+    season: Optional[str] = Field(
+        None,
+        description="Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses current season.",
+        examples=["2023-24", "2015-16", "2010-11"],
+        pattern=r"^\d{4}-\d{2}$|^$",
+    )
+    season_type: Literal["Regular Season", "Playoffs"] = Field(
+        "Regular Season",
+        description="Season type: 'Regular Season' or 'Playoffs'",
+    )
+    granularity: Literal["raw", "hexbin", "both", "summary"] = Field(
+        "both",
+        description=(
+            "Output format: "
+            "'raw'=Individual shot coordinates (X,Y,make/miss), "
+            "'hexbin'=Aggregated 50x50 grid with FG% per zone, "
+            "'both'=Both raw and hexbin data (default), "
+            "'summary'=Zone summary statistics (paint, mid-range, three-point)"
+        ),
+    )
+
+
+# ============================================================================
+# Tool 13: answer_nba_question
 # ============================================================================
 
 
@@ -446,6 +491,7 @@ __all__ = [
     "GetPlayerAdvancedStatsParams",
     "ComparePlayersParams",
     "ComparePlayersEraAdjustedParams",
+    "GetShotChartParams",
     "AnswerNBAQuestionParams",
     "GetMetricsInfoParams",
 ]

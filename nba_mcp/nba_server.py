@@ -44,6 +44,9 @@ from nba_mcp.api.models import (
     partial_response,
     success_response,
 )
+
+# Import Phase 3 feature modules (shot charts, game context)
+from nba_mcp.api.shot_charts import get_shot_chart as fetch_shot_chart
 from nba_mcp.api.tools.nba_api_utils import (
     format_game,
     get_player_id,
@@ -1151,6 +1154,74 @@ async def compare_players_era_adjusted(
         response = error_response(
             error_code="NBA_API_ERROR",
             error_message=f"Failed to compare players across eras: {str(e)}",
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def get_shot_chart(
+    entity_name: str,
+    entity_type: Literal["player", "team"] = "player",
+    season: Optional[str] = None,
+    season_type: Literal["Regular Season", "Playoffs"] = "Regular Season",
+    granularity: Literal["raw", "hexbin", "both", "summary"] = "both",
+) -> str:
+    """
+    Get shot chart data for a player or team.
+
+    Returns shooting data with coordinates and optional hexbin aggregation.
+    Perfect for visualizing shooting patterns and hot zones.
+
+    Args:
+        entity_name: Player or team name (e.g., "Stephen Curry", "Warriors")
+        entity_type: "player" or "team" (default: "player")
+        season: Season in 'YYYY-YY' format (e.g., "2023-24"). If None, uses current season.
+        season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
+        granularity: Output format:
+            - "raw": Individual shot coordinates (X, Y, make/miss)
+            - "hexbin": Aggregated data (50x50 grid with FG% per zone)
+            - "both": Both raw and hexbin data (default)
+            - "summary": Zone summary (paint, mid-range, three-point stats)
+
+    Returns:
+        JSON string with ResponseEnvelope containing shot chart data
+
+    Examples:
+        get_shot_chart("Stephen Curry", season="2023-24", granularity="hexbin")
+        get_shot_chart("Lakers", entity_type="team", granularity="summary")
+    """
+    start_time = time.time()
+
+    try:
+        client = NBAApiClient()
+        data = await fetch_shot_chart(
+            entity_name=entity_name,
+            entity_type=entity_type,
+            season=season or client.get_season_string(),
+            season_type=season_type,
+            granularity=granularity,
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+        response = success_response(
+            data=data,
+            source="historical",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms,
+        )
+        return response.to_json_string()
+
+    except (EntityNotFoundError, InvalidParameterError) as e:
+        response = error_response(
+            error_code=e.code, error_message=e.message, details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_shot_chart")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch shot chart: {str(e)}",
         )
         return response.to_json_string()
 

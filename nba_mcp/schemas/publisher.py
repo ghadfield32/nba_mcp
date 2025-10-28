@@ -44,6 +44,7 @@ from nba_mcp.schemas.tool_params import (
     GetMetricsInfoParams,
     GetPlayerAdvancedStatsParams,
     GetPlayerCareerInformationParams,
+    GetShotChartParams,
     GetTeamAdvancedStatsParams,
     GetTeamStandingsParams,
     LeagueLeadersParams,
@@ -123,6 +124,12 @@ TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Compare players across different eras with pace and scoring adjustments",
         "category": "Comparison",
         "returns": "Cross-era comparison with adjusted stats accounting for pace/scoring environment",
+    },
+    "get_shot_chart": {
+        "model": GetShotChartParams,
+        "description": "Get shot chart data with coordinates and hexbin aggregation for visualization",
+        "category": "Shot Data",
+        "returns": "Shooting data with raw coordinates, hexbin aggregation, and zone summaries",
     },
     "answer_nba_question": {
         "model": AnswerNBAQuestionParams,
