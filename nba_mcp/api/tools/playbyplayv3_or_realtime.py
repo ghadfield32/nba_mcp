@@ -277,10 +277,12 @@ def _create_game_dict_from_row(row: pd.Series) -> dict:
     }
 
 
-_STATS_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-    "Referer": "https://stats.nba.com",
-}
+# Import centralized headers from nba_mcp.api.headers
+from nba_mcp.api.headers import get_stats_api_headers
+
+# Use centralized headers (replaces old _STATS_HEADERS)
+# This ensures we use professional NBA-MCP User-Agent and proper Referer
+_STATS_HEADERS = get_stats_api_headers()
 
 
 def get_today_games(timeout: float = 10.0) -> List[Dict[str, Any]]:

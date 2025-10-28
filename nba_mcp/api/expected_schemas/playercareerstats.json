@@ -1,0 +1,54 @@
+{
+  "endpoint": "playercareerstats",
+  "description": "Expected schema for NBA API playercareerstats endpoint",
+  "type": "object",
+  "required": [
+    "resultSets"
+  ],
+  "properties": {
+    "resultSets": {
+      "type": "array",
+      "description": "Array of result sets containing career stats",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "headers",
+          "rowSet"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the result set (e.g., 'CareerTotalsRegularSeason')"
+          },
+          "headers": {
+            "type": "array",
+            "description": "Column headers for the data",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rowSet": {
+            "type": "array",
+            "description": "Array of data rows"
+          }
+        }
+      }
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource name"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Request parameters used"
+    }
+  },
+  "generated_at": "2025-10-28T00:00:00Z",
+  "notes": [
+    "This is a baseline schema for playercareerstats endpoint",
+    "The rowSet structure varies by stat type",
+    "Additional result sets may be present depending on query parameters"
+  ]
+}

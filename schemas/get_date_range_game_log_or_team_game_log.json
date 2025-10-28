@@ -1,0 +1,77 @@
+{
+  "description": "Get game-by-game logs for a team or league within a date range",
+  "properties": {
+    "date_from": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Start date in 'YYYY-MM-DD' format. If None, starts from season beginning.",
+      "examples": [
+        "2024-01-01",
+        "2023-10-15"
+      ],
+      "title": "Date From"
+    },
+    "date_to": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "End date in 'YYYY-MM-DD' format. If None, includes through season end.",
+      "examples": [
+        "2024-04-15",
+        "2024-06-30"
+      ],
+      "title": "Date To"
+    },
+    "season": {
+      "description": "Season in 'YYYY-YY' format (e.g., '2023-24')",
+      "examples": [
+        "2023-24",
+        "2022-23"
+      ],
+      "pattern": "^\\d{4}-\\d{2}$",
+      "title": "Season",
+      "type": "string"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Team name or abbreviation. If None, returns logs for all teams.",
+      "examples": [
+        "Lakers",
+        "LAL",
+        "Boston Celtics",
+        "BOS"
+      ],
+      "title": "Team"
+    }
+  },
+  "required": [
+    "season"
+  ],
+  "title": "get_date_range_game_log_or_team_game_log",
+  "type": "object",
+  "x-category": "Game Data",
+  "x-returns": "Detailed game logs with stats, outcomes, and matchups"
+}

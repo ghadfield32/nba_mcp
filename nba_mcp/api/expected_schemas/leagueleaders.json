@@ -1,0 +1,59 @@
+{
+  "endpoint": "leagueleaders",
+  "description": "Expected schema for NBA API LeagueLeaders endpoint",
+  "type": "object",
+  "required": [
+    "resultSet"
+  ],
+  "properties": {
+    "resultSet": {
+      "type": "object",
+      "required": [
+        "name",
+        "headers",
+        "rowSet"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Result set name (e.g., 'LeagueLeaders')"
+        },
+        "headers": {
+          "type": "array",
+          "description": "Column headers for league leaders data",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "rowSet": {
+          "type": "array",
+          "description": "Array of player statistics rows",
+          "items": {
+            "type": "array",
+            "description": "Individual player stat row"
+          }
+        }
+      }
+    },
+    "resource": {
+      "type": "string",
+      "description": "API resource identifier"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "Query parameters used for the request",
+      "properties": {
+        "Season": {"type": "string"},
+        "StatCategory": {"type": "string"},
+        "PerMode": {"type": "string"}
+      }
+    }
+  },
+  "generated_at": "2025-10-28T00:00:00Z",
+  "notes": [
+    "League leaders endpoint returns top performers by stat category",
+    "Result set structure is consistent across stat categories",
+    "Headers array indicates which stats are included in rowSet"
+  ]
+}

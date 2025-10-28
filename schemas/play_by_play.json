@@ -1,0 +1,96 @@
+{
+  "description": "Get detailed play-by-play data for NBA games",
+  "properties": {
+    "end_period": {
+      "default": 4,
+      "description": "Ending quarter/period (1-4 for regulation)",
+      "maximum": 10,
+      "minimum": 1,
+      "title": "End Period",
+      "type": "integer"
+    },
+    "game_date": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Game date in 'YYYY-MM-DD' format. If None, uses today's date for live games.",
+      "examples": [
+        "2024-01-15",
+        "2023-12-25"
+      ],
+      "title": "Game Date"
+    },
+    "max_lines": {
+      "default": 200,
+      "description": "Maximum number of output lines to return (prevents excessive data)",
+      "maximum": 1000,
+      "minimum": 10,
+      "title": "Max Lines",
+      "type": "integer"
+    },
+    "recent_n": {
+      "default": 5,
+      "description": "For live games, number of most recent plays to include",
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Recent N",
+      "type": "integer"
+    },
+    "start_clock": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{1,2}:\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Starting game clock in 'MM:SS' format (e.g., '7:30'). If None, starts from period beginning.",
+      "examples": [
+        "12:00",
+        "7:30",
+        "2:15"
+      ],
+      "title": "Start Clock"
+    },
+    "start_period": {
+      "default": 1,
+      "description": "Starting quarter/period (1-4 for regulation, 5+ for OT)",
+      "maximum": 10,
+      "minimum": 1,
+      "title": "Start Period",
+      "type": "integer"
+    },
+    "team": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Team name or abbreviation. If None, returns all games for the date.",
+      "examples": [
+        "Lakers",
+        "LAL",
+        "Warriors"
+      ],
+      "title": "Team"
+    }
+  },
+  "title": "play_by_play",
+  "type": "object",
+  "x-category": "Game Data",
+  "x-returns": "Chronological game events with timestamps and descriptions"
+}

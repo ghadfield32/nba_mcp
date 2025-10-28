@@ -50,6 +50,10 @@ class ResponseMetadata(BaseModel):
     """Metadata for every response."""
 
     version: str = Field(default="v1", description="API version")
+    schema_version: str = Field(
+        default="2025-01",
+        description="Response schema version in YYYY-MM format for breaking changes tracking",
+    )
     timestamp: str = Field(
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
         description="ISO-8601 UTC timestamp",
@@ -68,6 +72,7 @@ class ResponseMetadata(BaseModel):
         json_schema_extra={
             "example": {
                 "version": "v1",
+                "schema_version": "2025-01",
                 "timestamp": "2025-01-28T12:34:56.789Z",
                 "source": "live",
                 "cache_status": "hit",

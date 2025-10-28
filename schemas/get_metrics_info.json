@@ -1,0 +1,8 @@
+{
+  "description": "Get server metrics and observability information",
+  "properties": {},
+  "title": "get_metrics_info",
+  "type": "object",
+  "x-category": "Observability",
+  "x-returns": "Server health, cache stats, rate limits, and metrics endpoint info"
+}

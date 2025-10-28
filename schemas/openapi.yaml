@@ -1,0 +1,961 @@
+openapi: 3.1.0
+info:
+  title: NBA MCP API
+  version: 1.0.0
+  description: NBA Model Context Protocol (MCP) Server providing comprehensive NBA
+    data through 12 specialized tools. Supports natural language queries, entity resolution,
+    player/team statistics, live scores, and advanced analytics.
+  contact:
+    name: NBA MCP
+    url: https://github.com/your-org/nba_mcp
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+- url: http://localhost:8000
+  description: Local development server
+paths:
+  /tools/resolve_nba_entity:
+    post:
+      summary: Resolve ambiguous player/team names to specific entities with fuzzy
+        matching
+      description: Resolve ambiguous player/team names to specific entities with fuzzy
+        matching
+      operationId: resolve_nba_entity
+      tags:
+      - Entity Resolution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/resolve_nba_entity'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_player_career_information:
+    post:
+      summary: Get comprehensive career statistics for an NBA player
+      description: Get comprehensive career statistics for an NBA player
+      operationId: get_player_career_information
+      tags:
+      - Player Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_player_career_information'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_league_leaders_info:
+    post:
+      summary: Get top-10 NBA league leaders for a statistical category
+      description: Get top-10 NBA league leaders for a statistical category
+      operationId: get_league_leaders_info
+      tags:
+      - League Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_league_leaders_info'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_live_scores:
+    post:
+      summary: Get live or historical NBA game scores for a date
+      description: Get live or historical NBA game scores for a date
+      operationId: get_live_scores
+      tags:
+      - Live Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_live_scores'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_date_range_game_log_or_team_game_log:
+    post:
+      summary: Get game-by-game logs for a team or league within a date range
+      description: Get game-by-game logs for a team or league within a date range
+      operationId: get_date_range_game_log_or_team_game_log
+      tags:
+      - Game Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_date_range_game_log_or_team_game_log'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/play_by_play:
+    post:
+      summary: Get detailed play-by-play data for NBA games
+      description: Get detailed play-by-play data for NBA games
+      operationId: play_by_play
+      tags:
+      - Game Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/play_by_play'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_team_standings:
+    post:
+      summary: Get NBA team standings with rankings and records
+      description: Get NBA team standings with rankings and records
+      operationId: get_team_standings
+      tags:
+      - Team Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_team_standings'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_team_advanced_stats:
+    post:
+      summary: Get team advanced statistics (Offensive/Defensive Rating, Pace, Four
+        Factors)
+      description: Get team advanced statistics (Offensive/Defensive Rating, Pace,
+        Four Factors)
+      operationId: get_team_advanced_stats
+      tags:
+      - Team Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_team_advanced_stats'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_player_advanced_stats:
+    post:
+      summary: Get player advanced statistics (Usage%, TS%, eFG%, PER, ratings)
+      description: Get player advanced statistics (Usage%, TS%, eFG%, PER, ratings)
+      operationId: get_player_advanced_stats
+      tags:
+      - Player Data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_player_advanced_stats'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/compare_players:
+    post:
+      summary: Compare two players side-by-side with normalized stats
+      description: Compare two players side-by-side with normalized stats
+      operationId: compare_players
+      tags:
+      - Comparison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/compare_players'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/answer_nba_question:
+    post:
+      summary: Answer natural language questions about NBA data (NLQ pipeline)
+      description: Answer natural language questions about NBA data (NLQ pipeline)
+      operationId: answer_nba_question
+      tags:
+      - Natural Language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/answer_nba_question'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+  /tools/get_metrics_info:
+    post:
+      summary: Get server metrics and observability information
+      description: Get server metrics and observability information
+      operationId: get_metrics_info
+      tags:
+      - Observability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/get_metrics_info'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  data:
+                    type: object
+                  metadata:
+                    type: object
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  errors:
+                    type: array
+components:
+  schemas:
+    resolve_nba_entity:
+      description: Resolve ambiguous player/team names to specific entities with fuzzy
+        matching
+      properties:
+        query:
+          description: Player or team name to resolve (supports partial names, abbreviations,
+            nicknames)
+          examples:
+          - LeBron
+          - LAL
+          - Durant
+          - Los Angeles Lakers
+          minLength: 1
+          title: Query
+          type: string
+        entity_type:
+          anyOf:
+          - enum:
+            - player
+            - team
+            type: string
+          - type: 'null'
+          default: null
+          description: Optional filter to search only players or teams. If None, searches
+            both.
+          title: Entity Type
+        return_suggestions:
+          default: true
+          description: If True, returns alternative suggestions when no exact match
+            found
+          title: Return Suggestions
+          type: boolean
+      required:
+      - query
+      title: resolve_nba_entity
+      type: object
+      x-category: Entity Resolution
+      x-returns: JSON with entity details, confidence score, and suggestions
+    get_player_career_information:
+      description: Get comprehensive career statistics for an NBA player
+      properties:
+        player_name:
+          description: Player name (full or partial, e.g., 'LeBron James', 'LeBron',
+            'James')
+          examples:
+          - LeBron James
+          - Stephen Curry
+          - Giannis Antetokounmpo
+          minLength: 2
+          title: Player Name
+          type: string
+        season:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Season in 'YYYY-YY' format (e.g., '2023-24'). If None, returns
+            career totals.
+          examples:
+          - 2023-24
+          - 2015-16
+          - 2010-11
+          title: Season
+      required:
+      - player_name
+      title: get_player_career_information
+      type: object
+      x-category: Player Data
+      x-returns: Formatted career stats (games, points, rebounds, assists, percentages)
+    get_league_leaders_info:
+      description: Get top-10 NBA league leaders for a statistical category
+      properties:
+        season:
+          anyOf:
+          - type: string
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          default: null
+          description: Season(s) in 'YYYY-YY' format, or list of seasons. None defaults
+            to current season.
+          examples:
+          - 2023-24
+          - - 2022-23
+            - 2023-24
+          title: Season
+        stat_category:
+          description: Statistical category to rank by. PTS=Points, REB=Rebounds,
+            AST=Assists, STL=Steals, BLK=Blocks, FG_PCT=Field Goal %, FG3_PCT=3-Point
+            %, FT_PCT=Free Throw %
+          enum:
+          - PTS
+          - REB
+          - AST
+          - STL
+          - BLK
+          - FG_PCT
+          - FG3_PCT
+          - FT_PCT
+          title: Stat Category
+          type: string
+        per_mode:
+          description: Statistical aggregation mode. 'Totals'=Season totals, 'PerGame'=Per-game
+            averages, 'Per48'=Per-48-minutes rate
+          enum:
+          - Totals
+          - PerGame
+          - Per48
+          title: Per Mode
+          type: string
+      required:
+      - stat_category
+      - per_mode
+      title: get_league_leaders_info
+      type: object
+      x-category: League Data
+      x-returns: Ranked list of top players for the specified stat
+    get_live_scores:
+      description: Get live or historical NBA game scores for a date
+      properties:
+        target_date:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Date in 'YYYY-MM-DD' format. If None, uses today's date.
+          examples:
+          - '2024-01-15'
+          - '2023-12-25'
+          title: Target Date
+      title: get_live_scores
+      type: object
+      x-category: Live Data
+      x-returns: Game summaries with scores, teams, and status
+    get_date_range_game_log_or_team_game_log:
+      description: Get game-by-game logs for a team or league within a date range
+      properties:
+        season:
+          description: Season in 'YYYY-YY' format (e.g., '2023-24')
+          examples:
+          - 2023-24
+          - 2022-23
+          pattern: ^\d{4}-\d{2}$
+          title: Season
+          type: string
+        team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Team name or abbreviation. If None, returns logs for all teams.
+          examples:
+          - Lakers
+          - LAL
+          - Boston Celtics
+          - BOS
+          title: Team
+        date_from:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Start date in 'YYYY-MM-DD' format. If None, starts from season
+            beginning.
+          examples:
+          - '2024-01-01'
+          - '2023-10-15'
+          title: Date From
+        date_to:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: End date in 'YYYY-MM-DD' format. If None, includes through
+            season end.
+          examples:
+          - '2024-04-15'
+          - '2024-06-30'
+          title: Date To
+      required:
+      - season
+      title: get_date_range_game_log_or_team_game_log
+      type: object
+      x-category: Game Data
+      x-returns: Detailed game logs with stats, outcomes, and matchups
+    play_by_play:
+      description: Get detailed play-by-play data for NBA games
+      properties:
+        game_date:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Game date in 'YYYY-MM-DD' format. If None, uses today's date
+            for live games.
+          examples:
+          - '2024-01-15'
+          - '2023-12-25'
+          title: Game Date
+        team:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          description: Team name or abbreviation. If None, returns all games for the
+            date.
+          examples:
+          - Lakers
+          - LAL
+          - Warriors
+          title: Team
+        start_period:
+          default: 1
+          description: Starting quarter/period (1-4 for regulation, 5+ for OT)
+          maximum: 10
+          minimum: 1
+          title: Start Period
+          type: integer
+        end_period:
+          default: 4
+          description: Ending quarter/period (1-4 for regulation)
+          maximum: 10
+          minimum: 1
+          title: End Period
+          type: integer
+        start_clock:
+          anyOf:
+          - pattern: ^\d{1,2}:\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Starting game clock in 'MM:SS' format (e.g., '7:30'). If None,
+            starts from period beginning.
+          examples:
+          - '12:00'
+          - '7:30'
+          - '2:15'
+          title: Start Clock
+        recent_n:
+          default: 5
+          description: For live games, number of most recent plays to include
+          maximum: 100
+          minimum: 1
+          title: Recent N
+          type: integer
+        max_lines:
+          default: 200
+          description: Maximum number of output lines to return (prevents excessive
+            data)
+          maximum: 1000
+          minimum: 10
+          title: Max Lines
+          type: integer
+      title: play_by_play
+      type: object
+      x-category: Game Data
+      x-returns: Chronological game events with timestamps and descriptions
+    get_team_standings:
+      description: Get NBA team standings with rankings and records
+      properties:
+        season:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses
+            current season.
+          examples:
+          - 2023-24
+          - 2022-23
+          title: Season
+        conference:
+          anyOf:
+          - enum:
+            - East
+            - West
+            type: string
+          - type: 'null'
+          default: null
+          description: Filter by conference ('East' or 'West'). If None, returns both
+            conferences.
+          title: Conference
+      title: get_team_standings
+      type: object
+      x-category: Team Data
+      x-returns: Comprehensive standings (W-L, GB, rankings, streaks)
+    get_team_advanced_stats:
+      description: Get team advanced statistics (Offensive/Defensive Rating, Pace,
+        Four Factors)
+      properties:
+        team_name:
+          description: Team name or abbreviation (e.g., 'Lakers', 'LAL', 'Los Angeles
+            Lakers')
+          examples:
+          - Lakers
+          - LAL
+          - Boston Celtics
+          - BOS
+          minLength: 2
+          title: Team Name
+          type: string
+        season:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses
+            current season.
+          examples:
+          - 2023-24
+          - 2015-16
+          title: Season
+      required:
+      - team_name
+      title: get_team_advanced_stats
+      type: object
+      x-category: Team Data
+      x-returns: Advanced team metrics and efficiency ratings
+    get_player_advanced_stats:
+      description: Get player advanced statistics (Usage%, TS%, eFG%, PER, ratings)
+      properties:
+        player_name:
+          description: Player name (full or partial, e.g., 'LeBron James', 'LeBron',
+            'James')
+          examples:
+          - LeBron James
+          - Stephen Curry
+          - Giannis
+          minLength: 2
+          title: Player Name
+          type: string
+        season:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses
+            current season.
+          examples:
+          - 2023-24
+          - 2015-16
+          title: Season
+      required:
+      - player_name
+      title: get_player_advanced_stats
+      type: object
+      x-category: Player Data
+      x-returns: Comprehensive player efficiency metrics
+    compare_players:
+      description: Compare two players side-by-side with normalized stats
+      properties:
+        player1_name:
+          description: First player name (full or partial)
+          examples:
+          - LeBron James
+          - Michael Jordan
+          minLength: 2
+          title: Player1 Name
+          type: string
+        player2_name:
+          description: Second player name (full or partial)
+          examples:
+          - Kevin Durant
+          - Kobe Bryant
+          minLength: 2
+          title: Player2 Name
+          type: string
+        season:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}$|^$
+            type: string
+          - type: 'null'
+          default: null
+          description: Season in 'YYYY-YY' format for comparison. If None, uses current
+            season.
+          examples:
+          - 2023-24
+          - 2012-13
+          title: Season
+        normalization:
+          default: per_75
+          description: Statistical normalization mode. 'raw'=Season totals, 'per_game'=Per-game
+            averages, 'per_75'=Per-75 possessions (fairest), 'era_adjusted'=Adjust
+            for pace/era
+          enum:
+          - raw
+          - per_game
+          - per_75
+          - era_adjusted
+          title: Normalization
+          type: string
+      required:
+      - player1_name
+      - player2_name
+      title: compare_players
+      type: object
+      x-category: Comparison
+      x-returns: Fair comparison with shared metrics and optional era adjustments
+    answer_nba_question:
+      description: Answer natural language questions about NBA data (NLQ pipeline)
+      properties:
+        question:
+          description: Natural language question about NBA data
+          examples:
+          - Who leads the NBA in assists?
+          - Compare LeBron James and Kevin Durant
+          - Show me Giannis stats from 2023-24
+          - Eastern Conference standings
+          - What games are on today?
+          minLength: 5
+          title: Question
+          type: string
+      required:
+      - question
+      title: answer_nba_question
+      type: object
+      x-category: Natural Language
+      x-returns: Formatted markdown answer with tables/narratives
+    get_metrics_info:
+      description: Get server metrics and observability information
+      properties: {}
+      title: get_metrics_info
+      type: object
+      x-category: Observability
+      x-returns: Server health, cache stats, rate limits, and metrics endpoint info

@@ -1,0 +1,63 @@
+{
+  "description": "Compare two players side-by-side with normalized stats",
+  "properties": {
+    "normalization": {
+      "default": "per_75",
+      "description": "Statistical normalization mode. 'raw'=Season totals, 'per_game'=Per-game averages, 'per_75'=Per-75 possessions (fairest), 'era_adjusted'=Adjust for pace/era",
+      "enum": [
+        "raw",
+        "per_game",
+        "per_75",
+        "era_adjusted"
+      ],
+      "title": "Normalization",
+      "type": "string"
+    },
+    "player1_name": {
+      "description": "First player name (full or partial)",
+      "examples": [
+        "LeBron James",
+        "Michael Jordan"
+      ],
+      "minLength": 2,
+      "title": "Player1 Name",
+      "type": "string"
+    },
+    "player2_name": {
+      "description": "Second player name (full or partial)",
+      "examples": [
+        "Kevin Durant",
+        "Kobe Bryant"
+      ],
+      "minLength": 2,
+      "title": "Player2 Name",
+      "type": "string"
+    },
+    "season": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Season in 'YYYY-YY' format for comparison. If None, uses current season.",
+      "examples": [
+        "2023-24",
+        "2012-13"
+      ],
+      "title": "Season"
+    }
+  },
+  "required": [
+    "player1_name",
+    "player2_name"
+  ],
+  "title": "compare_players",
+  "type": "object",
+  "x-category": "Comparison",
+  "x-returns": "Fair comparison with shared metrics and optional era adjustments"
+}

@@ -1,0 +1,47 @@
+{
+  "description": "Resolve ambiguous player/team names to specific entities with fuzzy matching",
+  "properties": {
+    "entity_type": {
+      "anyOf": [
+        {
+          "enum": [
+            "player",
+            "team"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional filter to search only players or teams. If None, searches both.",
+      "title": "Entity Type"
+    },
+    "query": {
+      "description": "Player or team name to resolve (supports partial names, abbreviations, nicknames)",
+      "examples": [
+        "LeBron",
+        "LAL",
+        "Durant",
+        "Los Angeles Lakers"
+      ],
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "return_suggestions": {
+      "default": true,
+      "description": "If True, returns alternative suggestions when no exact match found",
+      "title": "Return Suggestions",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "query"
+  ],
+  "title": "resolve_nba_entity",
+  "type": "object",
+  "x-category": "Entity Resolution",
+  "x-returns": "JSON with entity details, confidence score, and suggestions"
+}

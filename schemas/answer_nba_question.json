@@ -1,0 +1,25 @@
+{
+  "description": "Answer natural language questions about NBA data (NLQ pipeline)",
+  "properties": {
+    "question": {
+      "description": "Natural language question about NBA data",
+      "examples": [
+        "Who leads the NBA in assists?",
+        "Compare LeBron James and Kevin Durant",
+        "Show me Giannis stats from 2023-24",
+        "Eastern Conference standings",
+        "What games are on today?"
+      ],
+      "minLength": 5,
+      "title": "Question",
+      "type": "string"
+    }
+  },
+  "required": [
+    "question"
+  ],
+  "title": "answer_nba_question",
+  "type": "object",
+  "x-category": "Natural Language",
+  "x-returns": "Formatted markdown answer with tables/narratives"
+}
