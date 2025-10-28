@@ -40,6 +40,7 @@ from nba_mcp.schemas.tool_params import (
     ComparePlayersEraAdjustedParams,
     ComparePlayersParams,
     GetDateRangeGameLogParams,
+    GetGameContextParams,
     GetLiveScoresParams,
     GetMetricsInfoParams,
     GetPlayerAdvancedStatsParams,
@@ -130,6 +131,12 @@ TOOL_REGISTRY: Dict[str, Dict[str, Any]] = {
         "description": "Get shot chart data with coordinates and hexbin aggregation for visualization",
         "category": "Shot Data",
         "returns": "Shooting data with raw coordinates, hexbin aggregation, and zone summaries",
+    },
+    "get_game_context": {
+        "model": GetGameContextParams,
+        "description": "Get comprehensive game context with standings, stats, form, and narrative",
+        "category": "Game Context",
+        "returns": "Matchup analysis with standings, advanced stats, recent form, head-to-head, and narrative summary",
     },
     "answer_nba_question": {
         "model": AnswerNBAQuestionParams,

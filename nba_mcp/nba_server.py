@@ -33,6 +33,9 @@ from nba_mcp.api.errors import (
     retry_with_backoff,
 )
 
+# Import Phase 3 feature modules (shot charts, game context)
+from nba_mcp.api.game_context import get_game_context as fetch_game_context
+
 # Import new response models and error handling
 from nba_mcp.api.models import (
     EntityReference,
@@ -44,8 +47,6 @@ from nba_mcp.api.models import (
     partial_response,
     success_response,
 )
-
-# Import Phase 3 feature modules (shot charts, game context)
 from nba_mcp.api.shot_charts import get_shot_chart as fetch_shot_chart
 from nba_mcp.api.tools.nba_api_utils import (
     format_game,
@@ -1222,6 +1223,93 @@ async def get_shot_chart(
         response = error_response(
             error_code="NBA_API_ERROR",
             error_message=f"Failed to fetch shot chart: {str(e)}",
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def get_game_context(
+    team1_name: str,
+    team2_name: str,
+    season: Optional[str] = None,
+) -> str:
+    """
+    Get comprehensive game context for a matchup between two teams.
+
+    Fetches and composes multiple data sources in parallel:
+    - Team standings (conference/division rank, records, games behind)
+    - Advanced statistics (offensive/defensive/net rating, pace)
+    - Recent form (last 10 games, win/loss streaks)
+    - Head-to-head record (season series)
+    - Narrative synthesis (markdown-formatted storylines)
+
+    Perfect for game previews, matchup analysis, and pre-game context.
+
+    Args:
+        team1_name: First team name (e.g., "Lakers", "Los Angeles Lakers")
+        team2_name: Second team name (e.g., "Warriors", "Golden State Warriors")
+        season: Season in 'YYYY-YY' format (e.g., "2023-24"). If None, uses current season.
+
+    Returns:
+        JSON string with ResponseEnvelope containing:
+        - matchup: Team IDs and names
+        - standings: Conference/division ranks, records, win percentage
+        - advanced_stats: OffRtg, DefRtg, NetRtg, Pace for both teams
+        - recent_form: Last 10 games, W-L record, current streaks
+        - head_to_head: Season series record, game results
+        - narrative: Markdown-formatted game preview with key storylines
+        - metadata: Components loaded/failed status
+
+    Examples:
+        get_game_context("Lakers", "Warriors")
+        → Full matchup context with all components
+
+        get_game_context("Boston Celtics", "Miami Heat", season="2022-23")
+        → Historical matchup context from 2022-23 season
+
+    Features:
+        - Parallel API execution (4-6 calls simultaneously)
+        - Graceful degradation (returns partial data if some components fail)
+        - Auto-generated narrative with storylines
+        - Fuzzy team name matching
+
+    Narrative Sections:
+        1. Matchup Header: Team records, conference ranks
+        2. Season Series: Head-to-head record
+        3. Recent Form: Last 10 games, win/loss streaks
+        4. Statistical Edge: Net rating comparison
+        5. Key Storylines: Auto-generated insights (streaks, defensive struggles, etc.)
+    """
+    start_time = time.time()
+
+    try:
+        client = NBAApiClient()
+        data = await fetch_game_context(
+            team1_name=team1_name,
+            team2_name=team2_name,
+            season=season or client.get_season_string(),
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+        response = success_response(
+            data=data,
+            source="composed",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms,
+        )
+        return response.to_json_string()
+
+    except (EntityNotFoundError, InvalidParameterError) as e:
+        response = error_response(
+            error_code=e.code, error_message=e.message, details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_game_context")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch game context: {str(e)}",
         )
         return response.to_json_string()
 

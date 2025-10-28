@@ -433,7 +433,40 @@ class GetShotChartParams(BaseModel):
 
 
 # ============================================================================
-# Tool 13: answer_nba_question
+# Tool 13: get_game_context
+# ============================================================================
+
+
+class GetGameContextParams(BaseModel):
+    """
+    Parameters for retrieving comprehensive game context for a matchup.
+
+    Composes data from multiple sources (standings, advanced stats, recent form,
+    head-to-head record) and synthesizes into narrative summary.
+    """
+
+    team1_name: str = Field(
+        ...,
+        description="First team name (full or partial, e.g., 'Lakers', 'Los Angeles Lakers', 'LAL')",
+        examples=["Lakers", "Los Angeles Lakers", "Warriors", "Golden State Warriors"],
+        min_length=2,
+    )
+    team2_name: str = Field(
+        ...,
+        description="Second team name (full or partial, e.g., 'Warriors', 'Golden State Warriors', 'GSW')",
+        examples=["Warriors", "Golden State Warriors", "Celtics", "Boston Celtics"],
+        min_length=2,
+    )
+    season: Optional[str] = Field(
+        None,
+        description="Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses current season.",
+        examples=["2023-24", "2022-23", "2021-22"],
+        pattern=r"^\d{4}-\d{2}$|^$",
+    )
+
+
+# ============================================================================
+# Tool 14: answer_nba_question
 # ============================================================================
 
 
@@ -492,6 +525,7 @@ __all__ = [
     "ComparePlayersParams",
     "ComparePlayersEraAdjustedParams",
     "GetShotChartParams",
+    "GetGameContextParams",
     "AnswerNBAQuestionParams",
     "GetMetricsInfoParams",
 ]
