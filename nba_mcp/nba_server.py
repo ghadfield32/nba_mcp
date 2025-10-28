@@ -763,6 +763,7 @@ async def get_team_standings(
     Returns:
         JSON string with ResponseEnvelope containing list of TeamStanding objects
 
+    """
     start_time = time.time()
 
     try:
@@ -810,6 +811,7 @@ async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) 
     Returns:
         JSON string with ResponseEnvelope containing team advanced stats
 
+    """
     start_time = time.time()
 
     try:
@@ -866,6 +868,7 @@ async def get_player_advanced_stats(
     Returns:
         JSON string with ResponseEnvelope containing player advanced stats
 
+    """
     start_time = time.time()
 
     try:
@@ -929,6 +932,7 @@ async def compare_players(
     Returns:
         JSON string with ResponseEnvelope containing PlayerComparison object
 
+    """
     start_time = time.time()
 
     try:
@@ -997,6 +1001,7 @@ async def compare_players_era_adjusted(
         - Side-by-side comparison table
         - Explanation of adjustments
 
+    """
     start_time = time.time()
 
     try:
@@ -1193,6 +1198,7 @@ async def get_game_context(
         - narrative: Markdown-formatted game preview with key storylines
         - metadata: Components loaded/failed status
 
+    """
     start_time = time.time()
 
     try:
@@ -1288,6 +1294,7 @@ async def get_metrics_info() -> str:
         - Recent request statistics
         - Metrics endpoint information
 
+    """
     try:
         from nba_mcp.observability import get_metrics_snapshot
 
