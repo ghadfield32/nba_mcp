@@ -365,7 +365,15 @@ def initialize_rate_limiter() -> RateLimiter:
         "answer_nba_question", capacity=20, refill_rate=20 / 60
     )  # 20/min
 
-    # Global daily quota
+    # Phase 3 tools (shot charts, game context)
+    _rate_limiter.add_limit(
+        "get_shot_chart", capacity=30, refill_rate=30 / 60
+    )  # 30/min (single API call)
+    _rate_limiter.add_limit(
+        "get_game_context", capacity=20, refill_rate=20 / 60
+    )  # 20/min (4-6 API calls)
+
+    # Global daily quota (conservative to stay well under NBA API limits)
     _rate_limiter.set_global_quota(daily_limit=10000, warning_threshold=0.8)
 
     logger.info("Rate limiter initialized with default limits")

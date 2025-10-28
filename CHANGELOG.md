@@ -76,6 +76,38 @@
 
 **Dependencies**: Zero new dependencies (uses existing asyncio, pandas, nba_api)
 
+### 3.3 Production Readiness & Documentation ✅ COMPLETED (2025-10-28)
+- [x] **Rate limiting**: Added get_shot_chart (30/min) and get_game_context (20/min) to token bucket rate limiter
+- [x] **Global quota**: Conservative 10,000 requests/day limit with 80% warning threshold
+- [x] **Headers review**: Verified NBA API headers (User-Agent, Referer, Accept) properly configured in headers.py
+- [x] **Golden questions**: Created comprehensive test suite with 11 categories (docs/GOLDEN_QUESTIONS.md)
+- [x] **Setup guide**: Complete MCP integration guide for Claude Desktop + VS Code (docs/MCP_SETUP_GUIDE.md)
+- [x] **Testing automation**: Example scripts for connection testing and golden question validation
+
+**Rate Limits (per tool)**:
+- Simple tools (player/team stats): 60/min
+- Complex tools (compare, shot charts): 30/min
+- Multi-API tools (game context, NLQ): 20/min
+- Global daily quota: 10,000 requests with warning at 8,000
+
+**Golden Questions Test Coverage**:
+- Entity resolution (fuzzy matching, nicknames)
+- Live data (scores, games by date)
+- Player/team statistics (season stats, advanced metrics)
+- League leaders (top scorers, 3PT shooters)
+- Comparisons (career stats, era-adjusted)
+- Game logs (date ranges, last N games)
+- Shot charts (hexbin, zone summaries)
+- Game context (multi-source composition, narrative)
+- Natural language queries (NLQ pipeline)
+
+**MCP Setup Documentation**:
+- Claude Desktop: JSON config with PYTHONPATH setup
+- VS Code: Continue extension integration
+- Connection testing: MCP Inspector, Python scripts, golden questions
+- Troubleshooting: Common issues and solutions
+- Advanced config: Environment variables, custom rate limits, Docker
+
 ---
 
 ## PHASE 1: STANDARDIZATION (JSON Schemas, Headers, Validation, Versioning) ✅ COMPLETED
