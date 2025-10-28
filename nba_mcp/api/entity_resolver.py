@@ -204,6 +204,10 @@ def resolve_team(query: str, min_confidence: float = 0.6) -> Optional[EntityRefe
     Returns:
         EntityReference if found with sufficient confidence, else None
     """
+    # Convert int to string if needed (team IDs may be passed as int)
+    if isinstance(query, int):
+        query = str(query)
+
     team = _cached_team_lookup(query.lower())
 
     if not team:
@@ -263,6 +267,10 @@ def suggest_players(query: str, top_n: int = 5) -> List[EntityReference]:
     Returns:
         List of EntityReference sorted by confidence
     """
+    # Convert int to string if needed (player IDs may be passed as int)
+    if isinstance(query, int):
+        query = str(query)
+
     all_players = players.get_players()
     query_lower = query.lower()
 
@@ -314,6 +322,10 @@ def suggest_teams(query: str, top_n: int = 5) -> List[EntityReference]:
     Returns:
         List of EntityReference sorted by confidence
     """
+    # Convert int to string if needed (team IDs may be passed as int)
+    if isinstance(query, int):
+        query = str(query)
+
     all_teams = teams.get_teams()
     query_lower = query.lower()
 

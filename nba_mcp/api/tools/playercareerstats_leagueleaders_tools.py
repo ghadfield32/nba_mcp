@@ -129,11 +129,19 @@ def get_player_career_stats(
 
 
 def get_league_leaders(
-    season: str, stat_category: str, per_mode: str = "Totals"
+    season: str,
+    stat_category: str,
+    per_mode: str = "Totals",
+    season_type_all_star: str = "Regular Season"
 ) -> pd.DataFrame:
     """
     Retrieve league leaders for a specified season and statistical category.
-    (Unchanged from before—kept here just for your reference.)
+
+    Args:
+        season: NBA season (e.g., '2023-24')
+        stat_category: Statistical category (e.g., 'PTS', 'AST')
+        per_mode: Aggregation mode ('Totals', 'PerGame', 'Per48')
+        season_type_all_star: Season type ('Regular Season', 'Playoffs', 'All Star')
     """
     season_norm = normalize_season(season)
     normalized_stat = normalize_stat_category(stat_category)
@@ -144,7 +152,7 @@ def get_league_leaders(
         "per_mode48": normalized_mode,
         "scope": "S",
         "season": season_norm,
-        "season_type_all_star": "Regular Season",
+        "season_type_all_star": season_type_all_star,
         "stat_category_abbreviation": normalized_stat,
         "active_flag_nullable": "",
     }

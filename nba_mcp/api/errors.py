@@ -89,12 +89,33 @@ class EntityNotFoundError(NBAMCPError):
         if suggestions and len(suggestions) > 0:
             suggestion_text = "\n\nDid you mean?"
             for i, suggestion in enumerate(suggestions[:3], 1):
-                name = suggestion.get("name", "Unknown")
-                confidence = suggestion.get("confidence", 0.0)
+                # Handle both dict and EntityReference objects
+                if isinstance(suggestion, dict):
+                    name = suggestion.get("name", "Unknown")
+                    confidence = suggestion.get("confidence", 0.0)
+                elif isinstance(suggestion, str):
+                    name = suggestion
+                    confidence = 0.0
+                elif hasattr(suggestion, "name"):
+                    name = suggestion.name
+                    confidence = getattr(suggestion, "confidence", 0.0)
+                else:
+                    name = str(suggestion)
+                    confidence = 0.0
+
                 suggestion_text += f"\n  {i}. {name} (match: {confidence:.0%})"
 
-            # Add usage example
-            example_name = suggestions[0].get("name", "")
+            # Add usage example - handle first suggestion type
+            first_suggestion = suggestions[0]
+            if isinstance(first_suggestion, dict):
+                example_name = first_suggestion.get("name", "")
+            elif isinstance(first_suggestion, str):
+                example_name = first_suggestion
+            elif hasattr(first_suggestion, "name"):
+                example_name = first_suggestion.name
+            else:
+                example_name = str(first_suggestion)
+
             suggestion_text += f"\n\nTry: resolve_nba_entity('{example_name}', entity_type='{entity_type}')"
 
             message = base_message + suggestion_text

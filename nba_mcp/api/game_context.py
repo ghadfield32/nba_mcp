@@ -108,24 +108,24 @@ async def fetch_standings_context(
                 "losses": int(row["LOSSES"].iloc[0]) if "LOSSES" in row else 0,
                 "win_pct": float(row["WinPCT"].iloc[0]) if "WinPCT" in row else 0.0,
                 "conference_rank": (
-                    int(row["Conference"].iloc[0]) if "Conference" in row else 0
+                    int(row["ConferenceRank"].iloc[0]) if "ConferenceRank" in row else 0
                 ),
                 "division_rank": (
-                    int(row["Division"].iloc[0]) if "Division" in row else 0
+                    int(row["DivisionRank"].iloc[0]) if "DivisionRank" in row else 0
                 ),
                 "games_behind": (
-                    float(row["STANDINGSDATE"].iloc[0])
-                    if "STANDINGSDATE" in row
+                    float(row["ConferenceGamesBack"].iloc[0])
+                    if "ConferenceGamesBack" in row
                     else 0.0
                 ),
                 "conference": (
-                    str(row["ConferenceRecord"].iloc[0])
-                    if "ConferenceRecord" in row
+                    str(row["Conference"].iloc[0])
+                    if "Conference" in row
                     else ""
                 ),
                 "division": (
-                    str(row["DivisionRecord"].iloc[0])
-                    if "DivisionRecord" in row
+                    str(row["Division"].iloc[0])
+                    if "Division" in row
                     else ""
                 ),
             }
@@ -184,9 +184,19 @@ async def fetch_advanced_stats_context(
             f"Fetching advanced stats for teams {team1_id}, {team2_id} - {season}"
         )
 
+        # Get team names from IDs (fetch_team_advanced_stats expects names, not IDs)
+        from nba_api.stats.static import teams as nba_teams
+        all_teams = nba_teams.get_teams()
+        team1_name = next((t["full_name"] for t in all_teams if t["id"] == team1_id), None)
+        team2_name = next((t["full_name"] for t in all_teams if t["id"] == team2_id), None)
+
+        if not team1_name or not team2_name:
+            logger.error(f"Could not resolve team names for IDs: {team1_id}, {team2_id}")
+            return {"team1": {}, "team2": {}}
+
         # Fetch advanced stats for both teams in parallel
-        team1_stats_task = fetch_team_advanced_stats(team1_id, season)
-        team2_stats_task = fetch_team_advanced_stats(team2_id, season)
+        team1_stats_task = fetch_team_advanced_stats(team1_name, season)
+        team2_stats_task = fetch_team_advanced_stats(team2_name, season)
 
         team1_stats, team2_stats = await asyncio.gather(
             team1_stats_task, team2_stats_task, return_exceptions=True

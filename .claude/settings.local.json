@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp config:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(claude mcp add-json:*)",
+      "Bash(claude mcp:*)",
+      "Bash(timeout 60 .venv/Scripts/python.exe:*)",
+      "Bash(timeout 30 .venv/Scripts/python.exe:*)",
+      "Bash(timeout 120 .venv/Scripts/python.exe:*)",
+      "Bash(timeout 180 .venv/Scripts/python.exe:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

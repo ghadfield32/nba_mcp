@@ -226,10 +226,18 @@ class NBAApiClient:
         season: Optional[Union[str, List[str]]] = None,
         stat_category: str = "PTS",
         per_mode: str = "Totals",
+        season_type_all_star: str = "Regular Season",
         as_dataframe: bool = True,
     ) -> Union[pd.DataFrame, List[Dict[str, Any]], str]:
         """
         Fetch top league leaders for one or more seasons.
+
+        Args:
+            season: Season(s) in 'YYYY-YY' format
+            stat_category: Statistical category (e.g., 'PTS', 'AST')
+            per_mode: Aggregation mode ('Totals', 'PerGame', 'Per48')
+            season_type_all_star: Season type ('Regular Season', 'Playoffs', 'All Star')
+            as_dataframe: Return as DataFrame (True) or list of dicts (False)
         """
         stat_category_norm = normalize_stat_category(stat_category)
         per_mode_norm = normalize_per_mode(per_mode)
@@ -243,7 +251,7 @@ class NBAApiClient:
         results = []
         for s in seasons:
             df: pd.DataFrame = await asyncio.to_thread(
-                _fetch_league_leaders, s, stat_category_norm, per_mode_norm
+                _fetch_league_leaders, s, stat_category_norm, per_mode_norm, season_type_all_star
             )
             if df.empty:
                 continue

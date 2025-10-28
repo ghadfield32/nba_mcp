@@ -58,8 +58,8 @@ class ResponseMetadata(BaseModel):
         default_factory=lambda: datetime.utcnow().isoformat() + "Z",
         description="ISO-8601 UTC timestamp",
     )
-    source: Literal["live", "historical", "static"] = Field(
-        default="historical", description="Data source type"
+    source: Literal["live", "historical", "static", "composed"] = Field(
+        default="historical", description="Data source type (composed = multi-source)"
     )
     cache_status: Literal["miss", "hit", "stale", "error"] = Field(
         default="miss", description="Cache hit/miss status"
@@ -309,7 +309,7 @@ class PlayerComparison(BaseModel):
 
 def success_response(
     data: Any,
-    source: Literal["live", "historical", "static"] = "historical",
+    source: Literal["live", "historical", "static", "composed"] = "historical",
     cache_status: Literal["miss", "hit", "stale", "error"] = "miss",
     execution_time_ms: Optional[float] = None,
 ) -> ResponseEnvelope:
@@ -373,7 +373,7 @@ def error_response(
 def partial_response(
     data: Any,
     errors: List[ErrorDetail],
-    source: Literal["live", "historical", "static"] = "historical",
+    source: Literal["live", "historical", "static", "composed"] = "historical",
 ) -> ResponseEnvelope:
     """
     Create a partial response (some data available, but with errors).

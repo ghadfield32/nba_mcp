@@ -115,6 +115,18 @@ logger = logging.getLogger(__name__)
 HOST = os.getenv("FASTMCP_SSE_HOST", "0.0.0.0")
 PATH = os.getenv("FASTMCP_SSE_PATH", "/sse")
 
+# Team to conference mapping (2024-25 season)
+TEAM_TO_CONFERENCE = {
+    # Eastern Conference
+    "ATL": "East", "BOS": "East", "BKN": "East", "CHA": "East", "CHI": "East",
+    "CLE": "East", "DET": "East", "IND": "East", "MIA": "East", "MIL": "East",
+    "NYK": "East", "ORL": "East", "PHI": "East", "TOR": "East", "WAS": "East",
+    # Western Conference
+    "DAL": "West", "DEN": "West", "GSW": "West", "HOU": "West", "LAC": "West",
+    "LAL": "West", "MEM": "West", "MIN": "West", "NOP": "West", "OKC": "West",
+    "PHX": "West", "POR": "West", "SAC": "West", "SAS": "West", "UTA": "West",
+}
+
 # ── 2) Create the global server instance for decorator registration ──
 mcp_server = FastMCP(name="nba_mcp", host=HOST, port=BASE_PORT)
 
@@ -523,34 +535,183 @@ async def get_player_career_information(
 
 
 @mcp_server.tool()
-async def get_league_leaders_info(params: LeagueLeadersParams) -> str:
+async def get_league_leaders_info(
+    stat_category: Literal[
+        "PTS", "REB", "AST", "STL", "BLK", "FG_PCT", "FG3_PCT", "FT_PCT"
+    ],
+    season: Optional[Union[str, List[str]]] = None,
+    per_mode: Literal["Totals", "PerGame", "Per48"] = "PerGame",
+    season_type_all_star: str = "Regular Season",
+    limit: int = 10,
+    format: Literal["text", "json"] = "text",
+    min_games_played: Optional[int] = None,
+    conference: Optional[Literal["East", "West"]] = None,
+    team: Optional[str] = None,
+) -> str:
     """
-    Get the top-10 league leaders for the requested stat(s) and mode(s).
-    Inputs are validated and coerced via LeagueLeadersParams.
+    Get the league leaders for the requested stat(s) and mode(s).
+
+    Args:
+        stat_category: Statistical category (e.g., 'PTS', 'AST', 'REB')
+        season: Season in 'YYYY-YY' format or list thereof (None = current season)
+        per_mode: Aggregation mode - 'Totals', 'PerGame', or 'Per48'
+        season_type_all_star: Season type filter (e.g., 'Regular Season', 'Playoffs')
+        limit: Maximum number of leaders to return (default: 10)
+        format: Output format - 'text' for human-readable or 'json' for structured data (default: 'text')
+        min_games_played: Minimum games played filter (optional)
+        conference: Conference filter - 'East' or 'West' (optional)
+        team: Team abbreviation filter (e.g., 'LAL', 'BOS') (optional)
+
+    Returns:
+        Formatted string with top N leaders (text format) or JSON string with structured data
     """
-    # 1) Extract and normalize already-validated inputs
+    # Validate inputs via Pydantic model internally
+    params = LeagueLeadersParams(
+        season=season,
+        stat_category=stat_category,
+        per_mode=per_mode
+    )
+
+    # Extract validated values
     season = params.season
     stat_category = params.stat_category
     per_mode = params.per_mode
 
-    logger.debug("get_league_leaders_info(params=%r)", params.dict())
+    logger.debug("get_league_leaders_info(stat_category=%s, season=%s, per_mode=%s, season_type=%s)",
+                 stat_category, season, per_mode, season_type_all_star)
 
     client = NBAApiClient()
     result = await client.get_league_leaders(
-        season=season, stat_category=stat_category, per_mode=per_mode, as_dataframe=True
+        season=season,
+        stat_category=stat_category,
+        per_mode=per_mode,
+        season_type_all_star=season_type_all_star,
+        as_dataframe=True
     )
 
     if isinstance(result, str):
+        # If result is an error string but JSON format requested, wrap in JSON
+        if format == "json":
+            from datetime import datetime
+            return json.dumps({
+                "metadata": {
+                    "stat_category": stat_category,
+                    "season": season if isinstance(season, str) else list(season) if season else None,
+                    "per_mode": per_mode,
+                    "season_type": season_type_all_star,
+                    "limit": limit,
+                    "total_leaders": 0,
+                    "query_timestamp": datetime.utcnow().isoformat() + "Z",
+                    "error": result
+                },
+                "leaders": []
+            }, indent=2)
         return result
 
     df: pd.DataFrame = result
-    if df.empty:
-        return f"No leaders found for '{stat_category}' in season(s) {season}."
 
+    # Apply filters
+    if min_games_played is not None:
+        if "GP" in df.columns:
+            df = df[df["GP"] >= min_games_played]
+
+    if team is not None:
+        if "TEAM" in df.columns:
+            df = df[df["TEAM"] == team.upper()]
+
+    if conference is not None:
+        if "TEAM" in df.columns:
+            df = df[df["TEAM"].map(lambda t: TEAM_TO_CONFERENCE.get(t) == conference)]
+
+    if df.empty:
+        if format == "json":
+            from datetime import datetime
+            metadata = {
+                "stat_category": stat_category,
+                "season": season if isinstance(season, str) else list(season) if season else None,
+                "per_mode": per_mode,
+                "season_type": season_type_all_star,
+                "limit": limit,
+                "total_leaders": 0,
+                "query_timestamp": datetime.utcnow().isoformat() + "Z"
+            }
+            if min_games_played is not None:
+                metadata["min_games_played"] = min_games_played
+            if conference is not None:
+                metadata["conference"] = conference
+            if team is not None:
+                metadata["team"] = team
+            return json.dumps({"metadata": metadata, "leaders": []}, indent=2)
+
+        # Build filter description for text format
+        filter_desc = []
+        if min_games_played is not None:
+            filter_desc.append(f"min_games_played={min_games_played}")
+        if conference is not None:
+            filter_desc.append(f"conference={conference}")
+        if team is not None:
+            filter_desc.append(f"team={team}")
+
+        filter_str = f" with filters ({', '.join(filter_desc)})" if filter_desc else ""
+        return f"No leaders found for '{stat_category}' in season(s) {season}{filter_str}."
+
+    # Return JSON format if requested
+    if format == "json":
+        from datetime import datetime
+
+        leaders_data = []
+        for s, grp in df.groupby("SEASON"):
+            for i, (_, r) in enumerate(grp.head(limit).iterrows(), 1):
+                leader = {
+                    "rank": i,
+                    "season": s,
+                    "player_id": int(r.get("PLAYER_ID", 0)) if pd.notna(r.get("PLAYER_ID")) else None,
+                    "player_name": str(r.get("PLAYER_NAME", r.get("PLAYER", "Unknown"))),
+                    "team_id": int(r.get("TEAM_ID", 0)) if pd.notna(r.get("TEAM_ID")) else None,
+                    "team": str(r.get("TEAM", r.get("TEAM_ABBREVIATION", "N/A"))),
+                    "games_played": int(r.get("GP", 0)) if pd.notna(r.get("GP")) else None,
+                    "minutes": float(r.get("MIN", 0)) if pd.notna(r.get("MIN")) else None,
+                    "value": float(r.get(stat_category, 0)) if pd.notna(r.get(stat_category)) else None,
+                }
+
+                # Add all available stats
+                stat_fields = ["FGM", "FGA", "FG_PCT", "FG3M", "FG3A", "FG3_PCT",
+                               "FTM", "FTA", "FT_PCT", "OREB", "DREB", "REB",
+                               "AST", "STL", "BLK", "TOV", "PTS", "EFF"]
+                for field in stat_fields:
+                    if field in r.index and pd.notna(r[field]):
+                        leader[field.lower()] = float(r[field])
+
+                leaders_data.append(leader)
+
+        metadata = {
+            "stat_category": stat_category,
+            "season": season if isinstance(season, str) else list(season) if season else None,
+            "per_mode": per_mode,
+            "season_type": season_type_all_star,
+            "limit": limit,
+            "total_leaders": len(leaders_data),
+            "query_timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        # Add filter parameters if specified
+        if min_games_played is not None:
+            metadata["min_games_played"] = min_games_played
+        if conference is not None:
+            metadata["conference"] = conference
+        if team is not None:
+            metadata["team"] = team
+
+        response = {
+            "metadata": metadata,
+            "leaders": leaders_data
+        }
+        return json.dumps(response, indent=2)
+
+    # Return text format (default)
     out = []
     for s, grp in df.groupby("SEASON"):
-        out.append(f"Top 10 {stat_category} Leaders ({s}):")
-        for i, (_, r) in enumerate(grp.head(10).iterrows(), 1):
+        out.append(f"Top {limit} {stat_category} Leaders ({s}):")
+        for i, (_, r) in enumerate(grp.head(limit).iterrows(), 1):
             name = r["PLAYER_NAME"]
             team = r.get("TEAM_NAME", r.get("TEAM_ABBREVIATION", "N/A"))
             stat_cols = [c for c in r.index if stat_category in c]
@@ -591,6 +752,11 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         # Format each into "Lakers vs Suns – 102-99 (Final)"
         lines = []
         for g in games:
+            # Skip if game object is a string (error message)
+            if isinstance(g, str):
+                logger.warning(f"Skipping invalid game object: {g}")
+                continue
+
             summary = g.get("scoreBoardSummary") or g.get("scoreBoardSnapshot")
             home = summary["homeTeam"]
             away = summary["awayTeam"]

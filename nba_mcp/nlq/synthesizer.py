@@ -263,6 +263,12 @@ def synthesize_leaders_query(
     if not leaders_result or not leaders_result.success:
         return "Unable to retrieve league leaders at this time."
 
+    # Check if data is already a formatted string (new behavior)
+    if isinstance(leaders_result.data, str):
+        # Tool returns formatted string - pass it through
+        return leaders_result.data
+
+    # Handle structured data (old behavior for compatibility)
     leaders_data = leaders_result.data.get("leaders", [])
     stat_name = leaders_result.data.get("stat_category", "unknown stat")
 
