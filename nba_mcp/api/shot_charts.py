@@ -432,20 +432,32 @@ async def get_shot_chart(
         NBAApiError: If API call fails
     """
     # Normalize season format
-    season = normalize_season(season)
+    normalized_seasons = normalize_season(season)
+
+    # ShotChartDetail only supports single season, take first if multiple provided
+    if normalized_seasons is None:
+        # Use current season if None provided
+        from nba_mcp.api.tools.nba_api_client import NBAApiClient
+
+        client = NBAApiClient()
+        season_str = client.get_season_string()
+    elif isinstance(normalized_seasons, list):
+        season_str = normalized_seasons[0]  # Take first season
+    else:
+        season_str = normalized_seasons
 
     # Resolve entity (player or team)
     entity = resolve_entity(query=entity_name, entity_type=entity_type)
 
     logger.info(
-        f"Fetching shot chart for {entity.name} ({entity.entity_type}) - {season}"
+        f"Fetching shot chart for {entity.name} ({entity.entity_type}) - {season_str}"
     )
 
     # Fetch raw shot data
     shots_df = await fetch_shot_chart_data(
         entity_id=entity.entity_id,
         entity_type=entity_type,
-        season=season,
+        season=season_str,
         season_type=season_type,
     )
 
@@ -464,7 +476,7 @@ async def get_shot_chart(
             "name": entity.name,
             "type": entity_type,
         },
-        "season": season,
+        "season": season_str,
         "season_type": season_type,
         "metadata": {
             "total_shots": int(total_shots),
