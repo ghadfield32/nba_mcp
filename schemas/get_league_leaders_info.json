@@ -1,0 +1,64 @@
+{
+  "description": "Get top-10 NBA league leaders for a statistical category",
+  "properties": {
+    "per_mode": {
+      "description": "Statistical aggregation mode. 'Totals'=Season totals, 'PerGame'=Per-game averages, 'Per48'=Per-48-minutes rate",
+      "enum": [
+        "Totals",
+        "PerGame",
+        "Per48"
+      ],
+      "title": "Per Mode",
+      "type": "string"
+    },
+    "season": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Season(s) in 'YYYY-YY' format, or list of seasons. None defaults to current season.",
+      "examples": [
+        "2023-24",
+        [
+          "2022-23",
+          "2023-24"
+        ]
+      ],
+      "title": "Season"
+    },
+    "stat_category": {
+      "description": "Statistical category to rank by. PTS=Points, REB=Rebounds, AST=Assists, STL=Steals, BLK=Blocks, FG_PCT=Field Goal %, FG3_PCT=3-Point %, FT_PCT=Free Throw %",
+      "enum": [
+        "PTS",
+        "REB",
+        "AST",
+        "STL",
+        "BLK",
+        "FG_PCT",
+        "FG3_PCT",
+        "FT_PCT"
+      ],
+      "title": "Stat Category",
+      "type": "string"
+    }
+  },
+  "required": [
+    "stat_category",
+    "per_mode"
+  ],
+  "title": "get_league_leaders_info",
+  "type": "object",
+  "x-category": "League Data",
+  "x-returns": "Ranked list of top players for the specified stat"
+}

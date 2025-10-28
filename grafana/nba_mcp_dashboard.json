@@ -1,0 +1,395 @@
+{
+  "dashboard": {
+    "title": "NBA MCP - Performance & Health Dashboard",
+    "tags": ["nba-mcp", "mcp", "observability"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "type": "graph",
+        "title": "Request Rate by Tool",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_requests_total[5m])",
+            "legendFormat": "{{tool_name}} - {{status}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Requests/sec"},
+          {"format": "short"}
+        ],
+        "legend": {"show": true, "alignAsTable": true, "values": true, "avg": true, "current": true}
+      },
+      {
+        "id": 2,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "type": "graph",
+        "title": "Request Latency Percentiles",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(nba_mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(nba_mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(nba_mcp_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [2], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["p95", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "name": "High p95 Latency",
+          "message": "p95 latency is above 2 seconds"
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "type": "graph",
+        "title": "Error Rate by Tool",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_errors_total[5m])",
+            "legendFormat": "{{tool_name}} - {{error_type}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "reqps", "label": "Errors/sec"},
+          {"format": "short"}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.05], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "name": "High Error Rate",
+          "message": "Error rate is above 5%"
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "type": "gauge",
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "nba_mcp_cache_hit_rate",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.7, "color": "yellow"},
+                {"value": 0.9, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "type": "graph",
+        "title": "Cache Operations",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_cache_operations_total{result='hit'}[5m])",
+            "legendFormat": "Hits"
+          },
+          {
+            "expr": "rate(nba_mcp_cache_operations_total{result='miss'}[5m])",
+            "legendFormat": "Misses"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Operations/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 6,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "type": "graph",
+        "title": "Cache Size",
+        "targets": [
+          {
+            "expr": "nba_mcp_cache_size_items",
+            "legendFormat": "Cached Items"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Items"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "type": "gauge",
+        "title": "Daily Quota Usage",
+        "targets": [
+          {
+            "expr": "nba_mcp_quota_usage{quota_type='daily'}",
+            "legendFormat": "Usage"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 0.7, "color": "yellow"},
+                {"value": 0.9, "color": "red"}
+              ]
+            }
+          }
+        },
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [0.9], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "last"},
+              "type": "query"
+            }
+          ],
+          "name": "High Quota Usage",
+          "message": "Daily quota usage is above 90%"
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "type": "graph",
+        "title": "Quota Remaining",
+        "targets": [
+          {
+            "expr": "nba_mcp_quota_remaining{quota_type='daily'}",
+            "legendFormat": "Remaining Requests"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Requests"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 9,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "type": "graph",
+        "title": "Rate Limit Events",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_rate_limit_events_total{event_type='allowed'}[5m])",
+            "legendFormat": "{{tool_name}} - Allowed"
+          },
+          {
+            "expr": "rate(nba_mcp_rate_limit_events_total{event_type='blocked'}[5m])",
+            "legendFormat": "{{tool_name}} - Blocked"
+          }
+        ],
+        "yaxes": [
+          {"format": "ops", "label": "Events/sec"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 10,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "type": "graph",
+        "title": "Token Bucket Availability",
+        "targets": [
+          {
+            "expr": "nba_mcp_token_bucket_tokens",
+            "legendFormat": "{{tool_name}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Available Tokens"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 11,
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+        "type": "graph",
+        "title": "NLQ Pipeline Stage Duration",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(nba_mcp_nlq_stage_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{stage}} - p95"
+          }
+        ],
+        "yaxes": [
+          {"format": "s", "label": "Duration"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 12,
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+        "type": "graph",
+        "title": "NLQ Tool Calls per Query",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_nlq_tool_calls_total[5m])",
+            "legendFormat": "{{query_intent}}"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "label": "Tool Calls"},
+          {"format": "short"}
+        ]
+      },
+      {
+        "id": 13,
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 48},
+        "type": "table",
+        "title": "Error Types Breakdown",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (tool_name, error_type) (increase(nba_mcp_errors_total[1h])))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {},
+              "renameByName": {
+                "tool_name": "Tool",
+                "error_type": "Error Type",
+                "Value": "Count"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 56},
+        "type": "stat",
+        "title": "Total Requests (1h)",
+        "targets": [
+          {
+            "expr": "sum(increase(nba_mcp_requests_total[1h]))"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        }
+      },
+      {
+        "id": 15,
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 56},
+        "type": "stat",
+        "title": "Success Rate (1h)",
+        "targets": [
+          {
+            "expr": "sum(increase(nba_mcp_requests_total{status='success'}[1h])) / sum(increase(nba_mcp_requests_total[1h]))"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.95, "color": "yellow"},
+                {"value": 0.99, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 16,
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 56},
+        "type": "stat",
+        "title": "Avg Response Time (5m)",
+        "targets": [
+          {
+            "expr": "rate(nba_mcp_request_duration_seconds_sum[5m]) / rate(nba_mcp_request_duration_seconds_count[5m])"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 3
+          }
+        }
+      },
+      {
+        "id": 17,
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 56},
+        "type": "stat",
+        "title": "Server Uptime",
+        "targets": [
+          {
+            "expr": "time() - nba_mcp_server_start_time_seconds"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}

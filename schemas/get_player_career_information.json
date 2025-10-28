@@ -1,0 +1,42 @@
+{
+  "description": "Get comprehensive career statistics for an NBA player",
+  "properties": {
+    "player_name": {
+      "description": "Player name (full or partial, e.g., 'LeBron James', 'LeBron', 'James')",
+      "examples": [
+        "LeBron James",
+        "Stephen Curry",
+        "Giannis Antetokounmpo"
+      ],
+      "minLength": 2,
+      "title": "Player Name",
+      "type": "string"
+    },
+    "season": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Season in 'YYYY-YY' format (e.g., '2023-24'). If None, returns career totals.",
+      "examples": [
+        "2023-24",
+        "2015-16",
+        "2010-11"
+      ],
+      "title": "Season"
+    }
+  },
+  "required": [
+    "player_name"
+  ],
+  "title": "get_player_career_information",
+  "type": "object",
+  "x-category": "Player Data",
+  "x-returns": "Formatted career stats (games, points, rebounds, assists, percentages)"
+}

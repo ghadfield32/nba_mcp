@@ -1,0 +1,2 @@
+[console_scripts]
+nba-mcp = nba_mcp.nba_server:main

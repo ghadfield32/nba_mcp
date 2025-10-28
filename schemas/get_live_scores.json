@@ -1,0 +1,27 @@
+{
+  "description": "Get live or historical NBA game scores for a date",
+  "properties": {
+    "target_date": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Date in 'YYYY-MM-DD' format. If None, uses today's date.",
+      "examples": [
+        "2024-01-15",
+        "2023-12-25"
+      ],
+      "title": "Target Date"
+    }
+  },
+  "title": "get_live_scores",
+  "type": "object",
+  "x-category": "Live Data",
+  "x-returns": "Game summaries with scores, teams, and status"
+}

@@ -1,0 +1,41 @@
+{
+  "description": "Get player advanced statistics (Usage%, TS%, eFG%, PER, ratings)",
+  "properties": {
+    "player_name": {
+      "description": "Player name (full or partial, e.g., 'LeBron James', 'LeBron', 'James')",
+      "examples": [
+        "LeBron James",
+        "Stephen Curry",
+        "Giannis"
+      ],
+      "minLength": 2,
+      "title": "Player Name",
+      "type": "string"
+    },
+    "season": {
+      "anyOf": [
+        {
+          "pattern": "^\\d{4}-\\d{2}$|^$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Season in 'YYYY-YY' format (e.g., '2023-24'). If None, uses current season.",
+      "examples": [
+        "2023-24",
+        "2015-16"
+      ],
+      "title": "Season"
+    }
+  },
+  "required": [
+    "player_name"
+  ],
+  "title": "get_player_advanced_stats",
+  "type": "object",
+  "x-category": "Player Data",
+  "x-returns": "Comprehensive player efficiency metrics"
+}
