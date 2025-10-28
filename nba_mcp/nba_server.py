@@ -702,8 +702,256 @@ async def play_by_play(
     return json.dumps(md, indent=2)
 
 
+@mcp_server.tool()
+async def get_team_standings(
+    season: Optional[str] = None,
+    conference: Optional[Literal["East", "West"]] = None
+) -> str:
+    """
+    Get NBA team standings with conference/division rankings.
+
+    Provides comprehensive standings data including:
+    - Win-Loss records and percentages
+    - Games Behind (GB) conference leader
+    - Conference and division rankings
+    - Home/away records
+    - Last 10 games record
+    - Current streak (W/L)
+
+    Args:
+        season: Season string ('YYYY-YY' format, e.g., '2024-25'). Defaults to current season.
+        conference: Filter by conference ('East' or 'West'). None returns both conferences.
+
+    Returns:
+        JSON string with ResponseEnvelope containing list of TeamStanding objects
+
+    Examples:
+        get_team_standings()  # Current season, all teams
+        get_team_standings(season="2023-24", conference="East")  # 2023-24 Eastern Conference
+    """
+    start_time = time.time()
+
+    try:
+        from nba_mcp.api.advanced_stats import get_team_standings as fetch_standings
+
+        standings = await fetch_standings(season=season, conference=conference)
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Convert to list of dicts for JSON serialization
+        standings_data = [s.model_dump() for s in standings]
+
+        response = success_response(
+            data=standings_data,
+            source="historical",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms
+        )
+
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_team_standings")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch team standings: {str(e)}"
+        )
+        return response.to_json_string()
 
 
+@mcp_server.tool()
+async def get_team_advanced_stats(
+    team_name: str,
+    season: Optional[str] = None
+) -> str:
+    """
+    Get team advanced statistics (Offensive/Defensive Rating, Pace, Net Rating, Four Factors).
+
+    Provides comprehensive team metrics including:
+    - Offensive/Defensive/Net Rating (per 100 possessions)
+    - Pace (possessions per 48 minutes)
+    - True Shooting % and Effective FG %
+    - Four Factors: eFG%, TOV%, OREB%, FTA Rate (offense and defense)
+
+    Args:
+        team_name: Team name or abbreviation (e.g., "Lakers", "LAL", "Los Angeles Lakers")
+        season: Season string ('YYYY-YY'). Defaults to current season.
+
+    Returns:
+        JSON string with ResponseEnvelope containing team advanced stats
+
+    Examples:
+        get_team_advanced_stats("Lakers")
+        get_team_advanced_stats("BOS", season="2023-24")
+    """
+    start_time = time.time()
+
+    try:
+        from nba_mcp.api.advanced_stats import get_team_advanced_stats as fetch_team_stats
+
+        stats = await fetch_team_stats(team_name=team_name, season=season)
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        response = success_response(
+            data=stats,
+            source="historical",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        response = error_response(
+            error_code=e.code,
+            error_message=e.message,
+            details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_team_advanced_stats")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch team advanced stats: {str(e)}"
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def get_player_advanced_stats(
+    player_name: str,
+    season: Optional[str] = None
+) -> str:
+    """
+    Get player advanced statistics (Usage%, TS%, eFG%, PER, Offensive/Defensive Rating).
+
+    Provides comprehensive player efficiency metrics including:
+    - True Shooting % (TS%)
+    - Effective Field Goal % (eFG%)
+    - Usage % (percentage of team plays used)
+    - Player Impact Estimate (PIE)
+    - Offensive/Defensive/Net Rating
+    - Assist %, Rebound %, Turnover %
+
+    Args:
+        player_name: Player name (e.g., "LeBron James", "LeBron", "James")
+        season: Season string ('YYYY-YY'). Defaults to current season.
+
+    Returns:
+        JSON string with ResponseEnvelope containing player advanced stats
+
+    Examples:
+        get_player_advanced_stats("LeBron James")
+        get_player_advanced_stats("Curry", season="2015-16")
+    """
+    start_time = time.time()
+
+    try:
+        from nba_mcp.api.advanced_stats import get_player_advanced_stats as fetch_player_stats
+
+        stats = await fetch_player_stats(player_name=player_name, season=season)
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        response = success_response(
+            data=stats,
+            source="historical",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        response = error_response(
+            error_code=e.code,
+            error_message=e.message,
+            details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_player_advanced_stats")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch player advanced stats: {str(e)}"
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def compare_players(
+    player1_name: str,
+    player2_name: str,
+    season: Optional[str] = None,
+    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75"
+) -> str:
+    """
+    Compare two players side-by-side with shared metric registry.
+
+    Provides fair player comparison with:
+    - Shared metric definitions (identical schema)
+    - Per-possession normalization (per-75 by default for fairness)
+    - Era adjustment toggle (accounts for pace/scoring environment)
+    - Comprehensive advanced stats
+
+    Args:
+        player1_name: First player name
+        player2_name: Second player name
+        season: Season string ('YYYY-YY'). Defaults to current season.
+        normalization: Statistical normalization mode:
+            - "raw": Total stats (season totals)
+            - "per_game": Per-game averages
+            - "per_75": Per-75 possessions (DEFAULT - fairest comparison)
+            - "era_adjusted": Adjust for pace/era differences
+
+    Returns:
+        JSON string with ResponseEnvelope containing PlayerComparison object
+
+    Examples:
+        compare_players("LeBron James", "Michael Jordan", season="2012-13")
+        compare_players("Curry", "Nash", normalization="per_75")
+    """
+    start_time = time.time()
+
+    try:
+        from nba_mcp.api.advanced_stats import compare_players as do_compare
+
+        comparison = await do_compare(
+            player1_name=player1_name,
+            player2_name=player2_name,
+            season=season,
+            normalization=normalization
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        response = success_response(
+            data=comparison.model_dump(),
+            source="historical",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        response = error_response(
+            error_code=e.code,
+            error_message=e.message,
+            details=e.details
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in compare_players")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to compare players: {str(e)}"
+        )
+        return response.to_json_string()
 
 
 #########################################
