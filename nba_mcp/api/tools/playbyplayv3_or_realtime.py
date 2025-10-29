@@ -14,6 +14,10 @@ from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Tuple
 import pandas as pd
 import requests
 
+# ── APPLY NBA API PATCHES FIRST (before importing endpoints) ─────────────────────
+from nba_mcp.api.nba_api_patches import apply_all_patches
+apply_all_patches()
+
 # ── NEW HELPER: build a "snapshot" from a *finished* game ─────────────────────
 from nba_api.stats.endpoints import (
     PlayByPlayV3,

@@ -5,6 +5,163 @@
 
 ---
 
+## Recent Updates (October 2025)
+
+### NBA API Bug Fix - WinProbability KeyError - Complete ✅
+- **Status**: ✅ Fixed (2025-10-29)
+- **Issue**: Play-by-play API calls failing with `KeyError: 'WinProbability'` for games on 2025-10-28
+- **Root Cause**: `nba_api` library assumes NBA API always returns `WinProbability` dataset, but recent games don't include it
+- **Solution**: Monkey patch to make `WinProbability` optional in `ScoreboardV2` endpoint
+- **Files**:
+  - NEW: [`nba_mcp/api/nba_api_patches.py`](nba_mcp/api/nba_api_patches.py) - Centralized nba_api bug fixes
+  - MODIFIED: [`playbyplayv3_or_realtime.py`](nba_mcp/api/tools/playbyplayv3_or_realtime.py) - Apply patches at module load
+- **Testing**: All 5 previously failing games now return play-by-play data successfully
+- **Impact**: Fixes play-by-play MCP tool and all downstream features
+- **Documentation**: See [WINPROBABILITY_FIX_SUMMARY.md](WINPROBABILITY_FIX_SUMMARY.md)
+
+### Dataset Management & Joins Feature - Complete ✅
+- **Status**: ✅ Fully Implemented and Tested (2025-10-29)
+- **Modules**: `nba_mcp/data/` (4 modules, 1,400+ lines)
+- **Features**:
+  - **Data Catalog** (`catalog.py`): 9 endpoint definitions with schemas, PKs, join relationships, 6 join patterns
+  - **Dataset Manager** (`dataset_manager.py`): In-memory storage with TTL (1h), automatic cleanup, multi-format export
+  - **Joins Engine** (`joins.py`): DuckDB-powered SQL joins (inner/left/right/outer/cross), column validation, filter/aggregate ops
+  - **Fetch Module** (`fetch.py`): Real NBA API data fetching for 8 endpoints with provenance tracking
+- **MCP Tools** (6 new):
+  1. `list_endpoints()` - Enumerate all endpoints with schemas and params
+  2. `catalog()` - Complete data dictionary with join relationships and examples
+  3. `fetch()` - Fetch raw data as Arrow tables with dataset handles (REAL DATA)
+  4. `join()` - DuckDB joins on datasets with stats tracking
+  5. `build_dataset()` - Multi-step pipeline (fetch + join + filter + select)
+  6. `save_dataset()` - Export to Parquet/CSV/Feather/JSON
+- **Endpoints with Real Data**:
+  1. `player_career_stats` - Full career stats via get_player_career_stats()
+  2. `player_advanced_stats` - Advanced metrics (TS%, Usage%, PIE) via get_player_advanced_stats()
+  3. `team_standings` - Conference/division standings via get_team_standings()
+  4. `team_advanced_stats` - Team efficiency metrics via get_team_advanced_stats()
+  5. `team_game_log` - Historical game logs via fetch_league_game_log()
+  6. `league_leaders` - Top performers in any category via get_league_leaders()
+  7. `shot_chart` - Shot location data via fetch_shot_chart_data()
+  8. `live_scores` - Placeholder (use get_live_scores() tool directly)
+- **Dependencies**: Added DuckDB ≥0.9.0 (v1.4.1), PyArrow ≥14.0.0 (v19.0.1)
+- **Integration**: Dataset manager initialization in server startup, background cleanup tasks
+- **Performance**: In-memory datasets with 500MB limit, automatic TTL expiry, DuckDB query optimization
+- **Formats**: Parquet (snappy), CSV, Feather (lz4), JSON (records)
+- **Testing**: Complete integration tests (`test_dataset_fetch.py`) - all passing with real API:
+  - Basic fetch from 3 endpoints (player stats, league leaders, standings)
+  - Dataset manager storage/retrieval
+  - Multi-table joins with DuckDB
+  - Export to 4 formats (parquet, csv, feather, json)
+- **Documentation**: Implementation plan (DATASET_IMPLEMENTATION_PLAN.md), test script, inline examples
+
+### Endpoint Enhancement & Pagination - Complete ✅
+- **Status**: ✅ Fully Implemented and Tested (2025-10-29)
+- **Modules**: `nba_mcp/data/` (2 new modules, 1,000+ lines)
+- **Features**:
+  - **Introspection Module** (`introspection.py`): Auto-discover endpoint capabilities
+    - Column names and data types
+    - Estimated row counts for any parameter combination
+    - Available date ranges (1996-present for historical, current season for live)
+    - Available seasons (1996-97 through current)
+    - Recommended chunking strategies (date/season/game/none)
+    - Memory and time estimates before fetching
+  - **Pagination Module** (`pagination.py`): Handle datasets of any size
+    - Date-based chunking (monthly intervals)
+    - Season-based chunking (one season at a time)
+    - Game-based chunking (one game at a time)
+    - Auto-select optimal strategy based on dataset size
+    - Progress tracking with callbacks
+    - Graceful handling of API timeouts
+  - **Enhanced Catalog** (`catalog.py`): Added 9 metadata fields
+    - supports_date_range, supports_season_filter, supports_pagination
+    - typical_row_count, max_row_count, available_seasons
+    - chunk_strategy, min_date, max_date
+- **MCP Tools** (3 new):
+  1. `inspect_endpoint(endpoint, params)` - Discover all metadata before fetching
+  2. `fetch_chunked(endpoint, params, strategy, progress)` - Fetch large datasets in chunks
+  3. `discover_nba_endpoints()` - Browse all available endpoints with capabilities
+- **Chunking Strategies**:
+  - **No chunking**: Small datasets (<1,000 rows) like team_standings
+  - **Season chunking**: Moderate datasets (1,000-5,000 rows) like player_career_stats
+  - **Date chunking**: Large datasets (>5,000 rows) like shot_chart
+  - **Game chunking**: Detailed data like play_by_play
+- **Capabilities Discovered**:
+  - player_career_stats: 28 columns, ~20 rows/player, 30 seasons available
+  - shot_chart: 24 columns, ~1,500 rows/season, date range 1996-present, season chunking recommended
+  - team_standings: 15 columns, 30 rows/season, no chunking needed
+  - league_leaders: 25 columns, 10-50 rows, no chunking needed
+- **Performance**:
+  - Row count estimation (based on endpoint type and parameters)
+  - Memory usage prediction (~1KB per row in Arrow format)
+  - Time estimation (2s per API call × number of chunks)
+  - Automatic chunk size optimization
+- **Testing**: Complete test suite (`test_endpoint_enhancement.py`) - all 4 suites passing:
+  - Endpoint Introspection (3 tests): Discover columns, row counts, date ranges
+  - Pagination & Chunking (5 tests): No chunking, season chunking, date chunking, progress callbacks, estimates
+  - Catalog Integration (2 tests): List endpoints, get metadata with new fields
+  - Dataset Tool Integration (3 tests): Store chunks, union chunks, save to file
+- **Error Handling**: Graceful degradation for API timeouts, empty result handling, schema mismatches
+- **Documentation**: Implementation plan (ENDPOINT_ENHANCEMENT_PLAN.md), comprehensive test suite
+
+### Dataset Size Limits - Complete ✅
+- **Status**: ✅ Fully Implemented and Tested (2025-10-29)
+- **Modules**: `nba_mcp/data/limits.py` (1 new module, 250+ lines)
+- **Features**:
+  - **Limit Configuration** (`limits.py`): Configurable fetch size limits
+    - Default: 1024 MB (1 GB) - reasonable for most use cases
+    - Environment variable: NBA_MCP_MAX_FETCH_SIZE_MB
+    - Runtime configuration via configure_limits() tool
+    - Unlimited mode (-1) with warnings
+    - Singleton pattern for global configuration
+  - **Size Checking**: Pre-fetch estimation and warnings
+    - Estimates dataset size before fetching (1KB per row)
+    - Checks against configured limit
+    - Provides detailed warnings with options when exceeded
+    - Suggests chunking or limit increase
+  - **Integration**: Seamless with existing tools
+    - introspection.py: New check_size_limit() method
+    - pagination.py: Added check_size_limit and force parameters
+    - fetch() tool: Shows warning if size exceeds limit (allows fetch)
+    - fetch_chunked() tool: Shows info message (bypasses limit)
+- **MCP Tools** (1 new):
+  - `configure_limits(max_fetch_mb, show_current)` - Configure or view fetch size limits at runtime
+- **Configuration Options**:
+  - **Default**: 1024 MB (1 GB)
+  - **Environment**: Set NBA_MCP_MAX_FETCH_SIZE_MB=2048 at startup
+  - **Runtime**: configure_limits(max_fetch_mb=2048)
+  - **Unlimited**: configure_limits(max_fetch_mb=-1) with warnings
+- **Warning System**:
+  - Pre-fetch size estimation (before API calls)
+  - Detailed warning messages when limit exceeded:
+    - Estimated size vs. current limit
+    - Overage percentage
+    - Option 1: Use fetch_chunked() (recommended)
+    - Option 2: Increase limit with configure_limits()
+    - Option 3: Filter query to reduce size
+  - fetch() shows full warning but allows fetch
+  - fetch_chunked() shows info only (doesn't block)
+- **Size Estimates**:
+  - team_standings: ~0.03 MB (30 rows)
+  - player_career_stats: ~0.02 MB (20 rows)
+  - shot_chart: ~1.46 MB (1,500 rows/season)
+  - league_leaders: ~0.025 MB (10-50 rows)
+  - Estimation: 1KB per row in Arrow format
+- **Benefits**:
+  - Prevents unexpected large downloads
+  - Protects against excessive memory usage
+  - User awareness before fetching large datasets
+  - Configurable for different use cases
+  - Clear guidance on alternatives (chunking)
+- **Testing**: Complete test suite (`test_size_limits.py`) - all 5 suites passing:
+  - Limit Configuration (5 tests): get, set, reset, unlimited
+  - Size Checking (4 tests): within limit, at limit, exceeds limit, unlimited mode
+  - Introspector Integration (3 tests): small/medium/large dataset checks
+  - Pagination Integration (3 tests): size blocking, force override, chunked fetch
+  - Environment Variable (2 tests): env config, limit initialization
+- **Documentation**: Comprehensive docstrings, test suite with examples
+
+---
+
 ## Recent Updates (January 2025)
 
 ### Date Handling Overhaul - Complete ✅

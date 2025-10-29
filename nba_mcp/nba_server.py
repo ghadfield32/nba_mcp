@@ -62,6 +62,12 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_stat_category,
 )
 
+# Import dataset and joins features
+from nba_mcp.data.catalog import get_catalog
+from nba_mcp.data.dataset_manager import get_manager as get_dataset_manager, initialize_manager, shutdown_manager
+from nba_mcp.data.fetch import fetch_endpoint, validate_parameters
+from nba_mcp.data.joins import join_tables, join_with_stats, filter_table
+
 # Import Week 4 infrastructure (cache + rate limiting)
 from nba_mcp.cache.redis_cache import CacheTier, cached, get_cache, initialize_cache
 
@@ -1624,6 +1630,1303 @@ async def get_metrics_info() -> str:
 
 
 #########################################
+# Dataset and Joins Tools
+#########################################
+
+
+@mcp_server.tool()
+async def list_endpoints(category: Optional[str] = None) -> str:
+    """
+    List all available NBA API endpoints with their parameters and schemas.
+
+    Returns comprehensive information about each endpoint including:
+    - Parameter requirements
+    - Primary keys
+    - Sample usage
+    - Data categories
+
+    Args:
+        category: Optional filter by category:
+            - "player_stats": Player statistics
+            - "team_stats": Team statistics
+            - "game_data": Live and historical game data
+            - "league_data": League-wide data
+            - "advanced_analytics": Advanced metrics
+
+    Returns:
+        Formatted endpoint catalog
+
+    Example:
+        list_endpoints()
+        → Returns all endpoints
+
+        list_endpoints(category="player_stats")
+        → Returns only player statistics endpoints
+    """
+    try:
+        catalog = get_catalog()
+
+        # Parse category if provided
+        from nba_mcp.data.catalog import EndpointCategory
+
+        category_filter = None
+        if category:
+            try:
+                category_filter = EndpointCategory(category)
+            except ValueError:
+                valid_categories = [c.value for c in EndpointCategory]
+                return (
+                    f"Invalid category: {category}\n\n"
+                    f"Valid categories: {', '.join(valid_categories)}"
+                )
+
+        # Get endpoints
+        endpoints = catalog.list_endpoints(category=category_filter)
+
+        # Format response
+        lines = ["# NBA MCP Endpoints", ""]
+
+        if category:
+            lines.append(f"**Category**: {category}")
+            lines.append("")
+
+        lines.append(f"**Total Endpoints**: {len(endpoints)}")
+        lines.append("")
+
+        for endpoint in endpoints:
+            lines.append(f"## {endpoint.display_name}")
+            lines.append(f"**Name**: `{endpoint.name}`")
+            lines.append(f"**Category**: {endpoint.category.value}")
+            lines.append(f"**Description**: {endpoint.description}")
+            lines.append("")
+
+            if endpoint.parameters:
+                lines.append("**Parameters**:")
+                for param in endpoint.parameters:
+                    required = "**required**" if param.required else "optional"
+                    lines.append(
+                        f"- `{param.name}` ({param.type}, {required}): {param.description}"
+                    )
+                    if param.enum:
+                        lines.append(f"  - Options: {', '.join(param.enum)}")
+                    if param.example:
+                        lines.append(f"  - Example: `{param.example}`")
+                lines.append("")
+
+            if endpoint.primary_keys:
+                lines.append(f"**Primary Keys**: {', '.join(endpoint.primary_keys)}")
+                lines.append("")
+
+            if endpoint.sample_params:
+                import json
+
+                lines.append("**Sample Usage**:")
+                lines.append(
+                    f"```python\nfetch('{endpoint.name}', {json.dumps(endpoint.sample_params, indent=2)})\n```"
+                )
+                lines.append("")
+
+            if endpoint.notes:
+                lines.append(f"*Note: {endpoint.notes}*")
+                lines.append("")
+
+            lines.append("---")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in list_endpoints")
+        return f"Error listing endpoints: {str(e)}"
+
+
+@mcp_server.tool()
+async def catalog() -> str:
+    """
+    Get the complete data catalog with schema information and join relationships.
+
+    Returns comprehensive metadata about all endpoints including:
+    - Endpoint schemas with parameters and columns
+    - Primary and foreign key relationships
+    - Join recommendations with examples
+    - Complete join workflow examples
+
+    Use this to understand:
+    - What data is available
+    - How endpoints relate to each other
+    - How to join datasets effectively
+
+    Returns:
+        Complete data catalog with relationships and examples
+
+    Example:
+        catalog()
+        → Returns full data dictionary with join guidance
+    """
+    try:
+        cat = get_catalog()
+        catalog_dict = cat.to_dict()
+
+        lines = ["# NBA MCP Data Catalog", ""]
+
+        # Summary
+        summary = catalog_dict["summary"]
+        lines.append("## Summary")
+        lines.append(f"- **Total Endpoints**: {summary['total_endpoints']}")
+        lines.append(f"- **Categories**: {', '.join(summary['categories'])}")
+        lines.append(f"- **Join Relationships**: {summary['total_relationships']}")
+        lines.append(f"- **Join Examples**: {summary['total_examples']}")
+        lines.append("")
+
+        # Endpoints by category
+        lines.append("## Endpoints by Category")
+        lines.append("")
+        endpoints_by_cat = {}
+        for name, endpoint in catalog_dict["endpoints"].items():
+            cat_name = endpoint["category"]
+            if cat_name not in endpoints_by_cat:
+                endpoints_by_cat[cat_name] = []
+            endpoints_by_cat[cat_name].append(endpoint)
+
+        for cat_name, endpoints in sorted(endpoints_by_cat.items()):
+            lines.append(f"### {cat_name.replace('_', ' ').title()}")
+            for endpoint in endpoints:
+                lines.append(
+                    f"- **{endpoint['display_name']}** (`{endpoint['name']}`)"
+                )
+                lines.append(f"  - {endpoint['description']}")
+                if endpoint["primary_keys"]:
+                    lines.append(
+                        f"  - Primary Keys: {', '.join(endpoint['primary_keys'])}"
+                    )
+            lines.append("")
+
+        # Join Relationships
+        lines.append("## Join Relationships")
+        lines.append("")
+        lines.append("Common patterns for joining datasets:")
+        lines.append("")
+
+        for rel in catalog_dict["relationships"]:
+            lines.append(f"### {rel['from_endpoint']} → {rel['to_endpoint']}")
+            lines.append(f"**Join Keys**: {rel['join_keys']}")
+            lines.append(f"**Join Type**: {rel['join_type']}")
+            lines.append(f"**Description**: {rel['description']}")
+            lines.append(f"**Use Case**: {rel['example_use_case']}")
+            lines.append("")
+
+        # Join Examples
+        lines.append("## Complete Join Examples")
+        lines.append("")
+
+        for example in catalog_dict["join_examples"]:
+            lines.append(f"### {example['name']}")
+            lines.append(f"{example['description']}")
+            lines.append("")
+            lines.append("**Steps**:")
+            for i, step in enumerate(example["steps"], 1):
+                import json
+
+                lines.append(f"{i}. {json.dumps(step, indent=2)}")
+            lines.append("")
+            lines.append(f"**Expected Output**: {example['expected_output']}")
+            lines.append("")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in catalog")
+        return f"Error retrieving catalog: {str(e)}"
+
+
+@mcp_server.tool()
+async def fetch(endpoint: str, params: Dict[str, Any]) -> str:
+    """
+    Fetch raw data from an NBA API endpoint as an Arrow table.
+
+    Returns data in a standardized table format with provenance tracking.
+    The dataset is stored in memory and returns a handle for further operations.
+
+    Args:
+        endpoint: Endpoint name from catalog (e.g., "player_career_stats")
+        params: Parameters dictionary matching endpoint schema
+
+    Returns:
+        Dataset handle UUID with metadata (row count, columns, size, etc.)
+
+    Examples:
+        fetch("player_career_stats", {"player_name": "LeBron James"})
+        → Returns handle with LeBron's career stats
+
+        fetch("team_standings", {"season": "2023-24", "conference": "East"})
+        → Returns handle with Eastern Conference standings
+
+        fetch("league_leaders", {"stat_category": "PTS", "season": "2023-24"})
+        → Returns handle with scoring leaders
+    """
+    try:
+        # Validate parameters
+        validate_parameters(endpoint, params)
+
+        # Check size limits before fetching
+        from nba_mcp.data.introspection import get_introspector
+
+        introspector = get_introspector()
+        size_check = await introspector.check_size_limit(endpoint, params)
+
+        # Fetch data
+        table, provenance = await fetch_endpoint(endpoint, params, as_arrow=True)
+
+        # Store in dataset manager
+        manager = get_dataset_manager()
+        handle = await manager.store(
+            table, name=f"{endpoint}_{datetime.now().strftime('%Y%m%d_%H%M%S')}", provenance=provenance
+        )
+
+        # Import limits helper for display
+        from nba_mcp.data.limits import get_limits
+        limits = get_limits()
+
+        # Format response
+        lines = [
+            "# Dataset Fetched Successfully",
+            "",
+            f"**Endpoint**: {endpoint}",
+            f"**Dataset Handle**: `{handle.uuid}`",
+            "",
+        ]
+
+        # Show size limit status prominently
+        actual_size_mb = handle.size_bytes / 1024 / 1024
+        limit_mb = limits.get_max_fetch_size_mb()
+
+        lines.extend([
+            "## Size Information",
+            f"- **Dataset Size**: {actual_size_mb:.2f} MB ({handle.size_bytes:,} bytes)",
+            f"- **Estimated Size**: {size_check.estimated_mb:.2f} MB (pre-fetch)",
+            f"- **Size Limit**: {limit_mb:.0f} MB" if limit_mb > 0 else "- **Size Limit**: Unlimited",
+            f"- **Status**: {'✓ Within limit' if size_check.allowed else '⚠️ Exceeded limit (allowed)'}",
+            "",
+        ])
+
+        # Add size warning if exceeded
+        if not size_check.allowed:
+            lines.extend([
+                "## ⚠️ Size Warning",
+                "",
+                size_check.warning_message,
+                "",
+            ])
+
+        lines.extend([
+            "## Dataset Info",
+            f"- **Rows**: {handle.row_count:,}",
+            f"- **Columns**: {handle.column_count}",
+            f"- **Expires**: {handle.expires_at}",
+            "",
+            "## Columns",
+        ])
+
+        # Show column names (limit to first 20)
+        cols = handle.column_names[:20]
+        for col in cols:
+            lines.append(f"- {col}")
+
+        if len(handle.column_names) > 20:
+            lines.append(f"- ... and {len(handle.column_names) - 20} more")
+
+        lines.append("")
+        lines.append("## Provenance")
+        lines.append(f"- **NBA API Calls**: {provenance.nba_api_calls}")
+        lines.append(f"- **Execution Time**: {provenance.execution_time_ms:.2f}ms")
+        lines.append("")
+        lines.append("## Next Steps")
+        lines.append(f"Use this handle for joins: `join(['{handle.uuid}', ...], on=...)`")
+        lines.append(f"Or save to mcp_data/: `save_dataset('{handle.uuid}')`")
+        lines.append(f"Or save custom path: `save_dataset('{handle.uuid}', 'path/to/file.parquet')`")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in fetch")
+        return f"Error fetching data: {str(e)}"
+
+
+@mcp_server.tool()
+async def join(
+    handles: List[str],
+    on: Union[str, List[str], Dict[str, str]],
+    how: str = "left",
+) -> str:
+    """
+    Join multiple datasets using SQL join operations.
+
+    Performs in-memory joins using DuckDB with automatic validation.
+    Returns a new dataset handle with the joined result.
+
+    Args:
+        handles: List of dataset UUIDs to join (2 or more)
+        on: Join columns:
+            - str: Single column name (must exist in all tables)
+            - List[str]: Multiple columns (must exist in all tables)
+            - Dict[str, str]: Column mapping for 2 tables (e.g., {"TEAM_ID": "ID"})
+        how: Join type - "inner", "left", "right", "outer", or "cross"
+
+    Returns:
+        New dataset handle with join result and statistics
+
+    Examples:
+        # Simple join on single column
+        join(
+            handles=["uuid1", "uuid2"],
+            on="PLAYER_ID",
+            how="inner"
+        )
+
+        # Join on multiple columns
+        join(
+            handles=["uuid1", "uuid2"],
+            on=["PLAYER_ID", "SEASON"],
+            how="left"
+        )
+
+        # Join with column mapping
+        join(
+            handles=["uuid1", "uuid2"],
+            on={"TEAM_ID": "ID"},
+            how="left"
+        )
+    """
+    try:
+        if len(handles) < 2:
+            return "Error: At least 2 dataset handles required for join"
+
+        # Validate join type
+        valid_types = ["inner", "left", "right", "outer", "cross"]
+        if how not in valid_types:
+            return (
+                f"Error: Invalid join type '{how}'. "
+                f"Must be one of: {', '.join(valid_types)}"
+            )
+
+        # Retrieve tables from manager
+        manager = get_dataset_manager()
+        tables = []
+        for handle_uuid in handles:
+            table = await manager.retrieve(handle_uuid)
+            tables.append(table)
+
+        # Perform join with statistics
+        result_dict = join_with_stats(tables, on, how)
+        result_table = result_dict["result"]
+        stats = result_dict["stats"]
+
+        # Store joined result
+        from nba_mcp.data.dataset_manager import ProvenanceInfo
+
+        provenance = ProvenanceInfo(
+            source_endpoints=["join_operation"],
+            operations=["join"],
+            parameters={"handles": handles, "on": str(on), "how": how},
+            execution_time_ms=stats["execution_time_ms"],
+        )
+
+        new_handle = await manager.store(
+            result_table,
+            name=f"join_{how}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            provenance=provenance,
+        )
+
+        # Format response
+        lines = [
+            "# Join Completed Successfully",
+            "",
+            f"**New Dataset Handle**: `{new_handle.uuid}`",
+            "",
+            "## Join Statistics",
+            f"- **Join Type**: {stats['join_type']}",
+            f"- **Input Tables**: {stats['input_table_count']}",
+            f"- **Input Rows**: {', '.join(map(str, stats['input_row_counts']))}",
+            f"- **Output Rows**: {stats['output_row_count']:,}",
+            f"- **Output Columns**: {stats['output_column_count']}",
+            f"- **Execution Time**: {stats['execution_time_ms']:.2f}ms",
+            "",
+            "## Result Info",
+            f"- **Rows**: {new_handle.row_count:,}",
+            f"- **Columns**: {new_handle.column_count}",
+            f"- **Size**: {new_handle.size_bytes / 1024 / 1024:.2f} MB",
+            "",
+            "## Next Steps",
+            f"- Save to disk: `save_dataset('{new_handle.uuid}', 'joined_data.parquet')`",
+            f"- Join with more data: `join(['{new_handle.uuid}', 'other_uuid'], ...)`",
+        ]
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in join")
+        return f"Error performing join: {str(e)}"
+
+
+@mcp_server.tool()
+async def build_dataset(spec: Dict[str, Any]) -> str:
+    """
+    Build a complete dataset from multiple sources with joins, filters, and column selection.
+
+    Executes a multi-step dataset pipeline in a single call:
+    1. Fetch from multiple endpoints
+    2. Join datasets
+    3. Apply filters
+    4. Select columns
+
+    Args:
+        spec: Dataset specification with:
+            - sources: List of {endpoint, params} dicts
+            - joins: List of {on, how} dicts (optional)
+            - filters: List of {column, op, value} dicts (optional)
+            - select: List of column names to keep (optional)
+
+    Returns:
+        Dataset handle with final processed data
+
+    Example:
+        build_dataset({
+            "sources": [
+                {"endpoint": "player_career_stats", "params": {"player_name": "LeBron James"}},
+                {"endpoint": "team_standings", "params": {"season": "2023-24"}}
+            ],
+            "joins": [
+                {"on": {"TEAM_ID": "TEAM_ID"}, "how": "left"}
+            ],
+            "filters": [
+                {"column": "PTS", "op": ">", "value": 20}
+            ],
+            "select": ["PLAYER_NAME", "SEASON", "PTS", "TEAM_NAME", "W", "L"]
+        })
+    """
+    try:
+        import time
+
+        start_time = time.time()
+
+        # Validate spec
+        if "sources" not in spec or not spec["sources"]:
+            return "Error: 'sources' required in spec"
+
+        manager = get_dataset_manager()
+        handles = []
+        provenance_list = []
+
+        # Step 1: Fetch all sources
+        lines = ["# Building Dataset", "", "## Step 1: Fetching Sources", ""]
+
+        for i, source in enumerate(spec["sources"], 1):
+            endpoint = source.get("endpoint")
+            params = source.get("params", {})
+
+            if not endpoint:
+                return f"Error: Source {i} missing 'endpoint'"
+
+            lines.append(f"{i}. Fetching from `{endpoint}`...")
+
+            validate_parameters(endpoint, params)
+            table, provenance = await fetch_endpoint(endpoint, params, as_arrow=True)
+
+            handle = await manager.store(table, provenance=provenance)
+            handles.append(handle.uuid)
+            provenance_list.append(provenance)
+
+            lines.append(
+                f"   ✓ {handle.row_count:,} rows, {handle.column_count} columns"
+            )
+
+        lines.append("")
+
+        # Step 2: Perform joins if specified
+        if spec.get("joins"):
+            lines.append("## Step 2: Joining Datasets")
+            lines.append("")
+
+            current_handle = handles[0]
+            for i, join_spec in enumerate(spec["joins"], 1):
+                on = join_spec.get("on")
+                how = join_spec.get("how", "left")
+
+                if not on:
+                    return f"Error: Join {i} missing 'on'"
+
+                # Join current result with next table
+                next_handle = handles[min(i, len(handles) - 1)]
+
+                table1 = await manager.retrieve(current_handle)
+                table2 = await manager.retrieve(next_handle)
+
+                result_dict = join_with_stats([table1, table2], on, how)
+                result_table = result_dict["result"]
+                stats = result_dict["stats"]
+
+                # Store result
+                from nba_mcp.data.dataset_manager import ProvenanceInfo
+
+                prov = ProvenanceInfo(
+                    source_endpoints=[h for h in handles],
+                    operations=["join"],
+                    parameters=join_spec,
+                )
+                current_handle_obj = await manager.store(result_table, provenance=prov)
+                current_handle = current_handle_obj.uuid
+
+                lines.append(
+                    f"{i}. {how.upper()} join on {on}: {stats['output_row_count']:,} rows"
+                )
+
+            lines.append("")
+        else:
+            current_handle = handles[0]
+
+        # Step 3: Apply filters if specified
+        if spec.get("filters"):
+            lines.append("## Step 3: Applying Filters")
+            lines.append("")
+
+            table = await manager.retrieve(current_handle)
+            filtered_table = filter_table(table, spec["filters"])
+
+            from nba_mcp.data.dataset_manager import ProvenanceInfo
+
+            prov = ProvenanceInfo(
+                source_endpoints=[h for h in handles],
+                operations=["filter"],
+                parameters={"filters": spec["filters"]},
+            )
+            filtered_handle = await manager.store(filtered_table, provenance=prov)
+            current_handle = filtered_handle.uuid
+
+            lines.append(
+                f"Applied {len(spec['filters'])} filter(s): {filtered_table.num_rows:,} rows remain"
+            )
+            lines.append("")
+
+        # Step 4: Select columns if specified
+        if spec.get("select"):
+            lines.append("## Step 4: Selecting Columns")
+            lines.append("")
+
+            table = await manager.retrieve(current_handle)
+            selected_table = table.select(spec["select"])
+
+            from nba_mcp.data.dataset_manager import ProvenanceInfo
+
+            prov = ProvenanceInfo(
+                source_endpoints=[h for h in handles],
+                operations=["select"],
+                parameters={"select": spec["select"]},
+            )
+            selected_handle = await manager.store(selected_table, provenance=prov)
+            current_handle = selected_handle.uuid
+
+            lines.append(f"Selected {len(spec['select'])} column(s)")
+            lines.append("")
+
+        # Final result
+        final_handle = await manager.get_handle(current_handle)
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        lines.append("## ✓ Dataset Built Successfully")
+        lines.append("")
+        lines.append(f"**Dataset Handle**: `{final_handle.uuid}`")
+        lines.append("")
+        lines.append("### Final Dataset")
+        lines.append(f"- **Rows**: {final_handle.row_count:,}")
+        lines.append(f"- **Columns**: {final_handle.column_count}")
+        lines.append(f"- **Size**: {final_handle.size_bytes / 1024 / 1024:.2f} MB")
+        lines.append(f"- **Build Time**: {execution_time_ms:.2f}ms")
+        lines.append("")
+        lines.append("### Next Steps")
+        lines.append(
+            f"Save the dataset: `save_dataset('{final_handle.uuid}', 'my_dataset.parquet')`"
+        )
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in build_dataset")
+        return f"Error building dataset: {str(e)}"
+
+
+@mcp_server.tool()
+async def save_dataset(
+    handle: str, path: Optional[str] = None, format: str = "parquet"
+) -> str:
+    """
+    Save a dataset to disk in various formats.
+
+    Exports a dataset from memory to a file on disk.
+    Supports multiple formats with automatic compression.
+
+    When path is not specified, automatically organizes data in mcp_data/ folder
+    with structure: mcp_data/YYYY-MM-DD/endpoint_HHMMSS.format
+
+    Args:
+        handle: Dataset UUID to save
+        path: Output file path (optional - defaults to organized mcp_data/ structure)
+        format: Output format - "parquet", "csv", "feather", or "json"
+
+    Returns:
+        Save confirmation with file details
+
+    Examples:
+        save_dataset("abc123")
+        → Saves to mcp_data/2025-10-29/dataset_143052.parquet
+
+        save_dataset("abc123", format="csv")
+        → Saves to mcp_data/2025-10-29/dataset_143052.csv
+
+        save_dataset("abc123", "custom/path/data.parquet")
+        → Saves to custom/path/data.parquet
+
+        save_dataset("abc123", "data/player_stats.json", "json")
+        → Saves to data/player_stats.json
+    """
+    try:
+        # Validate format
+        valid_formats = ["parquet", "csv", "feather", "json"]
+        if format not in valid_formats:
+            return (
+                f"Error: Invalid format '{format}'. "
+                f"Must be one of: {', '.join(valid_formats)}"
+            )
+
+        # Get dataset manager and handle info
+        manager = get_dataset_manager()
+
+        # If no path specified, use smart default in mcp_data/ folder
+        if path is None:
+            from nba_mcp.data.dataset_manager import get_default_save_path
+
+            # Try to get endpoint name from dataset name
+            try:
+                handle_info = await manager.get_handle(handle)
+                endpoint_name = handle_info.name or "dataset"
+                # Extract endpoint name (before timestamp)
+                if "_" in endpoint_name:
+                    endpoint_name = "_".join(endpoint_name.split("_")[:-2])
+            except Exception:
+                endpoint_name = "dataset"
+
+            path = str(get_default_save_path(endpoint_name, format))
+
+        # Save dataset
+        result = await manager.save_to_file(handle, path, format=format)
+
+        # Format response
+        lines = [
+            "# Dataset Saved Successfully",
+            "",
+            f"**File**: `{result['path']}`",
+            f"**Format**: {result['format']}",
+            "",
+            "## File Info",
+            f"- **Rows**: {result['rows']:,}",
+            f"- **Columns**: {result['columns']}",
+            f"- **File Size**: {result['file_size_mb']} MB ({result['file_size_bytes']:,} bytes)",
+            f"- **Write Time**: {result['execution_time_ms']:.2f}ms",
+            "",
+            "## Dataset Info",
+            f"- **Dataset UUID**: `{result['dataset_uuid']}`",
+        ]
+
+        if result.get("dataset_name"):
+            lines.append(f"- **Dataset Name**: {result['dataset_name']}")
+
+        lines.append("")
+
+        # Show storage location info
+        if "mcp_data" in result['path']:
+            lines.append("**Storage**: Organized in mcp_data/ folder structure")
+        else:
+            lines.append("**Storage**: Custom path specified")
+
+        lines.append("")
+        lines.append("The dataset has been successfully saved to disk.")
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in save_dataset")
+        return f"Error saving dataset: {str(e)}"
+
+
+@mcp_server.tool()
+async def inspect_endpoint(
+    endpoint: str, params: Optional[Dict[str, Any]] = None
+) -> str:
+    """
+    Inspect an NBA API endpoint to discover its capabilities and metadata.
+
+    Returns comprehensive information about an endpoint including:
+    - Available columns and their data types
+    - Estimated row count for the given parameters
+    - Supported date ranges (if applicable)
+    - Available seasons (if applicable)
+    - Recommended chunking strategy for large datasets
+    - Notes and warnings
+
+    This tool is useful for understanding what data an endpoint provides
+    before fetching it, especially for large datasets.
+
+    Args:
+        endpoint: Endpoint name (e.g., "player_career_stats", "shot_chart")
+        params: Optional parameters to test with (for size estimation)
+
+    Returns:
+        Formatted metadata report with all endpoint capabilities
+
+    Examples:
+        inspect_endpoint("shot_chart", {"entity_name": "Stephen Curry"})
+        → Returns columns, estimated rows (~15,000), date range (1996-present),
+          and recommends date-based chunking
+
+        inspect_endpoint("team_standings", {"season": "2023-24"})
+        → Returns columns, estimated rows (30), no chunking needed
+
+        inspect_endpoint("play_by_play", {"game_date": "2024-03-15"})
+        → Returns columns, estimated rows (varies), recommends game-based chunking
+    """
+    try:
+        from nba_mcp.data.introspection import get_introspector
+
+        introspector = get_introspector()
+        caps = await introspector.inspect_endpoint(endpoint, params or {})
+
+        # Format response
+        lines = [
+            f"# Endpoint Inspection: {endpoint}",
+            "",
+            "## Schema Information",
+            f"- **Columns**: {len(caps.columns)}",
+            f"- **Sample Shape**: {caps.sample_data_shape[0]} rows × {caps.sample_data_shape[1]} columns",
+            "",
+            "### Available Columns",
+        ]
+
+        # Show columns with types (max 20, then summarize)
+        if len(caps.columns) <= 20:
+            for col in caps.columns:
+                col_type = caps.column_types.get(col, "unknown")
+                lines.append(f"- `{col}` ({col_type})")
+        else:
+            for col in caps.columns[:15]:
+                col_type = caps.column_types.get(col, "unknown")
+                lines.append(f"- `{col}` ({col_type})")
+            lines.append(f"- ... and {len(caps.columns) - 15} more columns")
+
+        lines.extend(
+            [
+                "",
+                "## Capabilities",
+                f"- **Supports Date Range**: {'Yes' if caps.supports_date_range else 'No'}",
+                f"- **Supports Season Filter**: {'Yes' if caps.supports_season_filter else 'No'}",
+                f"- **Supports Pagination**: {'Yes' if caps.supports_pagination else 'No'}",
+            ]
+        )
+
+        # Date range info
+        if caps.supports_date_range and caps.min_date and caps.max_date:
+            lines.extend(
+                [
+                    "",
+                    "## Date Range",
+                    f"- **Min Date**: {caps.min_date}",
+                    f"- **Max Date**: {caps.max_date}",
+                    f"- **Span**: {(caps.max_date - caps.min_date).days:,} days",
+                ]
+            )
+
+        # Season info
+        if caps.supports_season_filter and caps.available_seasons:
+            lines.extend(
+                [
+                    "",
+                    "## Available Seasons",
+                    f"- **Count**: {len(caps.available_seasons)} seasons",
+                    f"- **Range**: {caps.available_seasons[0]} to {caps.available_seasons[-1]}",
+                ]
+            )
+
+        # Size estimates
+        lines.extend(["", "## Dataset Size"])
+
+        if caps.estimated_row_count:
+            lines.append(f"- **Estimated Rows**: {caps.estimated_row_count:,}")
+
+            # Memory estimate (rough: 1KB per row)
+            memory_mb = (caps.estimated_row_count * 1024) / (1024 * 1024)
+            lines.append(f"- **Estimated Memory**: {memory_mb:.2f} MB")
+        else:
+            lines.append("- **Estimated Rows**: Unknown")
+
+        # Chunking recommendation
+        lines.extend(
+            [
+                "",
+                "## Chunking Strategy",
+                f"- **Recommended**: {caps.chunk_strategy}",
+            ]
+        )
+
+        if caps.chunk_strategy == "date":
+            lines.append(
+                "- **Reason**: Large time-series dataset, split by date ranges"
+            )
+        elif caps.chunk_strategy == "season":
+            lines.append("- **Reason**: Moderate dataset, split by NBA seasons")
+        elif caps.chunk_strategy == "game":
+            lines.append("- **Reason**: Game-level data, process one game at a time")
+        else:
+            lines.append("- **Reason**: Small dataset, no chunking needed")
+
+        # Notes
+        if caps.notes:
+            lines.extend(["", "## Notes", f"{caps.notes}"])
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in inspect_endpoint")
+        return f"Error inspecting endpoint: {str(e)}"
+
+
+@mcp_server.tool()
+async def fetch_chunked(
+    endpoint: str,
+    params: Dict[str, Any],
+    chunk_strategy: Optional[str] = None,
+    progress: bool = False,
+) -> str:
+    """
+    Fetch a large NBA dataset in chunks to handle any dataset size.
+
+    This tool automatically splits large datasets into manageable chunks
+    and returns multiple dataset handles (one per chunk). This enables
+    fetching datasets that would be too large to retrieve all at once.
+
+    Chunking strategies:
+    - **date**: Split by date ranges (monthly chunks)
+    - **season**: Split by NBA seasons
+    - **game**: Split by individual games
+    - **none**: Fetch all at once (no chunking)
+    - **None** (default): Auto-select based on endpoint capabilities
+
+    Args:
+        endpoint: Endpoint name to fetch from
+        params: Base parameters for the endpoint
+        chunk_strategy: Chunking strategy to use (or None for auto)
+        progress: If True, show progress information for each chunk
+
+    Returns:
+        List of dataset handles, one per chunk, with chunk information
+
+    Examples:
+        fetch_chunked("shot_chart", {"entity_name": "Stephen Curry", "season": "2023-24"}, "date")
+        → Returns 12 dataset handles (one per month)
+
+        fetch_chunked("team_game_log", {"team": "Lakers", "season": "2023-24"})
+        → Auto-selects "none" strategy, returns 1 handle with all 82 games
+
+        fetch_chunked("play_by_play", {"game_date": "2024-03-15"}, "game")
+        → Returns multiple handles, one per game on that date
+    """
+    try:
+        from nba_mcp.data.pagination import get_paginator
+        from nba_mcp.data.introspection import get_introspector
+
+        paginator = get_paginator()
+        manager = get_dataset_manager()
+        introspector = get_introspector()
+
+        # Check size (informational - chunking handles large datasets)
+        size_check = await introspector.check_size_limit(endpoint, params)
+
+        chunks = []
+        total_rows = 0
+
+        # Fetch chunks
+        async for table, chunk_info in paginator.fetch_chunked(
+            endpoint, params, chunk_strategy, check_size_limit=False  # Already checked
+        ):
+            # Store chunk
+            from nba_mcp.data.dataset_manager import ProvenanceInfo
+
+            provenance = ProvenanceInfo(
+                source_endpoints=[endpoint],
+                fetch_params=chunk_info.params,
+                operations=["fetch_chunked"],
+            )
+
+            chunk_name = f"{endpoint}_chunk_{chunk_info.chunk_number}"
+            handle = await manager.store(table, chunk_name, provenance)
+
+            chunk_meta = {
+                "handle": str(handle.uuid),
+                "chunk_number": chunk_info.chunk_number,
+                "total_chunks": chunk_info.total_chunks,
+                "rows": chunk_info.row_count,
+                "params": chunk_info.params,
+            }
+
+            if chunk_info.date_range:
+                chunk_meta["date_range"] = [
+                    str(chunk_info.date_range[0]),
+                    str(chunk_info.date_range[1]),
+                ]
+            if chunk_info.season:
+                chunk_meta["season"] = chunk_info.season
+            if chunk_info.game_id:
+                chunk_meta["game_id"] = chunk_info.game_id
+
+            chunks.append(chunk_meta)
+            total_rows += chunk_info.row_count
+
+        # Format response
+        lines = [
+            f"# Chunked Fetch Complete: {endpoint}",
+            "",
+            f"**Total Chunks**: {len(chunks)}",
+            f"**Total Rows**: {total_rows:,}",
+            f"**Strategy**: {chunk_strategy or 'auto'}",
+            "",
+        ]
+
+        # Add size info if exceeded (informational)
+        if not size_check.allowed:
+            lines.extend([
+                "## 📊 Size Information",
+                "",
+                f"✓ **Large dataset detected** ({size_check.estimated_mb:.2f} MB)",
+                f"- Dataset exceeds single-fetch limit ({size_check.limit_mb:.0f} MB)",
+                f"- Chunked fetching automatically handles large datasets",
+                f"- Fetched in {len(chunks)} chunk(s) for optimal performance",
+                "",
+            ])
+
+        lines.extend([
+            "## Chunk Details",
+            "",
+        ])
+
+        for chunk in chunks:
+            lines.append(f"### Chunk {chunk['chunk_number']}/{chunk['total_chunks']}")
+            lines.append(f"- **Handle**: `{chunk['handle']}`")
+            lines.append(f"- **Rows**: {chunk['rows']:,}")
+
+            if "date_range" in chunk:
+                lines.append(
+                    f"- **Date Range**: {chunk['date_range'][0]} to {chunk['date_range'][1]}"
+                )
+            if "season" in chunk:
+                lines.append(f"- **Season**: {chunk['season']}")
+            if "game_id" in chunk:
+                lines.append(f"- **Game ID**: {chunk['game_id']}")
+
+            lines.append("")
+
+        lines.extend(
+            [
+                "## Usage",
+                "",
+                "To combine all chunks into a single dataset:",
+                "```python",
+                f"handles = [{', '.join([f'\"{c['handle']}\"' for c in chunks[:3]])}{'...' if len(chunks) > 3 else ''}]",
+                'combined = join(handles, on=[], how="union")',
+                "```",
+                "",
+                "Or work with individual chunks:",
+                "```python",
+                f'chunk1 = fetch_dataset("{chunks[0]['handle']}")',
+                "# Process chunk1...",
+                "```",
+            ]
+        )
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in fetch_chunked")
+        return f"Error fetching chunks: {str(e)}"
+
+
+@mcp_server.tool()
+async def discover_nba_endpoints() -> str:
+    """
+    Discover all available NBA API endpoints with their capabilities.
+
+    This tool provides a comprehensive directory of all endpoints
+    supported by the NBA MCP server, including:
+    - Endpoint names and categories
+    - Parameter schemas
+    - Capabilities (date ranges, seasons, pagination)
+    - Typical dataset sizes
+    - Recommended use cases
+
+    Use this tool to explore what data is available and how to access it.
+
+    Returns:
+        Formatted directory of all endpoints organized by category
+
+    Example:
+        discover_nba_endpoints()
+        → Returns complete list of all 15+ endpoints with metadata
+    """
+    try:
+        from nba_mcp.data.catalog import get_catalog
+
+        catalog_obj = get_catalog()
+        endpoints = catalog_obj.list_endpoints()
+
+        # Group by category
+        by_category = {}
+        for ep in endpoints:
+            cat = ep.category.value
+            if cat not in by_category:
+                by_category[cat] = []
+            by_category[cat].append(ep)
+
+        lines = [
+            "# NBA MCP Endpoint Directory",
+            "",
+            f"**Total Endpoints**: {len(endpoints)}",
+            "",
+        ]
+
+        # Category emoji mapping
+        category_emoji = {
+            "player_stats": "👤",
+            "team_stats": "🏀",
+            "game_data": "📊",
+            "league_data": "🏆",
+            "advanced_analytics": "📈",
+        }
+
+        for category, eps in sorted(by_category.items()):
+            emoji = category_emoji.get(category, "📁")
+            lines.append(f"## {emoji} {category.replace('_', ' ').title()}")
+            lines.append("")
+
+            for ep in eps:
+                lines.append(f"### {ep.display_name}")
+                lines.append(f"- **Name**: `{ep.name}`")
+                lines.append(f"- **Description**: {ep.description}")
+
+                # Parameters
+                required_params = [p for p in ep.parameters if p.required]
+                optional_params = [p for p in ep.parameters if not p.required]
+
+                if required_params:
+                    lines.append(f"- **Required Parameters**: {', '.join([f'`{p.name}`' for p in required_params])}")
+
+                if optional_params:
+                    lines.append(f"- **Optional Parameters**: {', '.join([f'`{p.name}`' for p in optional_params])}")
+
+                # Capabilities
+                caps = []
+                if ep.supports_date_range:
+                    caps.append("date ranges")
+                if ep.supports_season_filter:
+                    caps.append("season filtering")
+                if ep.supports_pagination:
+                    caps.append("pagination")
+
+                if caps:
+                    lines.append(f"- **Capabilities**: {', '.join(caps)}")
+
+                # Size info
+                if ep.typical_row_count:
+                    lines.append(f"- **Typical Rows**: ~{ep.typical_row_count:,}")
+
+                # Chunking
+                if ep.chunk_strategy and ep.chunk_strategy != "none":
+                    lines.append(
+                        f"- **Recommended Chunking**: {ep.chunk_strategy}-based"
+                    )
+
+                # Sample query
+                if ep.sample_params:
+                    import json
+
+                    lines.append(
+                        f"- **Example**: `fetch('{ep.name}', {json.dumps(ep.sample_params)})`"
+                    )
+
+                lines.append("")
+
+        lines.extend(
+            [
+                "## Quick Start",
+                "",
+                "To inspect an endpoint before fetching:",
+                "```python",
+                'inspect_endpoint("player_career_stats", {"player_name": "LeBron James"})',
+                "```",
+                "",
+                "To fetch data:",
+                "```python",
+                'fetch("player_career_stats", {"player_name": "LeBron James"})',
+                "```",
+                "",
+                "To fetch large datasets in chunks:",
+                "```python",
+                'fetch_chunked("shot_chart", {"entity_name": "Stephen Curry"}, "date")',
+                "```",
+            ]
+        )
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in discover_nba_endpoints")
+        return f"Error discovering endpoints: {str(e)}"
+
+
+@mcp_server.tool()
+async def configure_limits(
+    max_fetch_mb: Optional[float] = None,
+    show_current: bool = False,
+) -> str:
+    """
+    Configure dataset size limits for fetch operations.
+
+    Controls the maximum size of datasets that can be fetched in a single
+    operation. Helps prevent excessive memory usage and unexpected large downloads.
+
+    Default limit: 1024 MB (1 GB)
+    Set to -1 for unlimited (⚠ use with caution)
+
+    Args:
+        max_fetch_mb: New maximum fetch size in MB (-1 for unlimited)
+        show_current: Just show current limits without changing (default: False)
+
+    Returns:
+        Current limit configuration and statistics
+
+    Examples:
+        configure_limits(show_current=True)
+        → Shows current limit (1024 MB by default)
+
+        configure_limits(max_fetch_mb=2048)
+        → Increases limit to 2 GB
+
+        configure_limits(max_fetch_mb=512)
+        → Decreases limit to 512 MB
+
+        configure_limits(max_fetch_mb=-1)
+        → Sets to unlimited (⚠ use with caution)
+
+    Environment Variable:
+        NBA_MCP_MAX_FETCH_SIZE_MB=2048  # Set limit at startup
+    """
+    try:
+        from nba_mcp.data.limits import get_limits
+
+        limits = get_limits()
+
+        # Update limit if provided
+        if max_fetch_mb is not None:
+            old_limit = limits.get_max_fetch_size_mb()
+            limits.set_max_fetch_size_mb(max_fetch_mb)
+
+            if max_fetch_mb == -1:
+                action_msg = f"⚠️ Limit set to **UNLIMITED** (was {old_limit:.0f} MB)"
+                warning_msg = "\n\n**Warning**: Unlimited mode allows fetching datasets of any size. This may cause:\n- High memory usage\n- Long API response times\n- Potential system instability\n\nRecommendation: Use fetch_chunked() for large datasets instead."
+            else:
+                action_msg = f"✓ Limit updated: {old_limit:.0f} MB → {max_fetch_mb:.0f} MB"
+                warning_msg = ""
+        else:
+            action_msg = "Current configuration:"
+            warning_msg = ""
+
+        # Get current stats
+        stats = limits.get_stats()
+
+        # Format response
+        lines = [
+            "# Fetch Size Limit Configuration",
+            "",
+            action_msg + warning_msg,
+            "",
+            "## Current Settings",
+            "",
+        ]
+
+        if stats["is_unlimited"]:
+            lines.extend([
+                f"- **Status**: ⚠️ UNLIMITED",
+                f"- **Description**: No size restrictions",
+                f"- **Recommendation**: Use fetch_chunked() for large datasets",
+            ])
+        else:
+            lines.extend([
+                f"- **Max Fetch Size**: {stats['max_fetch_mb']:.0f} MB ({stats['max_fetch_gb']:.2f} GB)",
+                f"- **Description**: {stats['description']}",
+            ])
+
+        lines.extend([
+            "",
+            "## What This Controls",
+            "",
+            "The fetch size limit controls:",
+            "- Maximum size for single `fetch()` operations",
+            "- Triggers warnings when datasets exceed the limit",
+            "- Recommends chunked fetching for large datasets",
+            "",
+            "**Note**: This limit does NOT apply to `fetch_chunked()`, which handles",
+            "datasets of any size by fetching in smaller chunks.",
+            "",
+            "## Usage Examples",
+            "",
+            "**Increase limit for one-time large fetch:**",
+            "```python",
+            "configure_limits(max_fetch_mb=5120)  # 5 GB",
+            'fetch("large_dataset", {...})',
+            "```",
+            "",
+            "**Or use chunked fetching (recommended):**",
+            "```python",
+            'fetch_chunked("large_dataset", {...})  # No size limit needed',
+            "```",
+            "",
+            "**Reset to default:**",
+            "```python",
+            "configure_limits(max_fetch_mb=1024)  # Reset to 1 GB",
+            "```",
+        ])
+
+        # Add environment variable info
+        env_var = os.getenv("NBA_MCP_MAX_FETCH_SIZE_MB")
+        if env_var:
+            lines.extend([
+                "",
+                "## Environment Configuration",
+                f"- **NBA_MCP_MAX_FETCH_SIZE_MB**: {env_var}",
+                "- Environment variable is set and was used at startup",
+            ])
+        else:
+            lines.extend([
+                "",
+                "## Environment Configuration",
+                "- **NBA_MCP_MAX_FETCH_SIZE_MB**: Not set",
+                "- Using default value (1024 MB)",
+                "- Set environment variable to configure limit at startup",
+            ])
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.exception("Error in configure_limits")
+        return f"Error configuring limits: {str(e)}"
+
+
+#########################################
 # Running the Server
 #########################################
 
@@ -1671,6 +2974,15 @@ def main():
     # if they explicitly passed --port, override
     if args.port:
         port = args.port
+
+    # Initialize dataset manager
+    logger.info("Initializing dataset manager...")
+    import asyncio
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(initialize_manager())
+    logger.info("✓ Dataset manager initialized")
 
     # Initialize NLQ tool registry with real MCP tools
     logger.info("Initializing NLQ tool registry...")

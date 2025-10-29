@@ -24,6 +24,8 @@ setup(
         "jupyter>=1.1.1",
         "streamlit>=1.37.1",
         "rich>=10.14.0,<14",
+        "duckdb>=0.9.0",
+        "pyarrow>=14.0.0",
     ],
     extras_require={
         "dev": [

@@ -11,6 +11,10 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+# ── APPLY NBA API PATCHES FIRST (before importing nba_api endpoints) ─────────────────────
+from .nba_api_patches import apply_all_patches
+apply_all_patches()
+
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.endpoints import (
