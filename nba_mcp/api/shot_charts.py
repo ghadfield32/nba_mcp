@@ -51,6 +51,8 @@ async def fetch_shot_chart_data(
     entity_type: Literal["player", "team"],
     season: str,
     season_type: str = "Regular Season",
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> pd.DataFrame:
     """
     Fetch raw shot chart data from NBA API.
@@ -62,6 +64,8 @@ async def fetch_shot_chart_data(
         entity_type: "player" or "team"
         season: Season in YYYY-YY format (e.g., "2023-24")
         season_type: "Regular Season", "Playoffs", etc.
+        date_from: Start date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        date_to: End date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
 
     Returns:
         DataFrame with columns:
@@ -73,6 +77,7 @@ async def fetch_shot_chart_data(
         - PERIOD: Quarter (1-4) or OT period
         - MINUTES_REMAINING: Minutes left in period
         - SECONDS_REMAINING: Seconds left in period
+        - GAME_DATE: Date of the game (if available)
         - And more...
 
     Raises:
@@ -81,7 +86,8 @@ async def fetch_shot_chart_data(
     """
     try:
         logger.info(
-            f"Fetching shot chart: entity_id={entity_id}, type={entity_type}, season={season}"
+            f"Fetching shot chart: entity_id={entity_id}, type={entity_type}, season={season}, "
+            f"date_from={date_from}, date_to={date_to}"
         )
 
         # ShotChartDetail requires both team_id and player_id
@@ -93,6 +99,8 @@ async def fetch_shot_chart_data(
                 season_nullable=season,
                 season_type_all_star=season_type,
                 context_measure_simple="FGA",  # Field Goal Attempts
+                date_from_nullable=date_from or "",
+                date_to_nullable=date_to or "",
             )
         else:
             # For teams, set player_id to 0 (all players)
@@ -102,6 +110,8 @@ async def fetch_shot_chart_data(
                 season_nullable=season,
                 season_type_all_star=season_type,
                 context_measure_simple="FGA",
+                date_from_nullable=date_from or "",
+                date_to_nullable=date_to or "",
             )
 
         # Get DataFrame
@@ -109,11 +119,21 @@ async def fetch_shot_chart_data(
 
         if df.empty:
             logger.warning(
-                f"No shot data found for entity_id={entity_id}, season={season}"
+                f"No shot data found for entity_id={entity_id}, season={season}, "
+                f"date_from={date_from}, date_to={date_to}"
             )
             return pd.DataFrame()
 
+        # DEBUG: Log available columns to understand what NBA API returns
         logger.info(f"Fetched {len(df)} shots")
+        logger.info(f"DEBUG: Available columns from NBA API: {list(df.columns)}")
+
+        # DEBUG: Check if GAME_DATE exists
+        if 'GAME_DATE' in df.columns:
+            logger.info(f"DEBUG: GAME_DATE column found. Sample values: {df['GAME_DATE'].head(3).tolist()}")
+        else:
+            logger.warning(f"DEBUG: GAME_DATE column NOT found in response")
+
         return df
 
     except Exception as e:
@@ -391,6 +411,8 @@ async def get_shot_chart(
     entity_type: Literal["player", "team"],
     season: str,
     season_type: str = "Regular Season",
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     granularity: Literal["raw", "hexbin", "both", "summary"] = "both",
 ) -> Dict[str, Any]:
     """
@@ -403,6 +425,8 @@ async def get_shot_chart(
         entity_type: "player" or "team"
         season: Season in YYYY-YY format (e.g., "2023-24")
         season_type: "Regular Season", "Playoffs", etc.
+        date_from: Start date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        date_to: End date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
         granularity: Output format
             - "raw": Individual shot coordinates only
             - "hexbin": Aggregated hexbin data only
@@ -415,6 +439,8 @@ async def get_shot_chart(
             "entity": {"id": int, "name": str, "type": str},
             "season": str,
             "season_type": str,
+            "date_from": str (if provided),
+            "date_to": str (if provided),
             "raw_shots": List[Dict] (if granularity includes raw),
             "hexbin": List[Dict] (if granularity includes hexbin),
             "zone_summary": Dict (if granularity includes summary),
@@ -423,6 +449,7 @@ async def get_shot_chart(
                 "made_shots": int,
                 "fg_pct": float,
                 "coordinate_system": str,
+                "date_range": {"min": str, "max": str} (actual date range of data),
             }
         }
 
@@ -459,6 +486,8 @@ async def get_shot_chart(
         entity_type=entity_type,
         season=season_str,
         season_type=season_type,
+        date_from=date_from,
+        date_to=date_to,
     )
 
     # Validate coordinates
@@ -468,6 +497,22 @@ async def get_shot_chart(
     total_shots = len(shots_df)
     made_shots = shots_df["SHOT_MADE_FLAG"].sum() if not shots_df.empty else 0
     fg_pct = (made_shots / total_shots) if total_shots > 0 else 0.0
+
+    # Extract date range from actual data (if GAME_DATE column exists)
+    date_range = None
+    logger.info(f"DEBUG: Checking for GAME_DATE column. shots_df.empty={shots_df.empty}, columns={list(shots_df.columns) if not shots_df.empty else 'N/A'}")
+    if not shots_df.empty and "GAME_DATE" in shots_df.columns:
+        try:
+            # Convert to datetime and get min/max
+            game_dates = pd.to_datetime(shots_df["GAME_DATE"])
+            min_date = game_dates.min().strftime("%Y-%m-%d")
+            max_date = game_dates.max().strftime("%Y-%m-%d")
+            date_range = {"min": min_date, "max": max_date}
+            logger.info(f"DEBUG: Successfully extracted date_range: {date_range}")
+        except Exception as e:
+            logger.warning(f"Could not extract date range from data: {e}")
+    else:
+        logger.warning(f"DEBUG: Could not extract date_range. GAME_DATE column exists: {'GAME_DATE' in shots_df.columns if not shots_df.empty else 'DataFrame is empty'}")
 
     # Build response based on granularity
     result = {
@@ -486,6 +531,22 @@ async def get_shot_chart(
         },
     }
 
+    # Add date filter parameters to result if provided
+    logger.info(f"DEBUG: date_from={date_from}, date_to={date_to}")
+    if date_from:
+        result["date_from"] = date_from
+        logger.info(f"DEBUG: Added date_from to result: {date_from}")
+    if date_to:
+        result["date_to"] = date_to
+        logger.info(f"DEBUG: Added date_to to result: {date_to}")
+
+    # Add actual date range from data if available
+    if date_range:
+        result["metadata"]["date_range"] = date_range
+        logger.info(f"DEBUG: Added date_range to metadata: {date_range}")
+    else:
+        logger.warning(f"DEBUG: date_range is None, not adding to metadata")
+
     # Add requested data based on granularity
     if granularity in ["raw", "both"]:
         # Convert shots to list of dicts
@@ -497,6 +558,7 @@ async def get_shot_chart(
                 "SHOT_MADE_FLAG",
                 "SHOT_DISTANCE",
                 "SHOT_TYPE",
+                "GAME_DATE",
             ]
             # Only include columns that exist
             available_cols = [col for col in shot_cols if col in shots_df.columns]
@@ -515,5 +577,17 @@ async def get_shot_chart(
         # Calculate zone summary
         zone_summary = calculate_zone_summary(shots_df)
         result["zone_summary"] = zone_summary
+
+    # DEBUG: Log final result structure before returning
+    logger.info(f"DEBUG: Final result keys: {list(result.keys())}")
+    logger.info(f"DEBUG: Metadata keys: {list(result.get('metadata', {}).keys())}")
+    if 'date_from' in result:
+        logger.info(f"DEBUG: date_from IN final result: {result['date_from']}")
+    else:
+        logger.warning(f"DEBUG: date_from NOT in final result")
+    if 'date_to' in result:
+        logger.info(f"DEBUG: date_to IN final result: {result['date_to']}")
+    else:
+        logger.warning(f"DEBUG: date_to NOT in final result")
 
     return result

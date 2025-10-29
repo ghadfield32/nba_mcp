@@ -420,6 +420,18 @@ class GetShotChartParams(BaseModel):
         "Regular Season",
         description="Season type: 'Regular Season' or 'Playoffs'",
     )
+    date_from: Optional[str] = Field(
+        None,
+        description="Start date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (e.g., '2024-01-01'). If None, includes all shots from season start.",
+        examples=["2024-01-01", "01/01/2024", "2024-12-25"],
+        pattern=r"^\d{4}-\d{2}-\d{2}$|^\d{2}/\d{2}/\d{4}$|^$",
+    )
+    date_to: Optional[str] = Field(
+        None,
+        description="End date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (e.g., '2024-03-31'). If None, includes all shots up to current date.",
+        examples=["2024-03-31", "03/31/2024", "2024-12-31"],
+        pattern=r"^\d{4}-\d{2}-\d{2}$|^\d{2}/\d{2}/\d{4}$|^$",
+    )
     granularity: Literal["raw", "hexbin", "both", "summary"] = Field(
         "both",
         description=(

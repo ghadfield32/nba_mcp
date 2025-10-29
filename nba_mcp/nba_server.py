@@ -1338,6 +1338,8 @@ async def get_shot_chart(
     entity_type: Literal["player", "team"] = "player",
     season: Optional[str] = None,
     season_type: Literal["Regular Season", "Playoffs"] = "Regular Season",
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     granularity: Literal["raw", "hexbin", "both", "summary"] = "both",
 ) -> str:
     """
@@ -1351,6 +1353,8 @@ async def get_shot_chart(
         entity_type: "player" or "team" (default: "player")
         season: Season in 'YYYY-YY' format (e.g., "2023-24"). If None, uses current season.
         season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
+        date_from: Start date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        date_to: End date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
         granularity: Output format:
             - "raw": Individual shot coordinates (X, Y, make/miss)
             - "hexbin": Aggregated data (50x50 grid with FG% per zone)
@@ -1363,6 +1367,7 @@ async def get_shot_chart(
     Examples:
         get_shot_chart("Stephen Curry", season="2023-24", granularity="hexbin")
         get_shot_chart("Lakers", entity_type="team", granularity="summary")
+        get_shot_chart("Joel Embiid", date_from="2024-01-01", date_to="2024-01-31")
     """
     start_time = time.time()
 
@@ -1373,6 +1378,8 @@ async def get_shot_chart(
             entity_type=entity_type,
             season=season or client.get_season_string(),
             season_type=season_type,
+            date_from=date_from,
+            date_to=date_to,
             granularity=granularity,
         )
 
