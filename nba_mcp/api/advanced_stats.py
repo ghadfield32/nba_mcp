@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import pandas as pd
+from nba_api.live.nba.endpoints.scoreboard import ScoreBoard
 from nba_api.stats.endpoints import (
     LeagueDashPlayerStats,
     LeagueDashTeamStats,
@@ -37,6 +38,47 @@ from .models import (
 from .tools.nba_api_utils import get_player_name, get_team_name, normalize_season
 
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+
+def get_current_season_from_nba_api() -> str:
+    """
+    Get the current NBA season from NBA API instead of system clock.
+
+    Returns:
+        str: Season string in 'YYYY-YY' format (e.g., '2024-25')
+
+    Raises:
+        Exception: If NBA API fails to return a valid date
+
+    Example:
+        >>> season = get_current_season_from_nba_api()
+        >>> # Returns '2024-25' if current date is in 2024-25 season
+    """
+    logger.debug("[DEBUG] get_current_season_from_nba_api: Fetching current date from NBA API")
+
+    # Get current date from NBA's authoritative source
+    sb = ScoreBoard(get_request=True)
+    nba_date_str = sb.score_board_date  # Format: "YYYY-MM-DD"
+
+    logger.debug(f"[DEBUG] get_current_season_from_nba_api: NBA API returned date = {nba_date_str}")
+
+    # Parse the date
+    date_obj = datetime.strptime(nba_date_str, "%Y-%m-%d")
+
+    # NBA season starts in October, so:
+    # - If month >= 10 (Oct-Dec): current year is the start of the season
+    # - If month < 10 (Jan-Sep): previous year is the start of the season
+    year = date_obj.year if date_obj.month >= 10 else date_obj.year - 1
+    season_str = f"{year}-{str(year + 1)[-2:]}"
+
+    logger.debug(f"[DEBUG] get_current_season_from_nba_api: Calculated season = {season_str}")
+
+    return season_str
 
 
 # ============================================================================
@@ -101,10 +143,8 @@ async def get_team_standings(
             seasons = normalize_season(season)
             season_str = seasons[0] if seasons else "2024-25"
         else:
-            # Get current season
-            today = datetime.now()
-            year = today.year if today.month >= 10 else today.year - 1
-            season_str = f"{year}-{str(year + 1)[-2:]}"
+            # Get current season from NBA API (not system clock)
+            season_str = get_current_season_from_nba_api()
 
         logger.info(f"Fetching team standings for season: {season_str}")
 
@@ -199,9 +239,8 @@ async def get_team_advanced_stats(
             seasons = normalize_season(season)
             season_str = seasons[0] if seasons else "2024-25"
         else:
-            today = datetime.now()
-            year = today.year if today.month >= 10 else today.year - 1
-            season_str = f"{year}-{str(year + 1)[-2:]}"
+            # Get current season from NBA API (not system clock)
+            season_str = get_current_season_from_nba_api()
 
         logger.info(f"Fetching advanced stats for {team_entity.name} ({season_str})")
 
@@ -290,9 +329,8 @@ async def get_player_advanced_stats(
             seasons = normalize_season(season)
             season_str = seasons[0] if seasons else "2024-25"
         else:
-            today = datetime.now()
-            year = today.year if today.month >= 10 else today.year - 1
-            season_str = f"{year}-{str(year + 1)[-2:]}"
+            # Get current season from NBA API (not system clock)
+            season_str = get_current_season_from_nba_api()
 
         logger.info(f"Fetching advanced stats for {player_entity.name} ({season_str})")
 

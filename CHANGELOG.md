@@ -5,6 +5,48 @@
 
 ---
 
+## Recent Updates (January 2025)
+
+### Date Handling Overhaul - Complete ✅
+- **Status**: ✅ Fixed, Audited, and Tested (2025-01-28)
+- **Issue**: Multiple functions used system clock (`datetime.now()`) which could be incorrect
+- **Root Cause**: Relied on system clock instead of authoritative NBA API date
+- **Impact**: When system clock wrong → incorrect dates/seasons → wrong data or no results
+- **Scope**: Affected 4 functions across 2 files
+- **Fixes**:
+  1. **get_live_scores** (nba_server.py:738-744)
+     - Now uses NBA API's `ScoreBoard.score_board_date` for current date
+     - Removed fallback to system clock (fail fast if NBA API unavailable)
+     - Added import: `from nba_api.live.nba.endpoints.scoreboard import ScoreBoard`
+  2. **get_team_standings** (advanced_stats.py:147)
+     - Now uses `get_current_season_from_nba_api()` helper
+  3. **get_team_advanced_stats** (advanced_stats.py:243)
+     - Now uses `get_current_season_from_nba_api()` helper
+  4. **get_player_advanced_stats** (advanced_stats.py:333)
+     - Now uses `get_current_season_from_nba_api()` helper
+- **New Helper Function**: `get_current_season_from_nba_api()` (advanced_stats.py:48-81)
+  - Fetches current date from NBA API
+  - Calculates NBA season based on date (October = season start)
+  - Replaces 3 instances of duplicate datetime.now() logic
+  - Includes debug logging for troubleshooting
+- **Audit**: Comprehensive datetime.now() audit documented in DATETIME_AUDIT.md
+  - 13 total usages found in production code
+  - 3 critical issues fixed (season determination)
+  - 7 acceptable uses (rate limiting, circuit breakers)
+  - 3 metadata uses (documentation timestamps)
+- **Testing**: Complete unit test suite created (tests/test_date_handling.py)
+  - 15 test cases covering all scenarios
+  - Tests for NBA API success, failure, edge cases
+  - Tests for season calculation logic (all months)
+  - Integration tests for advanced stats functions
+- **Documentation**:
+  - DEBUG_LOG.md: Complete debugging analysis
+  - DATETIME_AUDIT.md: Comprehensive audit report
+  - CHANGELOG.md: This entry
+- **Benefits**: Production-ready, timezone-aware, authoritative date source, consistent across codebase
+
+---
+
 ## Recent Updates (October 2025)
 
 ### Shot Charts Feature

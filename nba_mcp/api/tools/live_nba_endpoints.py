@@ -97,8 +97,11 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
         - gameId, boxScore, playByPlay, odds, scoreBoardSummary
     For **historical** mode, structure is unchanged (scoreBoardSnapshot only).
     """
+    logger.debug(f"[DEBUG] fetch_live_boxsc_odds_playbyplaydelayed_livescores: Called with game_date={game_date}")
+
     # ---------------- 1) Which API to hit? ----------------------------------
     if game_date:
+        logger.debug(f"[DEBUG] Using historical ScoreboardV2 for date={game_date}")
         sb2 = ScoreboardV2(day_offset=0, game_date=game_date, league_id="00")
         dfs = sb2.get_data_frames()
         df_header = next(df for df in dfs if "GAME_STATUS_TEXT" in df.columns)
@@ -136,11 +139,14 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
                 }
             )
         date_label = game_date
+        logger.debug(f"[DEBUG] Historical mode: date_label={date_label}, games_count={len(games_list)}")
     else:
         # Live ScoreBoard doesn't accept game_date parameter, only day_offset
+        logger.debug(f"[DEBUG] Using live ScoreBoard API (no game_date provided)")
         sb = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
         games_list = sb.games.get_dict()
         date_label = sb.score_board_date
+        logger.debug(f"[DEBUG] Live mode: NBA API returned date_label={date_label}, games_count={len(games_list)}")
 
     # ---------------- 2) Per‑game enrichment --------------------------------
     all_data: list[dict] = []
@@ -160,6 +166,7 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
             all_data.append(game_payload)
 
     # ---------------- 3) Return ---------------------------------------------
+    logger.debug(f"[DEBUG] Returning: date={date_label}, total_games={len(all_data)}")
     return {"date": date_label, "games": all_data}
 
 

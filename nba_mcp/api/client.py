@@ -279,14 +279,19 @@ class NBAApiClient:
         Fetch NBA games (live or by-date) using our unified fetch_all_games helper.
         """
         try:
+            date_str = target_date and str(target_date) or None
+            logger.debug(f"[DEBUG] get_live_scoreboard: Received target_date={target_date}, converted to date_str={date_str}")
+
             # 1) Delegate to our synchronous fetch_all_games
             payload = await asyncio.to_thread(
                 fetch_live_boxsc_odds_playbyplaydelayed_livescores,
-                target_date and str(target_date) or None,
+                date_str,
             )
+            logger.debug(f"[DEBUG] get_live_scoreboard: Received payload with date={payload.get('date')}, games count={len(payload.get('games', []))}")
             games = payload["games"]  # list of game‐dicts
             if not as_dataframe:
-                return games
+                # Return dict with both date and games to preserve date information
+                return {"date": payload["date"], "games": games}
 
             # 2) Build a flat DataFrame of summary fields
             records = []

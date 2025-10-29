@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 from fastmcp import Context
 from mcp.server.fastmcp import FastMCP
+from nba_api.live.nba.endpoints.scoreboard import ScoreBoard
 from nba_api.stats.static import players, teams
 
 # nba_server.py (add near the top)
@@ -733,21 +734,27 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
         str: Formatted game summaries like 'Lakers vs Suns – 102-99 (Final)'.
     """
     client = NBAApiClient()
-    # Normalize date or default to today
-    if not target_date:
-        target_date = datetime.now().strftime("%Y-%m-%d")
+
+    # For live scores, pass None to use live API; for historical, use the provided date
+    if target_date:
+        logger.debug(f"[DEBUG] get_live_scores: Using provided target_date = {target_date} (historical)")
+    else:
+        logger.debug(f"[DEBUG] get_live_scores: No target_date provided, using live API (target_date=None)")
 
     try:
         result = await client.get_live_scoreboard(
             target_date=target_date, as_dataframe=False
         )
-        # result is either a list of dicts or an error string
+        # result is either a dict with {date, games} or an error string
         if isinstance(result, str):
             return result
 
-        games = result  # list of game dicts
+        # Extract date and games from result
+        date = result.get("date")
+        games = result.get("games", [])
+
         if not games:
-            return f"No games found for {target_date}."
+            return f"No games found for {date}."
 
         # Format each into "Lakers vs Suns – 102-99 (Final)"
         lines = []
@@ -783,7 +790,7 @@ async def get_live_scores(target_date: Optional[str] = None) -> str:
                 f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})"
             )
 
-        header = f"NBA Games for {target_date}:\n"
+        header = f"NBA Games for {date}:\n"
         return header + "\n".join(lines)
 
     except Exception as e:
