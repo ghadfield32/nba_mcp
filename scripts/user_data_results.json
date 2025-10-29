@@ -1,0 +1,233 @@
+{
+  "lebron_home_avg": {
+    "player": "LeBron James",
+    "season": "2024-25",
+    "games": 5,
+    "ppg": 21.4,
+    "rpg": 4.6,
+    "apg": 6.6,
+    "fgpct": 51.9,
+    "fg3pct": 43.2,
+    "ftpct": 83.3
+  },
+  "curry_shot_data": {
+    "player": "Stephen Curry",
+    "season": "2024-25",
+    "games": 3,
+    "total_fga": 58,
+    "total_fgm": 28,
+    "fg_pct": 48.3,
+    "total_3pa": 34,
+    "total_3pm": 14,
+    "fg3_pct": 41.2,
+    "total_fta": 10,
+    "total_ftm": 10,
+    "ft_pct": 100.0,
+    "total_pts": 80,
+    "games_detail": [
+      {
+        "date": "2025-04-13 00:00:00",
+        "matchup": "GSW vs. LAC",
+        "pts": 36,
+        "fgm_fga": "10-20",
+        "fg3m_fg3a": "7-12",
+        "ftm_fta": "9-9"
+      },
+      {
+        "date": "2025-04-11 00:00:00",
+        "matchup": "GSW @ POR",
+        "pts": 14,
+        "fgm_fga": "6-14",
+        "fg3m_fg3a": "2-8",
+        "ftm_fta": "0-0"
+      },
+      {
+        "date": "2025-04-09 00:00:00",
+        "matchup": "GSW vs. SAS",
+        "pts": 30,
+        "fgm_fga": "12-24",
+        "fg3m_fg3a": "5-14",
+        "ftm_fta": "1-1"
+      }
+    ]
+  },
+  "durant_monthly": {
+    "player": "Kevin Durant",
+    "season": "2023-24",
+    "total_games": 75,
+    "monthly_progression": [
+      {
+        "month": "2023-10",
+        "games": 4,
+        "ppg": 27.2,
+        "rpg": 7.0,
+        "apg": 4.8,
+        "fg_pct": 54.4,
+        "fg3_pct": 32.1
+      },
+      {
+        "month": "2023-11",
+        "games": 12,
+        "ppg": 32.7,
+        "rpg": 6.8,
+        "apg": 5.8,
+        "fg_pct": 53.0,
+        "fg3_pct": 58.7
+      },
+      {
+        "month": "2023-12",
+        "games": 12,
+        "ppg": 27.9,
+        "rpg": 5.4,
+        "apg": 6.8,
+        "fg_pct": 55.1,
+        "fg3_pct": 44.8
+      },
+      {
+        "month": "2024-01",
+        "games": 13,
+        "ppg": 25.2,
+        "rpg": 6.6,
+        "apg": 5.2,
+        "fg_pct": 54.8,
+        "fg3_pct": 36.2
+      },
+      {
+        "month": "2024-02",
+        "games": 11,
+        "ppg": 26.0,
+        "rpg": 7.8,
+        "apg": 5.3,
+        "fg_pct": 52.6,
+        "fg3_pct": 36.8
+      },
+      {
+        "month": "2024-03",
+        "games": 15,
+        "ppg": 26.5,
+        "rpg": 7.0,
+        "apg": 3.5,
+        "fg_pct": 53.3,
+        "fg3_pct": 43.3
+      },
+      {
+        "month": "2024-04",
+        "games": 8,
+        "ppg": 23.1,
+        "rpg": 5.4,
+        "apg": 3.9,
+        "fg_pct": 47.0,
+        "fg3_pct": 33.9
+      }
+    ]
+  },
+  "warriors_home": {
+    "team": "Golden State Warriors",
+    "season": "2023-24",
+    "games": 41,
+    "wins": 21,
+    "losses": 20,
+    "win_pct": 0.512,
+    "avg_pts": 117.5,
+    "avg_opp_pts": 116.8,
+    "avg_margin": 0.7
+  },
+  "all_players": {
+    "season": "2023-24",
+    "date_range": "Full Season (Oct 2023 - Apr 2024)",
+    "note": "First 3 months would be Oct-Dec 2023",
+    "total_players": 240,
+    "top_10_scorers": [
+      {
+        "rank": 1,
+        "player": "Luka Don?i?",
+        "team": "DAL",
+        "gp": 70,
+        "ppg": 33.9,
+        "rpg": 9.2,
+        "apg": 9.8
+      },
+      {
+        "rank": 2,
+        "player": "Giannis Antetokounmpo",
+        "team": "MIL",
+        "gp": 73,
+        "ppg": 30.4,
+        "rpg": 11.5,
+        "apg": 6.5
+      },
+      {
+        "rank": 3,
+        "player": "Shai Gilgeous-Alexander",
+        "team": "OKC",
+        "gp": 75,
+        "ppg": 30.1,
+        "rpg": 5.5,
+        "apg": 6.2
+      },
+      {
+        "rank": 4,
+        "player": "Jalen Brunson",
+        "team": "NYK",
+        "gp": 77,
+        "ppg": 28.7,
+        "rpg": 3.6,
+        "apg": 6.7
+      },
+      {
+        "rank": 5,
+        "player": "Kevin Durant",
+        "team": "PHX",
+        "gp": 75,
+        "ppg": 27.1,
+        "rpg": 6.6,
+        "apg": 5.0
+      },
+      {
+        "rank": 6,
+        "player": "Devin Booker",
+        "team": "PHX",
+        "gp": 68,
+        "ppg": 27.1,
+        "rpg": 4.5,
+        "apg": 6.9
+      },
+      {
+        "rank": 7,
+        "player": "Jayson Tatum",
+        "team": "BOS",
+        "gp": 74,
+        "ppg": 26.9,
+        "rpg": 8.1,
+        "apg": 4.9
+      },
+      {
+        "rank": 8,
+        "player": "De'Aaron Fox",
+        "team": "SAC",
+        "gp": 74,
+        "ppg": 26.6,
+        "rpg": 4.6,
+        "apg": 5.6
+      },
+      {
+        "rank": 9,
+        "player": "Stephen Curry",
+        "team": "GSW",
+        "gp": 74,
+        "ppg": 26.4,
+        "rpg": 4.5,
+        "apg": 5.1
+      },
+      {
+        "rank": 10,
+        "player": "Nikola Joki?",
+        "team": "DEN",
+        "gp": 79,
+        "ppg": 26.4,
+        "rpg": 12.4,
+        "apg": 9.0
+      }
+    ]
+  }
+}

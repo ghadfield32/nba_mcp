@@ -37,6 +37,14 @@ from nba_mcp.api.errors import (
 # Import Phase 3 feature modules (shot charts, game context)
 from nba_mcp.api.game_context import get_game_context as fetch_game_context
 
+# Import data groupings and advanced metrics (Phase 4)
+from nba_mcp.api.season_aggregator import get_player_season_stats, get_team_season_stats
+from nba_mcp.api.advanced_metrics_calculator import AdvancedMetricsCalculator
+from nba_mcp.api.lineup_tracker import add_lineups_to_play_by_play
+
+# Import season context for LLM temporal awareness
+from nba_mcp.api.season_context import get_season_context, get_current_season
+
 # Import new response models and error handling
 from nba_mcp.api.models import (
     EntityReference,
@@ -428,47 +436,52 @@ async def get_player_career_information(
     player_name: str, season: Optional[str] = None
 ) -> str:
     logger.debug("get_player_career_information('%s', season=%s)", player_name, season)
+
+    # Default to current season if not specified
+    if season is None:
+        season = get_current_season()
+
     client = NBAApiClient()
-    season_str = season or client.get_season_string()
 
     try:
         # 1) Fetch
         result = await client.get_player_career_stats(
-            player_name, season_str, as_dataframe=True
+            player_name, season, as_dataframe=True
         )
         logger.debug("Raw result type: %s, value: %r", type(result), result)
 
         # 2) If the client returned an error dict, propagate it
         if isinstance(result, dict) and "error" in result:
             logger.error("API error payload: %s", result)
-            return result["error"]
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
 
         # 3) If it returned a string (no data / user-friendly), pass it back
         if isinstance(result, str):
-            return result
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\n{result}"
 
         # 4) If it's not a DataFrame, we have an unexpected payload
         if not isinstance(result, pd.DataFrame):
             logger.error("Unexpected payload type (not DataFrame): %s", type(result))
-            return (
-                f"Unexpected response format from API tool: "
-                f"{type(result).__name__}. Please check server logs."
-            )
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nUnexpected response format from API tool: {type(result).__name__}. Please check server logs."
 
         # 5) Now we can safely treat it as a DataFrame
         df: pd.DataFrame = result
         if df.empty:
-            return f"No career stats found for '{player_name}' in {season_str}."
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nNo career stats found for '{player_name}' in {season}."
 
         # 6) Format a more detailed response with proper stats
         if len(df) == 1:
             # Single season data
             row = df.iloc[0]
             team = row.get("TEAM_ABBREVIATION", "N/A")
-            return "\n".join(
+            response = "\n".join(
                 [
                     f"Player: {player_name}",
-                    f"Season: {season_str} ({team})",
+                    f"Season: {season} ({team})",
                     f"Games Played: {row.get('GP', 'N/A')}",
                     f"Minutes Per Game: {row.get('MIN', 'N/A')}",
                     f"Points Per Game: {row.get('PTS', 'N/A')}",
@@ -496,7 +509,7 @@ async def get_player_career_information(
             total_games = df["GP"].sum() if "GP" in df.columns else "N/A"
 
             # Build response with career averages
-            return "\n".join(
+            response = "\n".join(
                 [
                     f"Player: {player_name}",
                     f"Seasons: {season_range}",
@@ -535,197 +548,139 @@ async def get_player_career_information(
                 ]
             )
 
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
     except Exception as e:
         # 7) Uncaught exception: log full traceback
         logger.exception("Unexpected error in get_player_career_information")
-        return f"Unexpected error in get_player_career_information: {e}"
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Unexpected error in get_player_career_information: {e}"
 
 
 @mcp_server.tool()
 async def get_league_leaders_info(
-    stat_category: Literal[
-        "PTS", "REB", "AST", "STL", "BLK", "FG_PCT", "FG3_PCT", "FT_PCT"
-    ],
-    season: Optional[Union[str, List[str]]] = None,
-    per_mode: Literal["Totals", "PerGame", "Per48"] = "PerGame",
+    stat_category: str,
+    season: Optional[str] = None,
+    per_mode: str = "PerGame",
     season_type_all_star: str = "Regular Season",
     limit: int = 10,
-    format: Literal["text", "json"] = "text",
+    format: str = "text",
     min_games_played: Optional[int] = None,
-    conference: Optional[Literal["East", "West"]] = None,
+    conference: Optional[str] = None,
     team: Optional[str] = None,
 ) -> str:
     """
-    Get the league leaders for the requested stat(s) and mode(s).
+    Get league leaders for specified stat category with improved error handling.
 
     Args:
-        stat_category: Statistical category (e.g., 'PTS', 'AST', 'REB')
-        season: Season in 'YYYY-YY' format or list thereof (None = current season)
-        per_mode: Aggregation mode - 'Totals', 'PerGame', or 'Per48'
-        season_type_all_star: Season type filter (e.g., 'Regular Season', 'Playoffs')
-        limit: Maximum number of leaders to return (default: 10)
-        format: Output format - 'text' for human-readable or 'json' for structured data (default: 'text')
+        stat_category: Statistical category (e.g., 'PTS', 'AST', 'REB', 'FG_PCT')
+        season: Season in 'YYYY-YY' format (defaults to current season)
+        per_mode: Aggregation mode ('Totals', 'PerGame', 'Per48')
+        season_type_all_star: Season type ('Regular Season', 'Playoffs')
+        limit: Maximum number of leaders to return
+        format: Output format ('text' or 'json')
         min_games_played: Minimum games played filter (optional)
-        conference: Conference filter - 'East' or 'West' (optional)
-        team: Team abbreviation filter (e.g., 'LAL', 'BOS') (optional)
+        conference: Conference filter ('East' or 'West') (optional)
+        team: Team filter (optional)
 
     Returns:
-        Formatted string with top N leaders (text format) or JSON string with structured data
+        Formatted string with top N leaders or JSON
     """
-    # Validate inputs via Pydantic model internally
-    params = LeagueLeadersParams(
-        season=season,
-        stat_category=stat_category,
-        per_mode=per_mode
+    logger.debug(
+        "get_league_leaders_info(stat=%s, season=%s, per_mode=%s, limit=%d)",
+        stat_category,
+        season,
+        per_mode,
+        limit,
     )
 
-    # Extract validated values
-    season = params.season
-    stat_category = params.stat_category
-    per_mode = params.per_mode
+    # Default to current season if not specified
+    if season is None:
+        season = get_current_season()
 
-    logger.debug("get_league_leaders_info(stat_category=%s, season=%s, per_mode=%s, season_type=%s)",
-                 stat_category, season, per_mode, season_type_all_star)
+    try:
+        client = NBAApiClient()
+        result = await client.get_league_leaders(
+            season=season,
+            stat_category=stat_category,
+            per_mode=per_mode,
+            season_type_all_star=season_type_all_star,
+            as_dataframe=True
+        )
 
-    client = NBAApiClient()
-    result = await client.get_league_leaders(
-        season=season,
-        stat_category=stat_category,
-        per_mode=per_mode,
-        season_type_all_star=season_type_all_star,
-        as_dataframe=True
-    )
+        # ========================================================================
+        # BUG FIX: Handle empty/invalid responses before processing
+        # ========================================================================
+        # Check for error string response
+        if isinstance(result, str):
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\n{result}"
 
-    if isinstance(result, str):
-        # If result is an error string but JSON format requested, wrap in JSON
-        if format == "json":
-            from datetime import datetime
-            return json.dumps({
-                "metadata": {
-                    "stat_category": stat_category,
-                    "season": season if isinstance(season, str) else list(season) if season else None,
-                    "per_mode": per_mode,
-                    "season_type": season_type_all_star,
-                    "limit": limit,
-                    "total_leaders": 0,
-                    "query_timestamp": datetime.utcnow().isoformat() + "Z",
-                    "error": result
-                },
-                "leaders": []
-            }, indent=2)
-        return result
+        # Check if result is not a DataFrame
+        if not isinstance(result, pd.DataFrame):
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nUnexpected response format: {type(result)}"
 
-    df: pd.DataFrame = result
+        df: pd.DataFrame = result
 
-    # Apply filters
-    if min_games_played is not None:
-        if "GP" in df.columns:
-            df = df[df["GP"] >= min_games_played]
+        # Check for empty DataFrame
+        if df.empty:
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nNo data available for {stat_category} leaders in {season}"
 
-    if team is not None:
-        if "TEAM" in df.columns:
-            df = df[df["TEAM"] == team.upper()]
-
-    if conference is not None:
-        if "TEAM" in df.columns:
-            df = df[df["TEAM"].map(lambda t: TEAM_TO_CONFERENCE.get(t) == conference)]
-
-    if df.empty:
-        if format == "json":
-            from datetime import datetime
-            metadata = {
-                "stat_category": stat_category,
-                "season": season if isinstance(season, str) else list(season) if season else None,
-                "per_mode": per_mode,
-                "season_type": season_type_all_star,
-                "limit": limit,
-                "total_leaders": 0,
-                "query_timestamp": datetime.utcnow().isoformat() + "Z"
-            }
-            if min_games_played is not None:
-                metadata["min_games_played"] = min_games_played
-            if conference is not None:
-                metadata["conference"] = conference
-            if team is not None:
-                metadata["team"] = team
-            return json.dumps({"metadata": metadata, "leaders": []}, indent=2)
-
-        # Build filter description for text format
-        filter_desc = []
+        # Apply optional filters
         if min_games_played is not None:
-            filter_desc.append(f"min_games_played={min_games_played}")
-        if conference is not None:
-            filter_desc.append(f"conference={conference}")
+            if "GP" in df.columns:
+                df = df[df["GP"] >= min_games_played]
+
         if team is not None:
-            filter_desc.append(f"team={team}")
+            if "TEAM" in df.columns:
+                df = df[df["TEAM"] == team.upper()]
 
-        filter_str = f" with filters ({', '.join(filter_desc)})" if filter_desc else ""
-        return f"No leaders found for '{stat_category}' in season(s) {season}{filter_str}."
+        if conference is not None:
+            if "TEAM" in df.columns:
+                df = df[df["TEAM"].map(lambda t: TEAM_TO_CONFERENCE.get(t) == conference)]
 
-    # Return JSON format if requested
-    if format == "json":
-        from datetime import datetime
+        # Check again after filtering
+        if df.empty:
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nNo leaders found after applying filters"
 
-        leaders_data = []
-        for s, grp in df.groupby("SEASON"):
-            for i, (_, r) in enumerate(grp.head(limit).iterrows(), 1):
+        # Format output
+        if format == "json":
+            leaders_data = []
+            for _, r in df.head(limit).iterrows():
                 leader = {
-                    "rank": i,
-                    "season": s,
-                    "player_id": int(r.get("PLAYER_ID", 0)) if pd.notna(r.get("PLAYER_ID")) else None,
                     "player_name": str(r.get("PLAYER_NAME", r.get("PLAYER", "Unknown"))),
-                    "team_id": int(r.get("TEAM_ID", 0)) if pd.notna(r.get("TEAM_ID")) else None,
-                    "team": str(r.get("TEAM", r.get("TEAM_ABBREVIATION", "N/A"))),
-                    "games_played": int(r.get("GP", 0)) if pd.notna(r.get("GP")) else None,
-                    "minutes": float(r.get("MIN", 0)) if pd.notna(r.get("MIN")) else None,
+                    "team": str(r.get("TEAM", "N/A")),
                     "value": float(r.get(stat_category, 0)) if pd.notna(r.get(stat_category)) else None,
                 }
-
-                # Add all available stats
-                stat_fields = ["FGM", "FGA", "FG_PCT", "FG3M", "FG3A", "FG3_PCT",
-                               "FTM", "FTA", "FT_PCT", "OREB", "DREB", "REB",
-                               "AST", "STL", "BLK", "TOV", "PTS", "EFF"]
-                for field in stat_fields:
-                    if field in r.index and pd.notna(r[field]):
-                        leader[field.lower()] = float(r[field])
-
                 leaders_data.append(leader)
 
-        metadata = {
-            "stat_category": stat_category,
-            "season": season if isinstance(season, str) else list(season) if season else None,
-            "per_mode": per_mode,
-            "season_type": season_type_all_star,
-            "limit": limit,
-            "total_leaders": len(leaders_data),
-            "query_timestamp": datetime.utcnow().isoformat() + "Z"
-        }
-        # Add filter parameters if specified
-        if min_games_played is not None:
-            metadata["min_games_played"] = min_games_played
-        if conference is not None:
-            metadata["conference"] = conference
-        if team is not None:
-            metadata["team"] = team
+            response = json.dumps({"leaders": leaders_data, "season": season}, indent=2)
+        else:
+            # Text format
+            out = [f"Top {limit} {stat_category} Leaders ({season}):"]
+            for i, (_, r) in enumerate(df.head(limit).iterrows(), 1):
+                name = r.get("PLAYER_NAME", r.get("PLAYER", "Unknown"))
+                team = r.get("TEAM", "N/A")
+                value = r.get(stat_category, "N/A")
+                out.append(f"{i}. {name} ({team}): {value}")
+            response = "\n".join(out)
 
-        response = {
-            "metadata": metadata,
-            "leaders": leaders_data
-        }
-        return json.dumps(response, indent=2)
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
 
-    # Return text format (default)
-    out = []
-    for s, grp in df.groupby("SEASON"):
-        out.append(f"Top {limit} {stat_category} Leaders ({s}):")
-        for i, (_, r) in enumerate(grp.head(limit).iterrows(), 1):
-            name = r["PLAYER_NAME"]
-            team = r.get("TEAM_NAME", r.get("TEAM_ABBREVIATION", "N/A"))
-            stat_cols = [c for c in r.index if stat_category in c]
-            value = r[stat_cols[0]] if stat_cols else r.get("STAT_VALUE", "N/A")
-            out.append(f"{i}. {name} ({team}): {value}")
-        out.append("")
-    return "\n".join(out).strip()
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Error in get_league_leaders_info")
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error fetching league leaders: {str(e)}"
 
 
 @mcp_server.tool()
@@ -823,8 +778,20 @@ async def get_date_range_game_log_or_team_game_log(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
 ) -> str:
+    """
+    Get team game logs for a season or date range.
+
+    Args:
+        season: Season in 'YYYY-YY' format (e.g., '2023-24')
+        team: Team name, nickname, or abbreviation (optional)
+        date_from: Start date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        date_to: End date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+
+    Returns:
+        Formatted game log with wins, losses, scores, and opponents
+    """
     logger.debug(
-        "get_date_range_game_log_or_team_game_log(season=%r, team=%r, from=%r, to=%r)",
+        "get_date_range_game_log_or_team_game_log(season=%s, team=%s, date_from=%s, date_to=%s)",
         season,
         team,
         date_from,
@@ -832,60 +799,305 @@ async def get_date_range_game_log_or_team_game_log(
     )
 
     client = NBAApiClient()
-    lines: List[str] = []
-    start = date_from or "season start"
-    end = date_to or "season end"
 
     try:
-        for st in _ALLOWED_SEASON_TYPES:
-            df = await client.get_league_game_log(
-                season=season,
-                team_name=team,
-                season_type=st,
-                date_from=date_from,
-                date_to=date_to,
-                as_dataframe=True,
-            )
+        # Fetch game log
+        result = await client.get_league_game_log(
+            season=season, team_name=team, as_dataframe=True
+        )
 
-            if isinstance(df, str):
-                lines.append(f"{st}: {df}")
-                continue
+        # ========================================================================
+        # BUG FIX: Check type BEFORE using as DataFrame
+        # ========================================================================
+        # Check if result is a dict (error response)
+        if isinstance(result, dict):
+            if "error" in result:
+                season_ctx = get_season_context()
+                return f"📅 {season_ctx}\n\n❌ {result['error']}"
+            # If dict but not error, it's unexpected format
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nUnexpected response format: {type(result)}"
 
-            if df.empty:
-                lines.append(
-                    f"{st}: No games for {team or 'all teams'} "
-                    f"in {season} {st} {start}→{end}."
-                )
-                continue
+        # Check if result is not a DataFrame
+        if not isinstance(result, pd.DataFrame):
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nExpected DataFrame, got {type(result)}"
 
-            lines.append(
-                f"Game log ({st}) for {team or 'all teams'} "
-                f"in {season} from {start} to {end}:"
-            )
-            for _, r in df.iterrows():
-                gd = r.get("GAME_DATE") or r.get("GAME_DATE_EST", "Unknown")
-                mu = r.get("MATCHUP", "")
-                wl = r.get("WL", "")
-                ab = r.get("TEAM_ABBREVIATION", "")
-                pts = r.get("PTS", 0)
-                mins = r.get("MIN", "")
-                stats = (
-                    f"{mins} min | FGM {r.get('FGM',0)}-{r.get('FGA',0)} "
-                    f"| 3P {r.get('FG3M',0)}-{r.get('FG3A',0)} "
-                    f"| FT {r.get('FTM',0)}-{r.get('FTA',0)} "
-                    f"| TRB {r.get('REB',0)} | AST {r.get('AST',0)} "
-                    f"| STL {r.get('STL',0)} | BLK {r.get('BLK',0)} "
-                    f"| TOV {r.get('TOV',0)} | PF {r.get('PF',0)}"
-                )
-                prefix = f"{gd} • {ab} •" if not team else f"{gd}:"
-                lines.append(f"{prefix} {mu} – {wl}, {pts} pts | {stats}")
-            lines.append("")
+        # Now safe to use DataFrame methods
+        df = result
 
-        return "\n".join(lines).strip()
+        if df.empty:
+            team_str = f" for {team}" if team else ""
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nNo games found{team_str} in {season}"
 
+        # Apply date filtering if specified
+        if date_from or date_to:
+            if "GAME_DATE" in df.columns:
+                df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+                if date_from:
+                    date_from_dt = pd.to_datetime(date_from)
+                    df = df[df["GAME_DATE"] >= date_from_dt]
+                if date_to:
+                    date_to_dt = pd.to_datetime(date_to)
+                    df = df[df["GAME_DATE"] <= date_to_dt]
+
+        if df.empty:
+            season_ctx = get_season_context()
+            return f"📅 {season_ctx}\n\nNo games found for specified date range"
+
+        # Format response
+        response = format_game_log(df, team, season)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
     except Exception as e:
         logger.exception("Unexpected error in get_date_range_game_log_or_team_game_log")
-        return f"Unexpected error: {e}"
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error fetching game log: {str(e)}"
+
+
+@mcp_server.tool()
+async def fetch_player_games(
+    season: str,  # Single "2023-24", range "2021-22:2023-24", or JSON '["2021-22", "2022-23"]'
+    player: Optional[Union[int, str]] = None,  # Player ID (2544) or name ("LeBron James")
+    team: Optional[Union[int, str]] = None,  # Team ID (1610612747) or name ("Lakers" or "LAL")
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    location: Optional[Literal["Home", "Road"]] = None,
+    outcome: Optional[Literal["W", "L"]] = None,
+    last_n_games: Optional[int] = None,
+    game_segment: Optional[str] = None,
+    month: Optional[int] = None,
+    opponent_team: Optional[Union[int, str]] = None,  # Opponent team ID or name
+    po_round: Optional[int] = None,
+    per_mode: Optional[Literal["Totals", "PerGame", "Per36", "Per48", "Per40"]] = None,
+    period: Optional[int] = None,
+    season_segment: Optional[Literal["Pre All-Star", "Post All-Star"]] = None,
+    season_type: Optional[Literal["Regular Season", "Playoffs", "All Star"]] = None,
+    shot_clock_range: Optional[str] = None,
+    vs_conference: Optional[Literal["East", "West"]] = None,
+    vs_division: Optional[str] = None,
+    stat_filters: Optional[str] = None,
+) -> str:
+    """
+    Fetch player game logs with comprehensive filtering using the data grouping infrastructure.
+
+    Supports MULTIPLE SEASONS with flexible syntax:
+    - Single season: "2023-24"
+    - Season range: "2021-22:2023-24" (expands to all seasons in range)
+    - JSON array: '["2021-22", "2022-23", "2023-24"]'
+    Multi-season queries use CONCURRENT FETCHING (3x faster for 3 seasons).
+
+    This tool exposes the powerful three-tier filtering system:
+    - Tier 1: NBA API filters (reduces data transfer at source)
+    - Tier 2: DuckDB statistical filters (100x faster than pandas)
+    - Tier 3: Parquet storage ready (35.7x smaller, 6.7x faster)
+
+    NBA API Filters (Tier 1):
+        season: Season in YYYY-YY format (e.g., "2023-24") [REQUIRED]
+        player: Player ID (int) or name (str) - e.g., 2544 or "LeBron James"
+        team: Team ID (int), name (str), or abbreviation - e.g., 1610612747 or "Lakers" or "LAL"
+        date_from: Start date in YYYY-MM-DD format
+        date_to: End date in YYYY-MM-DD format
+        location: "Home" or "Road" games only
+        outcome: "W" (wins) or "L" (losses) only
+        last_n_games: Last N games (e.g., 10)
+        game_segment: "First Half", "Second Half", "Overtime"
+        month: Month number (1-12)
+        opponent_team: Opponent team ID (int), name (str), or abbreviation
+        po_round: Playoff round (0-4)
+        per_mode: "Totals", "PerGame", "Per36", "Per48", "Per40"
+        period: Quarter/period number (1-4)
+        season_segment: "Pre All-Star", "Post All-Star"
+        season_type: "Regular Season", "Playoffs", "All Star"
+        shot_clock_range: "24-22", "22-18 Very Early", etc.
+        vs_conference: "East", "West"
+        vs_division: "Atlantic", "Central", "Southeast", etc.
+
+    Statistical Filters (Tier 2 - DuckDB):
+        stat_filters: JSON string with statistical filters
+        Format: {"MIN": [">=", 10], "PTS": [">", 20], "FG_PCT": [">=", 0.5]}
+        Operators: ">=", ">", "<=", "<", "==", "!="
+
+    Returns:
+        JSON string with player game logs that can be passed to save_nba_data()
+
+    Examples:
+        # Using NATURAL LANGUAGE (names):
+        fetch_player_games(season="2023-24", player="LeBron James")
+
+        # Using player IDs (backward compatible):
+        fetch_player_games(season="2023-24", player=2544)
+
+        # Team filtering with name or abbreviation:
+        fetch_player_games(season="2023-24", player="LeBron James", team="Lakers")
+        fetch_player_games(season="2023-24", player="LeBron James", team="LAL")
+
+        # Home games only:
+        fetch_player_games(season="2023-24", player="LeBron James", location="Home")
+
+        # Games against specific opponent:
+        fetch_player_games(season="2023-24", player="LeBron James",
+                          opponent_team="Boston Celtics")
+
+        # Games with 20+ minutes played:
+        fetch_player_games(season="2023-24", player="LeBron James",
+                          stat_filters='{"MIN": [">=", 20]}')
+
+        # Playoff wins with 30+ points:
+        fetch_player_games(season="2023-24", player="LeBron James",
+                          season_type="Playoffs", outcome="W",
+                          stat_filters='{"PTS": [">=", 30]}')
+
+        # All players with 10+ minutes in 2023-24:
+        fetch_player_games(season="2023-24",
+                          stat_filters='{"MIN": [">=", 10]}')
+    """
+    try:
+        from nba_mcp.api.data_groupings import fetch_grouping_multi_season
+        from nba_mcp.utils.season_utils import parse_season_input, format_season_display
+        from nba_mcp.utils.entity_utils import resolve_player_input, resolve_team_input
+        import json
+        import pandas as pd
+
+        # Parse season parameter - supports single, range, or JSON array
+        # Examples: "2023-24", "2021-22:2023-24", '["2021-22", "2022-23"]'
+        seasons = parse_season_input(season)
+        logger.info(f"Parsed season input: {format_season_display(seasons)}")
+
+        # ======================================================================
+        # RESOLVE NATURAL LANGUAGE INPUTS TO IDs
+        # Accepts both IDs (int) and names (str) for flexible usage
+        # ======================================================================
+        player_id = resolve_player_input(player)
+        team_id = resolve_team_input(team)
+        opp_team_id = resolve_team_input(opponent_team)
+
+        # Build filters dictionary (without season - handled separately)
+        filters = {}
+
+        # Add all API-level filters (Tier 1)
+        if player_id is not None:
+            filters["player_id"] = player_id
+        if team_id is not None:
+            filters["team_id"] = team_id
+        if date_from is not None:
+            filters["date_from"] = date_from
+        if date_to is not None:
+            filters["date_to"] = date_to
+        if location is not None:
+            filters["location"] = location
+        if outcome is not None:
+            filters["outcome"] = outcome
+        if last_n_games is not None:
+            filters["last_n_games"] = last_n_games
+        if game_segment is not None:
+            filters["game_segment"] = game_segment
+        if month is not None:
+            filters["month"] = month
+        if opp_team_id is not None:
+            filters["opp_team_id"] = opp_team_id
+        if po_round is not None:
+            filters["po_round"] = po_round
+        if per_mode is not None:
+            filters["per_mode"] = per_mode
+        if period is not None:
+            filters["period"] = period
+        if season_segment is not None:
+            filters["season_segment"] = season_segment
+        if season_type is not None:
+            filters["season_type"] = season_type
+        if shot_clock_range is not None:
+            filters["shot_clock_range"] = shot_clock_range
+        if vs_conference is not None:
+            filters["vs_conference"] = vs_conference
+        if vs_division is not None:
+            filters["vs_division"] = vs_division
+
+        # Add statistical filters (Tier 2 - DuckDB)
+        if stat_filters:
+            stat_dict = json.loads(stat_filters)
+            # Convert to tuple format: {"MIN": [">=", 10]} -> {"MIN": (">=", 10)}
+            for key, value in stat_dict.items():
+                if isinstance(value, list) and len(value) == 2:
+                    filters[key] = tuple(value)
+
+        # Fetch data using concurrent multi-season fetching (3x faster for 3 seasons)
+        logger.info(f"fetch_player_games: Fetching {len(seasons)} seasons with filters: {filters}")
+        df = await fetch_grouping_multi_season(
+            "player/game",
+            seasons=seasons,
+            **filters
+        )
+
+        if df.empty:
+            return json.dumps({
+                "status": "success",
+                "message": "No games found matching the specified filters",
+                "data": [],
+                "metadata": {
+                    "rows": 0,
+                    "filters_applied": filters,
+                    "grouping_level": "player/game"
+                }
+            }, indent=2)
+
+        # Convert DataFrame to JSON-serializable format
+        # Convert datetime columns to strings
+        for col in df.columns:
+            if pd.api.types.is_datetime64_any_dtype(df[col]):
+                df[col] = df[col].astype(str)
+
+        # Convert to records
+        records = df.to_dict(orient="records")
+
+        # Build response with season information
+        season_display = format_season_display(seasons)
+        response = {
+            "status": "success",
+            "message": f"Found {len(records)} games from {season_display}",
+            "data": records,
+            "metadata": {
+                "rows": len(records),
+                "columns": list(df.columns),
+                "seasons": seasons,
+                "season_count": len(seasons),
+                "unique_players": int(df["PLAYER_ID"].nunique()) if "PLAYER_ID" in df.columns else None,
+                "unique_games": int(df["GAME_ID"].nunique()) if "GAME_ID" in df.columns else None,
+                "date_range": {
+                    "min": df["GAME_DATE"].min() if "GAME_DATE" in df.columns else None,
+                    "max": df["GAME_DATE"].max() if "GAME_DATE" in df.columns else None,
+                },
+                "filters_applied": {k: str(v) for k, v in filters.items()},
+                "grouping_level": "player/game",
+                "data_source": "NBA API via data grouping infrastructure"
+            }
+        }
+
+        return json.dumps(response, indent=2)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid stat_filters JSON: {stat_filters}")
+        return json.dumps({
+            "status": "error",
+            "error_code": "INVALID_JSON",
+            "error_message": f"stat_filters must be valid JSON: {str(e)}",
+            "example": '{"MIN": [">=", 10], "PTS": [">", 20]}'
+        }, indent=2)
+
+    except Exception as e:
+        logger.exception("Error in fetch_player_games")
+        return json.dumps({
+            "status": "error",
+            "error_code": "FETCH_ERROR",
+            "error_message": str(e)
+        }, indent=2)
 
 
 @mcp_server.tool()
@@ -897,10 +1109,40 @@ async def play_by_play(
     start_clock: Optional[str] = None,
     recent_n: int = 5,
     max_lines: int = 200,
+    include_lineups: bool = False,
 ) -> str:
     """
     Unified MCP tool: returns play-by-play for specified date/team,
     or for all games today if no parameters given.
+
+    NEW FEATURE: Optional lineup tracking!
+    Set include_lineups=True to get current 5-player lineups for each event.
+
+    Args:
+        game_date: Date in YYYY-MM-DD format (optional)
+        team: Team name or abbreviation (optional)
+        start_period: Starting period (default: 1)
+        end_period: Ending period (default: 4)
+        start_clock: Start time in format "MM:SS" (optional)
+        recent_n: Number of recent plays to show in summary (default: 5)
+        max_lines: Maximum lines of output (default: 200)
+        include_lineups: If True, adds current lineup columns to output (default: False)
+
+    Returns:
+        Play-by-play markdown or JSON with optional lineup data
+
+    Lineup columns (when include_lineups=True):
+        - CURRENT_LINEUP_HOME: List of 5 player names (home team)
+        - CURRENT_LINEUP_AWAY: List of 5 player names (away team)
+        - LINEUP_ID_HOME: NBA API format lineup ID (e.g., "-1626157-1628384-...")
+        - LINEUP_ID_AWAY: NBA API format lineup ID
+        - LINEUP_DISPLAY_HOME: Human-readable lineup (e.g., "James - Davis - Russell - ...")
+        - LINEUP_DISPLAY_AWAY: Human-readable lineup
+
+    Examples:
+        play_by_play()  # Today's games
+        play_by_play("2024-01-15", "Lakers")  # Specific game
+        play_by_play("2024-01-15", "Lakers", include_lineups=True)  # With lineups
     """
     client = NBAApiClient()
     output_blocks = []
@@ -946,9 +1188,245 @@ async def play_by_play(
         recent_n=recent_n,
         max_lines=max_lines,
     )
+
+    # NEW: Add lineup tracking if requested
+    if include_lineups:
+        try:
+            from nba_mcp.api.tools.playbyplayv3_or_realtime import PastGamesPlaybyPlay
+            from nba_api.stats.endpoints import PlayByPlayV3
+
+            # Get game_id from date/team
+            pbp_instance = PastGamesPlaybyPlay.from_team_date(
+                when=game_date,
+                team=team,
+                show_choices=False
+            )
+            game_id = pbp_instance.game_id
+
+            # Fetch play-by-play as DataFrame
+            result = PlayByPlayV3(
+                game_id=game_id,
+                start_period=start_period,
+                end_period=end_period
+            )
+            pbp_df = result.get_data_frames()[0]  # [0] is PlayByPlay
+
+            # Add lineup tracking
+            pbp_with_lineups = add_lineups_to_play_by_play(pbp_df, game_id)
+
+            # Return as JSON for inspection
+            return json.dumps({
+                "game_id": game_id,
+                "events": pbp_with_lineups.to_dict(orient="records")[:max_lines],
+                "total_events": len(pbp_with_lineups),
+                "lineups_tracked": True
+            }, indent=2, default=str)
+
+        except Exception as e:
+            logger.error(f"Failed to add lineup tracking: {e}")
+            # Fall back to regular play-by-play without lineups
+
     if isinstance(md, str):
         return md
     return json.dumps(md, indent=2)
+
+
+@mcp_server.tool()
+async def get_season_stats(
+    entity_type: Literal["player", "team"],
+    entity_name: str,
+    season: str,
+    team_filter: Optional[str] = None
+) -> str:
+    """
+    Get aggregated season statistics for players or teams.
+
+    Provides comprehensive season-level data including:
+    - Counting stats totals (PTS, REB, AST, etc.)
+    - Shooting percentages (recalculated from totals)
+    - Per-game averages
+    - Games played, wins/losses
+    - Advanced metrics (TS%, eFG%, etc.)
+
+    Supports multiple grouping levels:
+    - player/season: All games for a player in a season
+    - player/team/season: Games for a player with specific team
+    - team/season: All games for a team in a season
+
+    Args:
+        entity_type: "player" or "team"
+        entity_name: Player or team name (e.g., "LeBron James", "Lakers")
+        season: Season in 'YYYY-YY' format (e.g., "2023-24")
+        team_filter: Optional team name to filter player stats by team
+
+    Returns:
+        JSON string with ResponseEnvelope containing season statistics
+
+    Examples:
+        get_season_stats("player", "LeBron James", "2023-24")
+        get_season_stats("player", "LeBron James", "2023-24", team_filter="Lakers")
+        get_season_stats("team", "Lakers", "2023-24")
+    """
+    start_time = time.time()
+
+    try:
+        # Resolve entity to ID
+        entity = resolve_entity(entity_name, entity_type=entity_type)
+
+        # Fetch season stats based on entity type
+        if entity_type == "player":
+            # Get team ID if team_filter provided
+            team_id = None
+            if team_filter:
+                team_entity = resolve_entity(team_filter, entity_type="team")
+                team_id = team_entity.id
+
+            stats = await get_player_season_stats(
+                season=season,
+                player_id=entity.id,
+                team_id=team_id
+            )
+
+            grouping_level = "player/team/season" if team_filter else "player/season"
+
+        else:  # team
+            stats = await get_team_season_stats(
+                season=season,
+                team_id=entity.id
+            )
+
+            grouping_level = "team/season"
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Add grouping metadata
+        stats["_grouping_level"] = grouping_level
+        stats["_granularity"] = "season"
+
+        response = success_response(
+            data=stats,
+            source="aggregated",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms,
+        )
+
+        logger.info(
+            f"get_season_stats: {entity_type}={entity_name}, season={season}, "
+            f"grouping={grouping_level}, time={execution_time_ms:.0f}ms"
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        logger.warning(f"Entity not found in get_season_stats: {e}")
+        response = error_response(
+            error_code="ENTITY_NOT_FOUND",
+            error_message=str(e),
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_season_stats")
+        response = error_response(
+            error_code="NBA_API_ERROR",
+            error_message=f"Failed to fetch season stats: {str(e)}",
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def get_advanced_metrics(
+    player_name: str,
+    season: str,
+    metrics: Optional[List[str]] = None
+) -> str:
+    """
+    Calculate advanced basketball metrics for a player.
+
+    Provides sophisticated metrics beyond basic box score stats:
+    - **Game Score per 36**: Hollinger's efficiency metric normalized per 36 minutes
+    - **True Shooting %**: Shooting efficiency accounting for 3PT and FT value
+    - **Effective FG %**: Field goal % adjusted for 3-pointers
+    - **Win Shares**: Offensive + Defensive contributions to team wins
+    - **Win Shares per 48**: WS normalized per 48 minutes
+    - **EWA**: Estimated Wins Added (value above replacement)
+
+    Note: RAPM (Regularized Adjusted Plus-Minus) requires multi-year play-by-play
+    data and is not yet available.
+
+    Args:
+        player_name: Player name (e.g., "LeBron James")
+        season: Season in 'YYYY-YY' format (e.g., "2023-24")
+        metrics: Optional list of specific metrics to return
+                 (default: all metrics)
+
+    Returns:
+        JSON string with ResponseEnvelope containing advanced metrics
+
+    Examples:
+        get_advanced_metrics("LeBron James", "2023-24")
+        get_advanced_metrics("Stephen Curry", "2023-24", metrics=["GAME_SCORE_PER_36", "WIN_SHARES"])
+
+    Available metrics:
+        - GAME_SCORE_TOTAL
+        - GAME_SCORE_PER_GAME
+        - GAME_SCORE_PER_36
+        - TRUE_SHOOTING_PCT
+        - EFFECTIVE_FG_PCT
+        - USAGE_RATE
+        - OFFENSIVE_WIN_SHARES
+        - DEFENSIVE_WIN_SHARES
+        - WIN_SHARES
+        - WIN_SHARES_PER_48
+        - EWA
+    """
+    start_time = time.time()
+
+    try:
+        calculator = AdvancedMetricsCalculator()
+
+        # Calculate all metrics
+        result = await calculator.calculate_all_metrics(player_name, season)
+
+        # Convert to dict
+        metrics_dict = result.to_dict()
+
+        # Filter to specific metrics if requested
+        if metrics:
+            metrics_dict = {k: v for k, v in metrics_dict.items() if k in metrics or k in ["PLAYER_NAME", "SEASON"]}
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        response = success_response(
+            data=metrics_dict,
+            source="calculated",
+            cache_status="miss",
+            execution_time_ms=execution_time_ms,
+        )
+
+        logger.info(
+            f"get_advanced_metrics: player={player_name}, season={season}, "
+            f"GS/36={result.game_score_per_36:.1f}, WS={result.win_shares:.1f}, "
+            f"time={execution_time_ms:.0f}ms"
+        )
+
+        return response.to_json_string()
+
+    except EntityNotFoundError as e:
+        logger.warning(f"Player not found in get_advanced_metrics: {e}")
+        response = error_response(
+            error_code="ENTITY_NOT_FOUND",
+            error_message=str(e),
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Error in get_advanced_metrics")
+        response = error_response(
+            error_code="CALCULATION_ERROR",
+            error_message=f"Failed to calculate advanced metrics: {str(e)}",
+        )
+        return response.to_json_string()
 
 
 @mcp_server.tool()
@@ -1010,7 +1488,7 @@ async def get_team_standings(
 @mcp_server.tool()
 async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) -> str:
     """
-    Get team advanced statistics (Offensive/Defensive Rating, Pace, Net Rating, Four Factors).
+    Get team advanced statistics with human-readable formatting.
 
     Provides comprehensive team metrics including:
     - Offensive/Defensive/Net Rating (per 100 possessions)
@@ -1019,49 +1497,52 @@ async def get_team_advanced_stats(team_name: str, season: Optional[str] = None) 
     - Four Factors: eFG%, TOV%, OREB%, FTA Rate (offense and defense)
 
     Args:
-        team_name: Team name or abbreviation (e.g., "Lakers", "LAL", "Los Angeles Lakers")
+        team_name: Team name, nickname, or abbreviation (e.g., "Lakers", "Dubs", "LAL")
         season: Season string ('YYYY-YY'). Defaults to current season.
 
     Returns:
-        JSON string with ResponseEnvelope containing team advanced stats
-
-    Examples:
-        get_team_advanced_stats("Lakers")
-        get_team_advanced_stats("BOS", season="2023-24")
+        Formatted text with team advanced statistics
     """
-    start_time = time.time()
+    logger.debug("get_team_advanced_stats('%s', season=%s)", team_name, season)
+
+    # Default to current season if not specified
+    if season is None:
+        season = get_current_season()
 
     try:
-        from nba_mcp.api.advanced_stats import (
-            get_team_advanced_stats as fetch_team_stats,
-        )
+        from nba_mcp.api.advanced_stats import get_team_advanced_stats as fetch_stats
 
-        stats = await fetch_team_stats(team_name=team_name, season=season)
+        result = await fetch_stats(team_name, season=season)
 
-        execution_time_ms = (time.time() - start_time) * 1000
+        # ========================================================================
+        # BUG FIX: Convert JSON response to human-readable text
+        # ========================================================================
+        # Check if result is JSON string
+        if isinstance(result, str):
+            try:
+                data = json.loads(result)
+                if data.get("status") == "success":
+                    team_data = data["data"]
+                    # Format as human-readable text
+                    response = format_team_advanced_stats(team_data)
+                    season_ctx = get_season_context(include_date=True)
+                    return f"📅 {season_ctx}\n\n{response}"
+            except json.JSONDecodeError:
+                # If can't parse as JSON, return as-is with context
+                season_ctx = get_season_context()
+                return f"📅 {season_ctx}\n\n{result}"
 
-        response = success_response(
-            data=stats,
-            source="historical",
-            cache_status="miss",
-            execution_time_ms=execution_time_ms,
-        )
-
-        return response.to_json_string()
+        # If not string, add season context to whatever we got
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n{str(result)}"
 
     except EntityNotFoundError as e:
-        response = error_response(
-            error_code=e.code, error_message=e.message, details=e.details
-        )
-        return response.to_json_string()
-
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Team not found: {str(e)}"
     except Exception as e:
         logger.exception("Error in get_team_advanced_stats")
-        response = error_response(
-            error_code="NBA_API_ERROR",
-            error_message=f"Failed to fetch team advanced stats: {str(e)}",
-        )
-        return response.to_json_string()
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error: {str(e)}"
 
 
 @mcp_server.tool()
@@ -1069,7 +1550,7 @@ async def get_player_advanced_stats(
     player_name: str, season: Optional[str] = None
 ) -> str:
     """
-    Get player advanced statistics (Usage%, TS%, eFG%, PER, Offensive/Defensive Rating).
+    Get player advanced statistics with human-readable formatting.
 
     Provides comprehensive player efficiency metrics including:
     - True Shooting % (TS%)
@@ -1080,49 +1561,66 @@ async def get_player_advanced_stats(
     - Assist %, Rebound %, Turnover %
 
     Args:
-        player_name: Player name (e.g., "LeBron James", "LeBron", "James")
+        player_name: Player name, nickname, or abbreviation (e.g., "LeBron James", "King James", "LeBron")
         season: Season string ('YYYY-YY'). Defaults to current season.
 
     Returns:
-        JSON string with ResponseEnvelope containing player advanced stats
-
-    Examples:
-        get_player_advanced_stats("LeBron James")
-        get_player_advanced_stats("Curry", season="2015-16")
+        Formatted text with player advanced statistics
     """
-    start_time = time.time()
+    logger.debug("get_player_advanced_stats('%s', season=%s)", player_name, season)
+
+    # Default to current season if not specified
+    if season is None:
+        season = get_current_season()
 
     try:
-        from nba_mcp.api.advanced_stats import (
-            get_player_advanced_stats as fetch_player_stats,
-        )
+        from nba_mcp.api.advanced_stats import get_player_advanced_stats as fetch_stats
 
-        stats = await fetch_player_stats(player_name=player_name, season=season)
+        result = await fetch_stats(player_name=player_name, season=season)
 
-        execution_time_ms = (time.time() - start_time) * 1000
+        # Check if result is JSON string and convert to readable format
+        if isinstance(result, str):
+            try:
+                data = json.loads(result)
+                if data.get("status") == "success":
+                    player_data = data["data"]
+                    response = f"""**{player_data.get('player_name', 'Unknown Player')}** ({season})
+**Team**: {player_data.get('team_abbreviation', 'N/A')}
+**Games Played**: {player_data.get('games_played', 'N/A')}
+**Minutes Per Game**: {player_data.get('minutes_per_game', 0):.1f}
 
-        response = success_response(
-            data=stats,
-            source="historical",
-            cache_status="miss",
-            execution_time_ms=execution_time_ms,
-        )
+**EFFICIENCY METRICS**
+• True Shooting %: {player_data.get('true_shooting_pct', 0):.1%}
+• Effective FG%: {player_data.get('effective_fg_pct', 0):.1%}
+• Usage %: {player_data.get('usage_pct', 0):.1%}
+• Player Impact Estimate (PIE): {player_data.get('pie', 0):.3f}
 
-        return response.to_json_string()
+**RATINGS (Per 100 Possessions)**
+• Offensive Rating: {player_data.get('offensive_rating', 0):.1f}
+• Defensive Rating: {player_data.get('defensive_rating', 0):.1f}
+• Net Rating: {player_data.get('net_rating', 0):.1f}
+
+**ADVANCED PERCENTAGES**
+• Assist %: {player_data.get('assist_pct', 0):.1%}
+• Rebound %: {player_data.get('rebound_pct', 0):.1%}
+• Turnover %: {player_data.get('turnover_pct', 0):.1f}%"""
+
+                    season_ctx = get_season_context(include_date=True)
+                    return f"📅 {season_ctx}\n\n{response}"
+            except json.JSONDecodeError:
+                pass
+
+        # If not JSON or can't parse, return as-is with context
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n{str(result)}"
 
     except EntityNotFoundError as e:
-        response = error_response(
-            error_code=e.code, error_message=e.message, details=e.details
-        )
-        return response.to_json_string()
-
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Player not found: {str(e)}"
     except Exception as e:
         logger.exception("Error in get_player_advanced_stats")
-        response = error_response(
-            error_code="NBA_API_ERROR",
-            error_message=f"Failed to fetch player advanced stats: {str(e)}",
-        )
-        return response.to_json_string()
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error: {str(e)}"
 
 
 @mcp_server.tool()
@@ -1130,7 +1628,7 @@ async def compare_players(
     player1_name: str,
     player2_name: str,
     season: Optional[str] = None,
-    normalization: Literal["raw", "per_game", "per_75", "era_adjusted"] = "per_75",
+    normalization: str = "per_75_poss",
 ) -> str:
     """
     Compare two players side-by-side with shared metric registry.
@@ -1148,52 +1646,57 @@ async def compare_players(
         normalization: Statistical normalization mode:
             - "raw": Total stats (season totals)
             - "per_game": Per-game averages
-            - "per_75": Per-75 possessions (DEFAULT - fairest comparison)
+            - "per_75" or "per_75_poss": Per-75 possessions (DEFAULT - fairest comparison)
             - "era_adjusted": Adjust for pace/era differences
 
     Returns:
-        JSON string with ResponseEnvelope containing PlayerComparison object
-
-    Examples:
-        compare_players("LeBron James", "Michael Jordan", season="2012-13")
-        compare_players("Curry", "Nash", normalization="per_75")
+        Formatted markdown comparison with side-by-side stats
     """
-    start_time = time.time()
+    logger.debug(
+        "compare_players('%s', '%s', season=%s, normalization=%s)",
+        player1_name,
+        player2_name,
+        season,
+        normalization,
+    )
+
+    # Default to current season if not specified
+    if season is None:
+        season = get_current_season()
+
+    # Normalize parameter mapping for backwards compatibility
+    # Map user-friendly aliases to internal parameter names
+    normalization_map = {
+        "per_75": "per_75_poss",          # User-friendly alias
+        "per_game": "per_game",
+        "raw": "raw",
+        "era_adjusted": "era_adjusted",
+        "per_75_poss": "per_75_poss",    # Also accept exact name
+    }
+    normalization_internal = normalization_map.get(normalization, normalization)
 
     try:
         from nba_mcp.api.advanced_stats import compare_players as do_compare
 
+        # Call comparison with mapped normalization parameter
         comparison = await do_compare(
             player1_name=player1_name,
             player2_name=player2_name,
             season=season,
-            normalization=normalization,
+            normalization=normalization_internal,  # Use mapped value
         )
 
-        execution_time_ms = (time.time() - start_time) * 1000
-
-        response = success_response(
-            data=comparison.model_dump(),
-            source="historical",
-            cache_status="miss",
-            execution_time_ms=execution_time_ms,
-        )
-
-        return response.to_json_string()
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{comparison}"
 
     except EntityNotFoundError as e:
-        response = error_response(
-            error_code=e.code, error_message=e.message, details=e.details
-        )
-        return response.to_json_string()
-
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error: {str(e)}"
     except Exception as e:
         logger.exception("Error in compare_players")
-        response = error_response(
-            error_code="NBA_API_ERROR",
-            error_message=f"Failed to compare players: {str(e)}",
-        )
-        return response.to_json_string()
+        season_ctx = get_season_context()
+        return f"📅 {season_ctx}\n\n❌ Error comparing players: {str(e)}"
 
 
 @mcp_server.tool()
@@ -1374,6 +1877,9 @@ async def get_shot_chart(
         get_shot_chart("Stephen Curry", season="2023-24", granularity="hexbin")
         get_shot_chart("Lakers", entity_type="team", granularity="summary")
         get_shot_chart("Joel Embiid", date_from="2024-01-01", date_to="2024-01-31")
+
+    Note:
+        To save data, use the save_nba_data() tool after fetching.
     """
     start_time = time.time()
 
@@ -1452,6 +1958,9 @@ async def get_game_context(
 
         get_game_context("Boston Celtics", "Miami Heat", season="2022-23")
         → Historical matchup context from 2022-23 season
+
+    Note:
+        To save data, use the save_nba_data() tool after fetching.
 
     Features:
         - Parallel API execution (4-6 calls simultaneously)
@@ -2255,6 +2764,102 @@ async def build_dataset(spec: Dict[str, Any]) -> str:
 
 
 @mcp_server.tool()
+async def save_nba_data(
+    data_json: str,
+    custom_filename: Optional[str] = None
+) -> str:
+    """
+    Save NBA data to organized mcp_data/ folder with descriptive filenames.
+
+    Automatically generates meaningful filenames based on data content
+    (team/player names, dates, data type), or uses custom filename if provided.
+
+    This tool provides explicit, user-controlled data persistence. Unlike auto-save,
+    you choose exactly when to save data after fetching it.
+
+    Args:
+        data_json: JSON string from any NBA MCP tool response
+        custom_filename: Optional custom filename (without extension or timestamp)
+
+    Returns:
+        JSON string with save confirmation, file location, size, and generated filename
+
+    Examples:
+        # Auto-generate descriptive filename from shot chart data
+        shot_data = get_shot_chart("Warriors", entity_type="team", date_from="2025-10-28")
+        save_nba_data(shot_data)
+        → Saves as: mcp_data/2025-10-29/warriors_shot_chart_2025-10-28_143052.json
+
+        # Auto-generate from game context data
+        context_data = get_game_context("Lakers", "Warriors")
+        save_nba_data(context_data)
+        → Saves as: mcp_data/2025-10-29/lakers_vs_warriors_context_143052.json
+
+        # Use custom filename
+        save_nba_data(shot_data, custom_filename="my_analysis")
+        → Saves as: mcp_data/2025-10-29/my_analysis_143052.json
+
+    Filename Generation:
+        - Shot charts: "{team/player}_shot_chart_{date/season}"
+        - Game context: "{team1}_vs_{team2}_context"
+        - Player stats: "{player}_stats_{season}"
+        - Team stats: "{team}_advanced_stats_{season}"
+        - Fallback: "nba_data" if type cannot be determined
+
+    Note:
+        All filenames include timestamp (HHMMSS) for uniqueness.
+        Data is organized into date-based folders: mcp_data/YYYY-MM-DD/
+    """
+    start_time = time.time()
+
+    try:
+        # Parse JSON data
+        data = json.loads(data_json)
+
+        # Save with smart filename generation
+        from nba_mcp.data.dataset_manager import save_json_data
+        file_path = save_json_data(data, custom_filename=custom_filename)
+
+        # Get file stats
+        file_size = file_path.stat().st_size
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Build response
+        response = {
+            "status": "success",
+            "message": "Data saved successfully",
+            "file_info": {
+                "path": str(file_path),
+                "filename": file_path.name,
+                "size_bytes": file_size,
+                "size_kb": round(file_size / 1024, 2),
+                "folder": str(file_path.parent),
+            },
+            "metadata": {
+                "execution_time_ms": round(execution_time_ms, 2),
+                "timestamp": datetime.now().isoformat(),
+            }
+        }
+
+        return json.dumps(response, indent=2)
+
+    except json.JSONDecodeError as e:
+        return json.dumps({
+            "status": "error",
+            "error_code": "INVALID_JSON",
+            "error_message": f"Invalid JSON data: {str(e)}",
+        }, indent=2)
+
+    except Exception as e:
+        logger.exception("Error in save_nba_data")
+        return json.dumps({
+            "status": "error",
+            "error_code": "SAVE_ERROR",
+            "error_message": f"Failed to save data: {str(e)}",
+        }, indent=2)
+
+
+@mcp_server.tool()
 async def save_dataset(
     handle: str, path: Optional[str] = None, format: str = "parquet"
 ) -> str:
@@ -2926,6 +3531,1625 @@ async def configure_limits(
         return f"Error configuring limits: {str(e)}"
 
 
+@mcp_server.tool()
+async def get_player_game_stats(
+    player_name: str,
+    season: Optional[str] = None,
+    last_n_games: Optional[int] = None,
+    opponent: Optional[str] = None,
+    game_date: Optional[str] = None,
+    season_type: str = "Regular Season",
+) -> str:
+    """
+    Get individual game statistics for a specific player.
+
+    This tool fills the critical gap identified in the weakness analysis:
+    providing easy access to player stats for specific games.
+
+    Common use cases:
+    - "Show me LeBron's last game"
+    - "How did Curry perform vs the Lakers?"
+    - "Get Giannis stats from January 15th"
+    - "Show me Jokic's last 10 games"
+
+    Args:
+        player_name: Player name (supports fuzzy matching, e.g., "LeBron", "LBJ")
+        season: Season in 'YYYY-YY' format (defaults to current season)
+        last_n_games: Limit to most recent N games (e.g., 1 for last game, 10 for last 10)
+        opponent: Filter by opponent team (e.g., "Lakers", "LAL")
+        game_date: Specific game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format
+        season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
+
+    Returns:
+        Formatted game statistics with:
+        - Game date and matchup
+        - Win/Loss result
+        - Minutes played
+        - Points, Rebounds, Assists
+        - Field goals, 3-pointers, Free throws
+        - Advanced stats (PTS, REB, AST, STL, BLK, TO, +/-)
+
+    Examples:
+        # Get player's most recent game
+        get_player_game_stats("LeBron James", last_n_games=1)
+
+        # Get last 5 games vs specific opponent
+        get_player_game_stats("Stephen Curry", opponent="Lakers", last_n_games=5)
+
+        # Get stats for specific date
+        get_player_game_stats("Giannis", game_date="2024-01-15")
+
+        # Get full season game log
+        get_player_game_stats("Luka Doncic", season="2023-24")
+    """
+    logger.debug(
+        f"get_player_game_stats(player={player_name}, season={season}, "
+        f"last_n={last_n_games}, opponent={opponent}, date={game_date})"
+    )
+
+    client = NBAApiClient()
+
+    try:
+        # Default to current season if not specified
+        if season is None:
+            season = get_current_season()
+
+        # Fetch game log
+        result = await client.get_player_game_log(
+            player_name=player_name,
+            season=season,
+            season_type=season_type,
+            last_n_games=last_n_games,
+            as_dataframe=True,
+        )
+
+        # Check for errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        if not isinstance(result, pd.DataFrame):
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ Unexpected response format"
+
+        df = result
+
+        if df.empty:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\nNo games found for {player_name} in {season}"
+
+        # Apply additional filters
+        if opponent:
+            # Normalize opponent name
+            opponent_team_name = None
+            try:
+                from nba_mcp.api.entity_resolver import resolve_entity
+                resolved = resolve_entity(opponent, entity_type="team")
+                if resolved["status"] == "success":
+                    opponent_team_name = resolved["data"]["abbreviation"]
+            except:
+                # Fallback to direct matching
+                opponent_team_name = opponent.upper()
+
+            # Filter by opponent in MATCHUP column (e.g., "LAL vs. GSW" or "LAL @ GSW")
+            if opponent_team_name and "MATCHUP" in df.columns:
+                df = df[df["MATCHUP"].str.contains(opponent_team_name, case=False, na=False)]
+
+        if game_date:
+            # Normalize game date
+            try:
+                from nba_mcp.api.tools.nba_api_utils import normalize_date
+                target_date = normalize_date(game_date)
+                df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+                df = df[df["GAME_DATE"].dt.date == target_date.date()]
+            except Exception as e:
+                logger.warning(f"Could not parse game_date '{game_date}': {e}")
+
+        if df.empty:
+            season_ctx = get_season_context(include_date=True)
+            filters_msg = []
+            if opponent:
+                filters_msg.append(f"opponent={opponent}")
+            if game_date:
+                filters_msg.append(f"date={game_date}")
+            filters_str = ", ".join(filters_msg) if filters_msg else "specified filters"
+            return f"📅 {season_ctx}\n\nNo games found for {player_name} with {filters_str}"
+
+        # Format response
+        response_lines = [f"# {player_name} - Game Stats ({season} {season_type})"]
+        response_lines.append("")
+
+        # Summary if multiple games
+        if len(df) > 1:
+            avg_pts = df["PTS"].mean() if "PTS" in df.columns else 0
+            avg_reb = df["REB"].mean() if "REB" in df.columns else 0
+            avg_ast = df["AST"].mean() if "AST" in df.columns else 0
+            wins = len(df[df["WL"] == "W"]) if "WL" in df.columns else 0
+            losses = len(df[df["WL"] == "L"]) if "WL" in df.columns else 0
+
+            response_lines.append(f"**Games**: {len(df)} ({wins}W-{losses}L)")
+            response_lines.append(f"**Averages**: {avg_pts:.1f} PTS, {avg_reb:.1f} REB, {avg_ast:.1f} AST")
+            response_lines.append("")
+            response_lines.append("---")
+            response_lines.append("")
+
+        # Individual game details
+        for idx, row in df.iterrows():
+            game_date_str = row.get("GAME_DATE", "")
+            if isinstance(game_date_str, pd.Timestamp):
+                game_date_str = game_date_str.strftime("%Y-%m-%d")
+
+            matchup = row.get("MATCHUP", "")
+            wl = row.get("WL", "")
+            wl_emoji = "✅" if wl == "W" else "❌"
+            minutes = row.get("MIN", 0)
+            pts = row.get("PTS", 0)
+            reb = row.get("REB", 0)
+            ast = row.get("AST", 0)
+            stl = row.get("STL", 0)
+            blk = row.get("BLK", 0)
+            tov = row.get("TOV", 0)
+            fgm = row.get("FGM", 0)
+            fga = row.get("FGA", 0)
+            fg_pct = row.get("FG_PCT", 0) * 100 if "FG_PCT" in row and pd.notna(row["FG_PCT"]) else 0
+            fg3m = row.get("FG3M", 0)
+            fg3a = row.get("FG3A", 0)
+            fg3_pct = row.get("FG3_PCT", 0) * 100 if "FG3_PCT" in row and pd.notna(row["FG3_PCT"]) else 0
+            plus_minus = row.get("PLUS_MINUS", 0)
+
+            response_lines.append(f"## {game_date_str} - {matchup} {wl_emoji}")
+            response_lines.append(f"**Result**: {wl} | **Minutes**: {minutes}")
+            response_lines.append(f"**Stats**: {pts} PTS, {reb} REB, {ast} AST, {stl} STL, {blk} BLK")
+            response_lines.append(f"**Shooting**: {fgm}/{fga} FG ({fg_pct:.1f}%), {fg3m}/{fg3a} 3PT ({fg3_pct:.1f}%)")
+            response_lines.append(f"**Turnovers**: {tov} | **+/-**: {plus_minus:+d}")
+            response_lines.append("")
+
+        response = "\n".join(response_lines)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Unexpected error in get_player_game_stats")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching player game stats: {str(e)}"
+
+
+
+
+@mcp_server.tool()
+async def get_box_score(
+    game_id: Optional[str] = None,
+    team: Optional[str] = None,
+    game_date: Optional[str] = None,
+) -> str:
+    """
+    Get full box score for a specific game with quarter-by-quarter breakdowns.
+
+    This tool fills the critical gap identified in the weakness analysis:
+    providing detailed box scores with quarter-level granularity.
+
+    Common use cases:
+    - "Get box score for game ID 0022300500"
+    - "Show me Lakers box score from last night"
+    - "Box score for Warriors game on 2024-01-15"
+
+    Args:
+        game_id: 10-digit NBA game ID (e.g., "0022300500"). If provided, this takes precedence.
+        team: Team name for date lookup (e.g., "Lakers", "LAL"). Used with game_date.
+        game_date: Game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format. Used with team.
+
+    Returns:
+        Formatted box score with:
+        - Quarter-by-quarter scores
+        - Player statistics for both teams
+        - Team totals
+        - Starters vs bench breakdowns
+
+    Examples:
+        # Get box score by game ID
+        get_box_score(game_id="0022300500")
+
+        # Get box score by team and date
+        get_box_score(team="Lakers", game_date="2024-01-15")
+
+    Notes:
+        - Either game_id OR (team + game_date) must be provided
+        - Quarter breakdowns show Q1, Q2, Q3, Q4, and OT (if applicable)
+        - Player stats include MIN, PTS, REB, AST, FG%, 3P%, FT%, +/-
+    """
+    logger.debug(f"get_box_score(game_id={game_id}, team={team}, game_date={game_date})")
+
+    client = NBAApiClient()
+
+    try:
+        # Validate input
+        if not game_id and not (team and game_date):
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ Error: Must provide either game_id OR (team + game_date)"
+
+        # If team and date provided, find game_id
+        if not game_id and team and game_date:
+            # Get games for that date
+            games_result = await client.get_games_by_date(game_date)
+
+            if isinstance(games_result, str):
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\n❌ {games_result}"
+
+            # Resolve team name
+            try:
+                from nba_mcp.api.entity_resolver import resolve_entity
+                resolved = resolve_entity(team, entity_type="team")
+                if resolved["status"] == "success":
+                    team_id = resolved["data"]["id"]
+                else:
+                    team_id = get_team_id(team)
+            except:
+                team_id = get_team_id(team)
+
+            if not team_id:
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\n❌ Team not found: {team}"
+
+            # Find game with this team
+            game_found = None
+            if isinstance(games_result, pd.DataFrame):
+                for _, game in games_result.iterrows():
+                    if game["home_team"]["id"] == team_id or game["visitor_team"]["id"] == team_id:
+                        game_id = game["game_id"]
+                        game_found = game
+                        break
+
+            if not game_id:
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\nNo game found for {team} on {game_date}"
+
+        # Fetch box score
+        result = await client.get_box_score(game_id=game_id, as_dataframe=True)
+
+        # Check for errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        player_stats = result.get("player_stats")
+        team_stats = result.get("team_stats")
+        line_score = result.get("line_score")
+
+        if player_stats is None or player_stats.empty:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\nNo box score data found for game {game_id}"
+
+        # Format response
+        response_lines = [f"# Box Score - Game {game_id}"]
+        response_lines.append("")
+
+        # Quarter-by-quarter scores
+        if line_score is not None and not line_score.empty:
+            response_lines.append("## Quarter Scores")
+            response_lines.append("")
+
+            for _, row in line_score.iterrows():
+                team_abbrev = row.get("TEAM_ABBREVIATION", "")
+                q1 = row.get("PTS_QT1", 0)
+                q2 = row.get("PTS_QT2", 0)
+                q3 = row.get("PTS_QT3", 0)
+                q4 = row.get("PTS_QT4", 0)
+                pts = row.get("PTS", 0)
+
+                quarters_str = f"Q1: {q1} | Q2: {q2} | Q3: {q3} | Q4: {q4}"
+
+                # Check for overtime
+                for ot in range(1, 10):  # Check up to 9 OT periods
+                    ot_col = f"PTS_OT{ot}"
+                    if ot_col in row and pd.notna(row[ot_col]) and row[ot_col] > 0:
+                        quarters_str += f" | OT{ot}: {row[ot_col]}"
+
+                response_lines.append(f"**{team_abbrev}**: {quarters_str} | **TOTAL: {pts}**")
+
+            response_lines.append("")
+            response_lines.append("---")
+            response_lines.append("")
+
+        # Team stats
+        if team_stats is not None and not team_stats.empty:
+            response_lines.append("## Team Totals")
+            response_lines.append("")
+
+            for _, row in team_stats.iterrows():
+                team_abbrev = row.get("TEAM_ABBREVIATION", "")
+                pts = row.get("PTS", 0)
+                reb = row.get("REB", 0)
+                ast = row.get("AST", 0)
+                stl = row.get("STL", 0)
+                blk = row.get("BLK", 0)
+                tov = row.get("TOV", 0)
+                fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+                fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+
+                response_lines.append(f"### {team_abbrev}")
+                response_lines.append(f"**Totals**: {pts} PTS, {reb} REB, {ast} AST, {stl} STL, {blk} BLK, {tov} TOV")
+                response_lines.append(f"**Shooting**: {fg_pct:.1f}% FG, {fg3_pct:.1f}% 3PT")
+                response_lines.append("")
+
+            response_lines.append("---")
+            response_lines.append("")
+
+        # Player stats by team
+        response_lines.append("## Player Stats")
+        response_lines.append("")
+
+        teams = player_stats["TEAM_ABBREVIATION"].unique()
+
+        for team_abbrev in teams:
+            team_players = player_stats[player_stats["TEAM_ABBREVIATION"] == team_abbrev]
+
+            # Sort by minutes (starters first)
+            team_players = team_players.sort_values("MIN", ascending=False)
+
+            response_lines.append(f"### {team_abbrev}")
+            response_lines.append("")
+
+            # Starters (top 5 by minutes)
+            starters = team_players.head(5)
+            response_lines.append("**Starters:**")
+            response_lines.append("")
+
+            for _, player in starters.iterrows():
+                name = player.get("PLAYER_NAME", "")
+                min_played = player.get("MIN", 0)
+                pts = player.get("PTS", 0)
+                reb = player.get("REB", 0)
+                ast = player.get("AST", 0)
+                fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
+                fg3 = f"{player.get('FG3M', 0)}-{player.get('FG3A', 0)}"
+                plus_minus = player.get("PLUS_MINUS", 0)
+
+                response_lines.append(
+                    f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
+                    f"FG: {fg}, 3PT: {fg3} | +/-: {plus_minus:+d}"
+                )
+
+            response_lines.append("")
+
+            # Bench (remaining players)
+            bench = team_players.iloc[5:]
+            if not bench.empty:
+                response_lines.append("**Bench:**")
+                response_lines.append("")
+
+                for _, player in bench.iterrows():
+                    name = player.get("PLAYER_NAME", "")
+                    min_played = player.get("MIN", 0)
+
+                    # Skip DNPs (0 minutes)
+                    if min_played == 0 or pd.isna(min_played):
+                        continue
+
+                    pts = player.get("PTS", 0)
+                    reb = player.get("REB", 0)
+                    ast = player.get("AST", 0)
+                    fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
+                    plus_minus = player.get("PLUS_MINUS", 0)
+
+                    response_lines.append(
+                        f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
+                        f"FG: {fg} | +/-: {plus_minus:+d}"
+                    )
+
+                response_lines.append("")
+
+            response_lines.append("")
+
+        response = "\n".join(response_lines)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except Exception as e:
+        logger.exception("Unexpected error in get_box_score")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching box score: {str(e)}"
+
+
+@mcp_server.tool()
+async def get_clutch_stats(
+    entity_name: str,
+    entity_type: str = "player",
+    season: Optional[str] = None,
+    per_mode: str = "PerGame",
+) -> str:
+    """
+    Get clutch time statistics (final 5 minutes, score within 5 points).
+
+    This tool fills the critical gap identified in the weakness analysis:
+    providing clutch performance analytics.
+
+    Clutch time is defined as:
+    - Final 5 minutes of the 4th quarter or overtime
+    - Score differential of 5 points or less
+
+    Common use cases:
+    - "Show me LeBron's clutch stats"
+    - "How do the Lakers perform in clutch time?"
+    - "Get Curry's clutch shooting percentages"
+
+    Args:
+        entity_name: Player or team name (supports fuzzy matching)
+        entity_type: "player" or "team" (default: "player")
+        season: Season in 'YYYY-YY' format (defaults to current season)
+        per_mode: "PerGame" or "Totals" (default: "PerGame")
+
+    Returns:
+        Formatted clutch statistics with:
+        - Games played in clutch situations
+        - Clutch time win-loss record
+        - Points, assists, rebounds in clutch
+        - Shooting percentages in clutch
+        - Clutch time efficiency metrics
+
+    Examples:
+        # Get player clutch stats
+        get_clutch_stats("LeBron James")
+
+        # Get team clutch stats
+        get_clutch_stats("Lakers", entity_type="team")
+
+        # Get totals instead of per-game
+        get_clutch_stats("Stephen Curry", per_mode="Totals")
+
+        # Specific season
+        get_clutch_stats("Giannis", season="2022-23")
+    """
+    logger.debug(
+        f"get_clutch_stats(entity={entity_name}, type={entity_type}, "
+        f"season={season}, per_mode={per_mode})"
+    )
+
+    client = NBAApiClient()
+
+    try:
+        # Default to current season if not specified
+        if season is None:
+            season = get_current_season()
+
+        # Fetch clutch stats
+        result = await client.get_clutch_stats(
+            entity_name=entity_name,
+            entity_type=entity_type,
+            season=season,
+            per_mode=per_mode
+        )
+
+        # Check for errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        if not isinstance(result, pd.DataFrame) or result.empty:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\nNo clutch stats found for {entity_name} in {season}"
+
+        # Get the single row (filtered data)
+        row = result.iloc[0]
+
+        # Format response
+        if entity_type == "player":
+            player_name = row.get("PLAYER_NAME", entity_name)
+            team_abbrev = row.get("TEAM_ABBREVIATION", "")
+
+            response_lines = [
+                f"# {player_name} - Clutch Stats ({season})",
+                f"**Team**: {team_abbrev}" if team_abbrev else "",
+                f"**Definition**: Final 5 min, score within 5 points",
+                "",
+                "## Clutch Performance",
+                ""
+            ]
+
+            # Games and record
+            games = row.get("GP", 0)
+            wins = row.get("W", 0)
+            losses = row.get("L", 0)
+            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
+
+            response_lines.append(f"**Games**: {games} clutch situations")
+            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
+            response_lines.append("")
+
+            # Scoring
+            pts = row.get("PTS", 0)
+            fgm = row.get("FGM", 0)
+            fga = row.get("FGA", 0)
+            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+            fg3m = row.get("FG3M", 0)
+            fg3a = row.get("FG3A", 0)
+            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+            ftm = row.get("FTM", 0)
+            fta = row.get("FTA", 0)
+            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
+
+            response_lines.append("## Scoring")
+            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
+            response_lines.append(f"**Field Goals**: {fgm:.1f}/{fga:.1f} ({fg_pct:.1f}%)")
+            response_lines.append(f"**Three Pointers**: {fg3m:.1f}/{fg3a:.1f} ({fg3_pct:.1f}%)")
+            response_lines.append(f"**Free Throws**: {ftm:.1f}/{fta:.1f} ({ft_pct:.1f}%)")
+            response_lines.append("")
+
+            # Playmaking and rebounding
+            ast = row.get("AST", 0)
+            reb = row.get("REB", 0)
+            oreb = row.get("OREB", 0)
+            dreb = row.get("DREB", 0)
+            stl = row.get("STL", 0)
+            blk = row.get("BLK", 0)
+            tov = row.get("TOV", 0)
+
+            response_lines.append("## Playmaking & Defense")
+            response_lines.append(f"**Assists**: {ast:.1f}")
+            response_lines.append(f"**Rebounds**: {reb:.1f} ({oreb:.1f} OFF, {dreb:.1f} DEF)")
+            response_lines.append(f"**Steals**: {stl:.1f}")
+            response_lines.append(f"**Blocks**: {blk:.1f}")
+            response_lines.append(f"**Turnovers**: {tov:.1f}")
+            response_lines.append("")
+
+            # Advanced metrics (if available)
+            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
+                plus_minus = row["PLUS_MINUS"]
+                response_lines.append("## Impact")
+                response_lines.append(f"**Plus/Minus**: {plus_minus:+.1f}")
+                response_lines.append("")
+
+        else:  # team
+            team_name = row.get("TEAM_NAME", entity_name)
+
+            response_lines = [
+                f"# {team_name} - Clutch Stats ({season})",
+                f"**Definition**: Final 5 min, score within 5 points",
+                "",
+                "## Clutch Performance",
+                ""
+            ]
+
+            # Games and record
+            games = row.get("GP", 0)
+            wins = row.get("W", 0)
+            losses = row.get("L", 0)
+            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
+
+            response_lines.append(f"**Games**: {games} clutch situations")
+            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
+            response_lines.append("")
+
+            # Scoring
+            pts = row.get("PTS", 0)
+            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
+
+            response_lines.append("## Team Stats")
+            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
+            response_lines.append(f"**FG%**: {fg_pct:.1f}% | **3P%**: {fg3_pct:.1f}% | **FT%**: {ft_pct:.1f}%")
+
+            ast = row.get("AST", 0)
+            reb = row.get("REB", 0)
+            tov = row.get("TOV", 0)
+
+            response_lines.append(f"**Assists**: {ast:.1f} | **Rebounds**: {reb:.1f} | **Turnovers**: {tov:.1f}")
+            response_lines.append("")
+
+            # Net rating (if available)
+            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
+                plus_minus = row["PLUS_MINUS"]
+                response_lines.append(f"**Net Rating**: {plus_minus:+.1f}")
+                response_lines.append("")
+
+        response = "\n".join(response_lines)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Unexpected error in get_clutch_stats")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching clutch stats: {str(e)}"
+
+
+
+
+@mcp_server.tool()
+async def get_box_score(
+    game_id: Optional[str] = None,
+    team: Optional[str] = None,
+    game_date: Optional[str] = None,
+) -> str:
+    """
+    Get full box score for a specific game with quarter-by-quarter breakdowns.
+
+    This tool fills the critical gap identified in the weakness analysis:
+    providing detailed box scores with quarter-level granularity.
+
+    Common use cases:
+    - "Get box score for game ID 0022300500"
+    - "Show me Lakers box score from last night"
+    - "Box score for Warriors game on 2024-01-15"
+
+    Args:
+        game_id: 10-digit NBA game ID (e.g., "0022300500"). If provided, this takes precedence.
+        team: Team name for date lookup (e.g., "Lakers", "LAL"). Used with game_date.
+        game_date: Game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format. Used with team.
+
+    Returns:
+        Formatted box score with:
+        - Quarter-by-quarter scores
+        - Player statistics for both teams
+        - Team totals
+        - Starters vs bench breakdowns
+
+    Examples:
+        # Get box score by game ID
+        get_box_score(game_id="0022300500")
+
+        # Get box score by team and date
+        get_box_score(team="Lakers", game_date="2024-01-15")
+
+    Notes:
+        - Either game_id OR (team + game_date) must be provided
+        - Quarter breakdowns show Q1, Q2, Q3, Q4, and OT (if applicable)
+        - Player stats include MIN, PTS, REB, AST, FG%, 3P%, FT%, +/-
+    """
+    logger.debug(f"get_box_score(game_id={game_id}, team={team}, game_date={game_date})")
+
+    client = NBAApiClient()
+
+    try:
+        # Validate input
+        if not game_id and not (team and game_date):
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ Error: Must provide either game_id OR (team + game_date)"
+
+        # If team and date provided, find game_id
+        if not game_id and team and game_date:
+            # Get games for that date
+            games_result = await client.get_games_by_date(game_date)
+
+            if isinstance(games_result, str):
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\n❌ {games_result}"
+
+            # Resolve team name
+            try:
+                from nba_mcp.api.entity_resolver import resolve_entity
+                resolved = resolve_entity(team, entity_type="team")
+                if resolved["status"] == "success":
+                    team_id = resolved["data"]["id"]
+                else:
+                    team_id = get_team_id(team)
+            except:
+                team_id = get_team_id(team)
+
+            if not team_id:
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\n❌ Team not found: {team}"
+
+            # Find game with this team
+            game_found = None
+            if isinstance(games_result, pd.DataFrame):
+                for _, game in games_result.iterrows():
+                    if game["home_team"]["id"] == team_id or game["visitor_team"]["id"] == team_id:
+                        game_id = game["game_id"]
+                        game_found = game
+                        break
+
+            if not game_id:
+                season_ctx = get_season_context(include_date=True)
+                return f"📅 {season_ctx}\n\nNo game found for {team} on {game_date}"
+
+        # Fetch box score
+        result = await client.get_box_score(game_id=game_id, as_dataframe=True)
+
+        # Check for errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        player_stats = result.get("player_stats")
+        team_stats = result.get("team_stats")
+        line_score = result.get("line_score")
+
+        if player_stats is None or player_stats.empty:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\nNo box score data found for game {game_id}"
+
+        # Format response
+        response_lines = [f"# Box Score - Game {game_id}"]
+        response_lines.append("")
+
+        # Quarter-by-quarter scores
+        if line_score is not None and not line_score.empty:
+            response_lines.append("## Quarter Scores")
+            response_lines.append("")
+
+            for _, row in line_score.iterrows():
+                team_abbrev = row.get("TEAM_ABBREVIATION", "")
+                q1 = row.get("PTS_QT1", 0)
+                q2 = row.get("PTS_QT2", 0)
+                q3 = row.get("PTS_QT3", 0)
+                q4 = row.get("PTS_QT4", 0)
+                pts = row.get("PTS", 0)
+
+                quarters_str = f"Q1: {q1} | Q2: {q2} | Q3: {q3} | Q4: {q4}"
+
+                # Check for overtime
+                for ot in range(1, 10):  # Check up to 9 OT periods
+                    ot_col = f"PTS_OT{ot}"
+                    if ot_col in row and pd.notna(row[ot_col]) and row[ot_col] > 0:
+                        quarters_str += f" | OT{ot}: {row[ot_col]}"
+
+                response_lines.append(f"**{team_abbrev}**: {quarters_str} | **TOTAL: {pts}**")
+
+            response_lines.append("")
+            response_lines.append("---")
+            response_lines.append("")
+
+        # Team stats
+        if team_stats is not None and not team_stats.empty:
+            response_lines.append("## Team Totals")
+            response_lines.append("")
+
+            for _, row in team_stats.iterrows():
+                team_abbrev = row.get("TEAM_ABBREVIATION", "")
+                pts = row.get("PTS", 0)
+                reb = row.get("REB", 0)
+                ast = row.get("AST", 0)
+                stl = row.get("STL", 0)
+                blk = row.get("BLK", 0)
+                tov = row.get("TOV", 0)
+                fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+                fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+
+                response_lines.append(f"### {team_abbrev}")
+                response_lines.append(f"**Totals**: {pts} PTS, {reb} REB, {ast} AST, {stl} STL, {blk} BLK, {tov} TOV")
+                response_lines.append(f"**Shooting**: {fg_pct:.1f}% FG, {fg3_pct:.1f}% 3PT")
+                response_lines.append("")
+
+            response_lines.append("---")
+            response_lines.append("")
+
+        # Player stats by team
+        response_lines.append("## Player Stats")
+        response_lines.append("")
+
+        teams = player_stats["TEAM_ABBREVIATION"].unique()
+
+        for team_abbrev in teams:
+            team_players = player_stats[player_stats["TEAM_ABBREVIATION"] == team_abbrev]
+
+            # Sort by minutes (starters first)
+            team_players = team_players.sort_values("MIN", ascending=False)
+
+            response_lines.append(f"### {team_abbrev}")
+            response_lines.append("")
+
+            # Starters (top 5 by minutes)
+            starters = team_players.head(5)
+            response_lines.append("**Starters:**")
+            response_lines.append("")
+
+            for _, player in starters.iterrows():
+                name = player.get("PLAYER_NAME", "")
+                min_played = player.get("MIN", 0)
+                pts = player.get("PTS", 0)
+                reb = player.get("REB", 0)
+                ast = player.get("AST", 0)
+                fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
+                fg3 = f"{player.get('FG3M', 0)}-{player.get('FG3A', 0)}"
+                plus_minus = player.get("PLUS_MINUS", 0)
+
+                response_lines.append(
+                    f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
+                    f"FG: {fg}, 3PT: {fg3} | +/-: {plus_minus:+d}"
+                )
+
+            response_lines.append("")
+
+            # Bench (remaining players)
+            bench = team_players.iloc[5:]
+            if not bench.empty:
+                response_lines.append("**Bench:**")
+                response_lines.append("")
+
+                for _, player in bench.iterrows():
+                    name = player.get("PLAYER_NAME", "")
+                    min_played = player.get("MIN", 0)
+
+                    # Skip DNPs (0 minutes)
+                    if min_played == 0 or pd.isna(min_played):
+                        continue
+
+                    pts = player.get("PTS", 0)
+                    reb = player.get("REB", 0)
+                    ast = player.get("AST", 0)
+                    fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
+                    plus_minus = player.get("PLUS_MINUS", 0)
+
+                    response_lines.append(
+                        f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
+                        f"FG: {fg} | +/-: {plus_minus:+d}"
+                    )
+
+                response_lines.append("")
+
+            response_lines.append("")
+
+        response = "\n".join(response_lines)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except Exception as e:
+        logger.exception("Unexpected error in get_box_score")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching box score: {str(e)}"
+
+
+@mcp_server.tool()
+async def get_clutch_stats(
+    entity_name: str,
+    entity_type: str = "player",
+    season: Optional[str] = None,
+    per_mode: str = "PerGame",
+) -> str:
+    """
+    Get clutch time statistics (final 5 minutes, score within 5 points).
+
+    This tool fills the critical gap identified in the weakness analysis:
+    providing clutch performance analytics.
+
+    Clutch time is defined as:
+    - Final 5 minutes of the 4th quarter or overtime
+    - Score differential of 5 points or less
+
+    Common use cases:
+    - "Show me LeBron's clutch stats"
+    - "How do the Lakers perform in clutch time?"
+    - "Get Curry's clutch shooting percentages"
+
+    Args:
+        entity_name: Player or team name (supports fuzzy matching)
+        entity_type: "player" or "team" (default: "player")
+        season: Season in 'YYYY-YY' format (defaults to current season)
+        per_mode: "PerGame" or "Totals" (default: "PerGame")
+
+    Returns:
+        Formatted clutch statistics with:
+        - Games played in clutch situations
+        - Clutch time win-loss record
+        - Points, assists, rebounds in clutch
+        - Shooting percentages in clutch
+        - Clutch time efficiency metrics
+
+    Examples:
+        # Get player clutch stats
+        get_clutch_stats("LeBron James")
+
+        # Get team clutch stats
+        get_clutch_stats("Lakers", entity_type="team")
+
+        # Get totals instead of per-game
+        get_clutch_stats("Stephen Curry", per_mode="Totals")
+
+        # Specific season
+        get_clutch_stats("Giannis", season="2022-23")
+    """
+    logger.debug(
+        f"get_clutch_stats(entity={entity_name}, type={entity_type}, "
+        f"season={season}, per_mode={per_mode})"
+    )
+
+    client = NBAApiClient()
+
+    try:
+        # Default to current season if not specified
+        if season is None:
+            season = get_current_season()
+
+        # Fetch clutch stats
+        result = await client.get_clutch_stats(
+            entity_name=entity_name,
+            entity_type=entity_type,
+            season=season,
+            per_mode=per_mode
+        )
+
+        # Check for errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        if not isinstance(result, pd.DataFrame) or result.empty:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\nNo clutch stats found for {entity_name} in {season}"
+
+        # Get the single row (filtered data)
+        row = result.iloc[0]
+
+        # Format response
+        if entity_type == "player":
+            player_name = row.get("PLAYER_NAME", entity_name)
+            team_abbrev = row.get("TEAM_ABBREVIATION", "")
+
+            response_lines = [
+                f"# {player_name} - Clutch Stats ({season})",
+                f"**Team**: {team_abbrev}" if team_abbrev else "",
+                f"**Definition**: Final 5 min, score within 5 points",
+                "",
+                "## Clutch Performance",
+                ""
+            ]
+
+            # Games and record
+            games = row.get("GP", 0)
+            wins = row.get("W", 0)
+            losses = row.get("L", 0)
+            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
+
+            response_lines.append(f"**Games**: {games} clutch situations")
+            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
+            response_lines.append("")
+
+            # Scoring
+            pts = row.get("PTS", 0)
+            fgm = row.get("FGM", 0)
+            fga = row.get("FGA", 0)
+            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+            fg3m = row.get("FG3M", 0)
+            fg3a = row.get("FG3A", 0)
+            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+            ftm = row.get("FTM", 0)
+            fta = row.get("FTA", 0)
+            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
+
+            response_lines.append("## Scoring")
+            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
+            response_lines.append(f"**Field Goals**: {fgm:.1f}/{fga:.1f} ({fg_pct:.1f}%)")
+            response_lines.append(f"**Three Pointers**: {fg3m:.1f}/{fg3a:.1f} ({fg3_pct:.1f}%)")
+            response_lines.append(f"**Free Throws**: {ftm:.1f}/{fta:.1f} ({ft_pct:.1f}%)")
+            response_lines.append("")
+
+            # Playmaking and rebounding
+            ast = row.get("AST", 0)
+            reb = row.get("REB", 0)
+            oreb = row.get("OREB", 0)
+            dreb = row.get("DREB", 0)
+            stl = row.get("STL", 0)
+            blk = row.get("BLK", 0)
+            tov = row.get("TOV", 0)
+
+            response_lines.append("## Playmaking & Defense")
+            response_lines.append(f"**Assists**: {ast:.1f}")
+            response_lines.append(f"**Rebounds**: {reb:.1f} ({oreb:.1f} OFF, {dreb:.1f} DEF)")
+            response_lines.append(f"**Steals**: {stl:.1f}")
+            response_lines.append(f"**Blocks**: {blk:.1f}")
+            response_lines.append(f"**Turnovers**: {tov:.1f}")
+            response_lines.append("")
+
+            # Advanced metrics (if available)
+            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
+                plus_minus = row["PLUS_MINUS"]
+                response_lines.append("## Impact")
+                response_lines.append(f"**Plus/Minus**: {plus_minus:+.1f}")
+                response_lines.append("")
+
+        else:  # team
+            team_name = row.get("TEAM_NAME", entity_name)
+
+            response_lines = [
+                f"# {team_name} - Clutch Stats ({season})",
+                f"**Definition**: Final 5 min, score within 5 points",
+                "",
+                "## Clutch Performance",
+                ""
+            ]
+
+            # Games and record
+            games = row.get("GP", 0)
+            wins = row.get("W", 0)
+            losses = row.get("L", 0)
+            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
+
+            response_lines.append(f"**Games**: {games} clutch situations")
+            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
+            response_lines.append("")
+
+            # Scoring
+            pts = row.get("PTS", 0)
+            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
+            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
+            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
+
+            response_lines.append("## Team Stats")
+            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
+            response_lines.append(f"**FG%**: {fg_pct:.1f}% | **3P%**: {fg3_pct:.1f}% | **FT%**: {ft_pct:.1f}%")
+
+            ast = row.get("AST", 0)
+            reb = row.get("REB", 0)
+            tov = row.get("TOV", 0)
+
+            response_lines.append(f"**Assists**: {ast:.1f} | **Rebounds**: {reb:.1f} | **Turnovers**: {tov:.1f}")
+            response_lines.append("")
+
+            # Net rating (if available)
+            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
+                plus_minus = row["PLUS_MINUS"]
+                response_lines.append(f"**Net Rating**: {plus_minus:+.1f}")
+                response_lines.append("")
+
+        response = "\n".join(response_lines)
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Unexpected error in get_clutch_stats")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching clutch stats: {str(e)}"
+
+
+@mcp_server.tool()
+async def get_player_head_to_head(
+    player1_name: str,
+    player2_name: str,
+    season: Optional[str] = None,
+) -> str:
+    """
+    Get head-to-head matchup stats comparing two players.
+
+    This tool fills the Priority 2 enhancement identified in the roadmap:
+    providing player vs player direct comparison in games where both played.
+
+    Finds all games where both players participated and compares their
+    performance in those specific matchups (not season averages).
+
+    Common use cases:
+    - "LeBron vs Durant head to head this season"
+    - "Show me Curry vs Lillard matchups"
+    - "Compare Giannis and Embiid in their matchups"
+
+    Args:
+        player1_name: First player name (supports fuzzy matching)
+        player2_name: Second player name (supports fuzzy matching)
+        season: Season in 'YYYY-YY' format (defaults to current season)
+
+    Returns:
+        Formatted head-to-head comparison with:
+        - Number of matchups where both players played
+        - Win-loss records for each player in those matchups
+        - Average stats for each player in head-to-head games
+        - Game-by-game breakdown of matchups
+
+    Examples:
+        # Current season head-to-head
+        get_player_head_to_head("LeBron James", "Kevin Durant")
+
+        # Specific season
+        get_player_head_to_head("Stephen Curry", "Damian Lillard", season="2023-24")
+
+    Notes:
+        - Only includes games where BOTH players participated
+        - Stats are from those specific matchup games, not season averages
+        - Win-loss record shows team results, not individual performance
+        - If no common games found, returns informative message
+    """
+    try:
+        # Fetch head-to-head data from client
+        client = NBAApiClient()
+        result = await client.get_player_head_to_head(
+            player1_name=player1_name,
+            player2_name=player2_name,
+            season=season
+        )
+
+        # Handle errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        # Extract data
+        player1_stats = result["player1_stats"]
+        player2_stats = result["player2_stats"]
+        player1_record = result["player1_record"]
+        player2_record = result["player2_record"]
+        matchup_count = result["matchup_count"]
+        season_str = result["season"]
+
+        # Get player names from first row
+        player1_full = player1_stats.iloc[0]["PLAYER_NAME"]
+        player2_full = player2_stats.iloc[0]["PLAYER_NAME"]
+
+        # Calculate average stats
+        p1_avg_pts = player1_stats["PTS"].mean()
+        p1_avg_reb = player1_stats["REB"].mean()
+        p1_avg_ast = player1_stats["AST"].mean()
+        p1_avg_fg_pct = player1_stats["FG_PCT"].mean()
+
+        p2_avg_pts = player2_stats["PTS"].mean()
+        p2_avg_reb = player2_stats["REB"].mean()
+        p2_avg_ast = player2_stats["AST"].mean()
+        p2_avg_fg_pct = player2_stats["FG_PCT"].mean()
+
+        # Build response
+        response = f"""🏀 HEAD-TO-HEAD MATCHUP: {player1_full} vs {player2_full}
+Season: {season_str}
+Total Matchups: {matchup_count} games
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 MATCHUP RECORDS:
+{player1_full}: {player1_record['wins']}W-{player1_record['losses']}L
+{player2_full}: {player2_record['wins']}W-{player2_record['losses']}L
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 AVERAGE STATS IN MATCHUPS:
+
+{player1_full}:
+  PPG: {p1_avg_pts:.1f}
+  RPG: {p1_avg_reb:.1f}
+  APG: {p1_avg_ast:.1f}
+  FG%: {p1_avg_fg_pct:.1%}
+
+{player2_full}:
+  PPG: {p2_avg_pts:.1f}
+  RPG: {p2_avg_reb:.1f}
+  APG: {p2_avg_ast:.1f}
+  FG%: {p2_avg_fg_pct:.1%}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 GAME-BY-GAME BREAKDOWN:
+"""
+
+        # Add game-by-game details
+        for i in range(len(player1_stats)):
+            p1_game = player1_stats.iloc[i]
+            p2_game = player2_stats.iloc[i]
+
+            game_date = p1_game["GAME_DATE"]
+            matchup = p1_game["MATCHUP"]
+
+            p1_pts = p1_game["PTS"]
+            p1_reb = p1_game["REB"]
+            p1_ast = p1_game["AST"]
+            p1_wl = p1_game["WL"]
+
+            p2_pts = p2_game["PTS"]
+            p2_reb = p2_game["REB"]
+            p2_ast = p2_game["AST"]
+            p2_wl = p2_game["WL"]
+
+            response += f"""
+Game {i+1} - {game_date} ({matchup})
+  {player1_full}: {p1_pts} PTS, {p1_reb} REB, {p1_ast} AST ({p1_wl})
+  {player2_full}: {p2_pts} PTS, {p2_reb} REB, {p2_ast} AST ({p2_wl})
+"""
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Unexpected error in get_player_head_to_head")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching head-to-head stats: {str(e)}"
+
+
+@mcp_server.tool()
+async def get_player_performance_splits(
+    player_name: str,
+    season: Optional[str] = None,
+    last_n_games: int = 10,
+) -> str:
+    """
+    Get comprehensive performance splits and advanced analytics for a player.
+
+    This tool provides deep performance insights including:
+    - Recent form analysis (hot/cold streaks)
+    - Home vs Away performance
+    - Win vs Loss splits
+    - Per-100 possessions normalization
+    - Trend detection
+
+    Common use cases:
+    - "Show me Curry's recent form and performance splits"
+    - "How does LeBron perform at home vs away?"
+    - "Get Giannis's performance in wins vs losses"
+
+    Args:
+        player_name: Player name (supports fuzzy matching)
+        season: Season in 'YYYY-YY' format (defaults to current season)
+        last_n_games: Number of recent games to analyze (default: 10)
+
+    Returns:
+        Formatted performance splits with:
+        - Season averages
+        - Last N games performance
+        - Home/Away splits
+        - Win/Loss splits
+        - Trend analysis (hot/cold streaks)
+        - Per-100 possessions stats
+
+    Examples:
+        # Get performance splits
+        get_player_performance_splits("Stephen Curry")
+
+        # Analyze last 15 games
+        get_player_performance_splits("LeBron James", last_n_games=15)
+
+        # Specific season
+        get_player_performance_splits("Giannis", season="2023-24")
+
+    Notes:
+        - Hot streak: Recent scoring >10% above season average
+        - Cold streak: Recent scoring >10% below season average
+        - Per-100 stats normalize for pace differences
+        - Home/Away detection from game MATCHUP field
+    """
+    try:
+        # Fetch performance splits from client
+        client = NBAApiClient()
+        result = await client.get_player_performance_splits(
+            player_name=player_name,
+            season=season,
+            last_n_games=last_n_games
+        )
+
+        # Handle errors
+        if isinstance(result, dict) and "error" in result:
+            season_ctx = get_season_context(include_date=True)
+            return f"📅 {season_ctx}\n\n❌ {result['error']}"
+
+        # Extract data
+        player = result["player_name"]
+        season_str = result["season"]
+        season_stats = result["season_stats"]
+        last_n_stats = result["last_n_stats"]
+        home_stats = result["home_stats"]
+        away_stats = result["away_stats"]
+        wins_stats = result["wins_stats"]
+        losses_stats = result["losses_stats"]
+        trends = result["trends"]
+        per_100 = result["per_100_stats"]
+
+        # Build response
+        response = f"""🔍 PERFORMANCE SPLITS: {player}
+Season: {season_str}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 SEASON AVERAGES ({season_stats.get('games', 0)} games):
+  PPG: {season_stats.get('ppg', 0):.1f}
+  RPG: {season_stats.get('rpg', 0):.1f}
+  APG: {season_stats.get('apg', 0):.1f}
+  FG%: {season_stats.get('fg_pct', 0):.1%}
+  3P%: {season_stats.get('fg3_pct', 0):.1%}
+  +/-: {season_stats.get('plus_minus', 0):.1f}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔥 LAST {last_n_games} GAMES:
+  PPG: {last_n_stats.get('ppg', 0):.1f} ({trends.get('ppg_trend', 0):+.1f})
+  RPG: {last_n_stats.get('rpg', 0):.1f} ({trends.get('rpg_trend', 0):+.1f})
+  APG: {last_n_stats.get('apg', 0):.1f} ({trends.get('apg_trend', 0):+.1f})
+  FG%: {last_n_stats.get('fg_pct', 0):.1%} ({trends.get('fg_pct_trend', 0):+.1%})
+  3P%: {last_n_stats.get('fg3_pct', 0):.1%}
+
+"""
+
+        # Add hot/cold streak indicator
+        if trends.get('is_hot_streak'):
+            response += "  🔥 HOT STREAK: Scoring 10%+ above season average\n"
+        elif trends.get('is_cold_streak'):
+            response += "  🧊 COLD STREAK: Scoring 10%+ below season average\n"
+
+        response += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🏠 HOME vs 🛫 AWAY SPLITS:
+
+HOME ({result.get('home_games_count', 0)} games):
+  PPG: {home_stats.get('ppg', 0):.1f}
+  RPG: {home_stats.get('rpg', 0):.1f}
+  APG: {home_stats.get('apg', 0):.1f}
+  FG%: {home_stats.get('fg_pct', 0):.1%}
+
+AWAY ({result.get('away_games_count', 0)} games):
+  PPG: {away_stats.get('ppg', 0):.1f}
+  RPG: {away_stats.get('rpg', 0):.1f}
+  APG: {away_stats.get('apg', 0):.1f}
+  FG%: {away_stats.get('fg_pct', 0):.1%}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ WINS vs ❌ LOSSES:
+
+WINS ({result.get('wins_count', 0)} games):
+  PPG: {wins_stats.get('ppg', 0):.1f}
+  RPG: {wins_stats.get('rpg', 0):.1f}
+  APG: {wins_stats.get('apg', 0):.1f}
+  FG%: {wins_stats.get('fg_pct', 0):.1%}
+  +/-: {wins_stats.get('plus_minus', 0):.1f}
+
+LOSSES ({result.get('losses_count', 0)} games):
+  PPG: {losses_stats.get('ppg', 0):.1f}
+  RPG: {losses_stats.get('rpg', 0):.1f}
+  APG: {losses_stats.get('apg', 0):.1f}
+  FG%: {losses_stats.get('fg_pct', 0):.1%}
+  +/-: {losses_stats.get('plus_minus', 0):.1f}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📈 PER-100 POSSESSIONS:
+  PTS: {per_100.get('pts_per_100', 0):.1f}
+  REB: {per_100.get('reb_per_100', 0):.1f}
+  AST: {per_100.get('ast_per_100', 0):.1f}
+  TOV: {per_100.get('tov_per_100', 0):.1f}
+"""
+
+        # Add season context
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n{response}"
+
+    except EntityNotFoundError as e:
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+    except Exception as e:
+        logger.exception("Unexpected error in get_player_performance_splits")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error fetching performance splits: {str(e)}"
+
+
+@mcp_server.tool()
+async def get_nba_awards(
+    award_type: Optional[str] = None,
+    player_name: Optional[str] = None,
+    season: Optional[str] = None,
+    last_n: Optional[int] = None,
+    format: str = "text"
+) -> str:
+    """
+    Get NBA awards data - historical winners or player-specific awards.
+
+    This tool provides comprehensive awards information including MVP, DPOY, ROY,
+    Finals MVP, Sixth Man, Most Improved, and Coach of the Year.
+
+    Query Modes:
+    1. Historical Winners: get_nba_awards(award_type="mvp", last_n=10)
+    2. Season Winners: get_nba_awards(award_type="dpoy", season="2023-24")
+    3. Player Awards: get_nba_awards(player_name="LeBron James")
+    4. Player + Award Filter: get_nba_awards(player_name="LeBron James", award_type="mvp")
+
+    Args:
+        award_type: Award type - Individual or team selections:
+                   Individual Awards:
+                   - "mvp": Most Valuable Player
+                   - "finals_mvp": Finals MVP
+                   - "dpoy": Defensive Player of the Year
+                   - "roy": Rookie of the Year
+                   - "smoy": Sixth Man of the Year
+                   - "mip": Most Improved Player
+                   - "coy": Coach of the Year
+
+                   Team Selections (5 players each):
+                   - "all_nba_first": All-NBA First Team
+                   - "all_nba_second": All-NBA Second Team
+                   - "all_nba_third": All-NBA Third Team
+                   - "all_defensive_first": All-Defensive First Team
+                   - "all_defensive_second": All-Defensive Second Team
+                   - "all_rookie_first": All-Rookie First Team
+                   - "all_rookie_second": All-Rookie Second Team
+        player_name: Get all awards for specific player (uses live API data)
+        season: Filter by specific season (e.g., "2023-24")
+        last_n: Get last N winners (for historical queries)
+        format: Output format - "text" (default) or "json"
+
+    Returns:
+        Formatted award data as text or JSON string
+
+    Examples:
+        get_nba_awards(award_type="mvp", last_n=10)
+        → Returns last 10 MVP winners
+
+        get_nba_awards(player_name="LeBron James")
+        → Returns all of LeBron's awards
+
+        get_nba_awards(award_type="roy", season="2023-24")
+        → Returns 2023-24 Rookie of the Year winner
+
+        get_nba_awards(award_type="dpoy", last_n=5)
+        → Returns last 5 Defensive Player of the Year winners
+
+    Note: Historical data covers 2004-05 through 2023-24. For complete player career
+    awards (including weekly/monthly honors), use player_name parameter.
+    """
+    start_time = time.time()
+    client = NBAApiClient()
+
+    try:
+        # Determine query mode
+        if player_name:
+            # Mode: Player-specific awards (live API data)
+            logger.info(f"Fetching awards for player: {player_name}")
+
+            awards_df = await client.get_player_awards(
+                player_name=player_name,
+                award_filter=award_type  # Optional filter
+            )
+
+            if len(awards_df) == 0:
+                return f"No awards found for {player_name}" + (
+                    f" matching '{award_type}'" if award_type else ""
+                )
+
+            # Format output
+            if format == "json":
+                return awards_df.to_json(orient='records', indent=2)
+            else:
+                # Text format with season context
+                season_ctx = get_season_context(include_date=True)
+                output = [f"📅 {season_ctx}\n"]
+                output.append(f"🏆 Awards for {player_name}:")
+                output.append("=" * 60)
+
+                # Group by award type
+                for desc in awards_df['DESCRIPTION'].unique():
+                    matching = awards_df[awards_df['DESCRIPTION'] == desc]
+                    count = len(matching)
+
+                    if count == 1:
+                        season_val = matching.iloc[0].get('SEASON', 'N/A')
+                        output.append(f"  • {desc}: {season_val}")
+                    else:
+                        seasons = matching['SEASON'].tolist()
+                        output.append(f"  • {desc} ({count}x): {', '.join(seasons)}")
+
+                return "\n".join(output)
+
+        elif award_type:
+            # Mode: Historical award winners (static data)
+            logger.info(f"Fetching historical {award_type} winners")
+
+            # Get winners
+            winners = client.get_award_winners(
+                award_type=award_type,
+                last_n=last_n
+            )
+
+            # Filter by season if specified
+            if season:
+                winners = [w for w in winners if w.get('season') == season]
+
+            if not winners:
+                return f"No {award_type} winners found for specified criteria"
+
+            # Format output
+            if format == "json":
+                return json.dumps(winners, indent=2)
+            else:
+                # Text format with season context
+                season_ctx = get_season_context(include_date=True)
+
+                award_names = {
+                    "mvp": "Most Valuable Player",
+                    "finals_mvp": "Finals MVP",
+                    "dpoy": "Defensive Player of the Year",
+                    "roy": "Rookie of the Year",
+                    "smoy": "Sixth Man of the Year",
+                    "mip": "Most Improved Player",
+                    "coy": "Coach of the Year",
+                    "all_nba_first": "All-NBA First Team",
+                    "all_nba_second": "All-NBA Second Team",
+                    "all_nba_third": "All-NBA Third Team",
+                    "all_defensive_first": "All-Defensive First Team",
+                    "all_defensive_second": "All-Defensive Second Team",
+                    "all_rookie_first": "All-Rookie First Team",
+                    "all_rookie_second": "All-Rookie Second Team"
+                }
+
+                title = award_names.get(award_type, award_type.upper())
+                if last_n:
+                    output = [f"📅 {season_ctx}\n"]
+                    output.append(f"🏆 Last {len(winners)} {title} Winners:")
+                elif season:
+                    output = [f"📅 {season_ctx}\n"]
+                    output.append(f"🏆 {season} {title}:")
+                else:
+                    output = [f"📅 {season_ctx}\n"]
+                    output.append(f"🏆 {title} Winners:")
+
+                output.append("=" * 60)
+
+                # Check if this is a team selection (has 'players' array)
+                is_team_selection = winners and 'players' in winners[0]
+
+                for winner in winners:
+                    season_val = winner.get('season', 'N/A')
+
+                    if is_team_selection:
+                        # Team selection - list all 5 players
+                        players = winner.get('players', [])
+                        output.append(f"\n{season_val}:")
+                        for i, player in enumerate(players, 1):
+                            name = player.get('player_name', 'Unknown')
+                            team = player.get('team', '')
+                            position = player.get('position', '')
+                            pos_str = f" - {position}" if position else ""
+                            output.append(f"  {i}. {name} ({team}){pos_str}")
+                    else:
+                        # Individual award
+                        if 'coach_name' in winner:
+                            # Coach award
+                            name = winner['coach_name']
+                        else:
+                            # Player award
+                            name = winner.get('player_name', 'Unknown')
+
+                        team = winner.get('team', '')
+                        output.append(f"  {season_val}: {name} ({team})")
+
+                return "\n".join(output)
+
+        else:
+            # No parameters provided - show available awards
+            return (
+                "NBA Awards Tool - Please specify query parameters:\n\n"
+                "1. Get historical winners:\n"
+                "   award_type='mvp', last_n=10\n\n"
+                "2. Get season winner:\n"
+                "   award_type='all_nba_first', season='2023-24'\n\n"
+                "3. Get player awards:\n"
+                "   player_name='LeBron James'\n\n"
+                "Individual Awards:\n"
+                "  mvp, finals_mvp, dpoy, roy, smoy, mip, coy\n\n"
+                "Team Selections (5 players each):\n"
+                "  all_nba_first, all_nba_second, all_nba_third\n"
+                "  all_defensive_first, all_defensive_second\n"
+                "  all_rookie_first, all_rookie_second"
+            )
+
+    except ValueError as e:
+        logger.error(f"Awards query error: {e}")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Error: {str(e)}"
+
+    except Exception as e:
+        logger.exception("Unexpected error in get_nba_awards")
+        season_ctx = get_season_context(include_date=True)
+        return f"📅 {season_ctx}\n\n❌ Unexpected error: {type(e).__name__}: {str(e)}"
+
+    finally:
+        elapsed = (time.time() - start_time) * 1000
+        logger.info(f"Awards query completed in {elapsed:.1f}ms")
+
+
 #########################################
 # Running the Server
 #########################################
@@ -2994,6 +5218,7 @@ def main():
         "get_player_advanced_stats": get_player_advanced_stats,
         "get_live_scores": get_live_scores,
         "get_player_career_information": get_player_career_information,
+        "get_nba_awards": get_nba_awards,
     }
     initialize_tool_registry(tool_map)
     logger.info(f"NLQ tool registry initialized with {len(tool_map)} tools")
@@ -3028,6 +5253,7 @@ def main():
         limiter.add_limit(
             "get_player_career_information", capacity=60.0, refill_rate=1.0
         )
+        limiter.add_limit("get_nba_awards", capacity=60.0, refill_rate=1.0)
 
         # Complex queries: 30 requests/min
         limiter.add_limit("compare_players", capacity=30.0, refill_rate=0.5)
@@ -3163,6 +5389,45 @@ def main():
     except Exception:
         logger.exception("Failed to start MCP server (transport=%s)", transport)
         sys.exit(1)
+
+
+def format_team_advanced_stats(data: Dict[str, Any]) -> str:
+    """
+    Format team advanced stats as readable text.
+
+    Args:
+        data: Team stats dictionary with keys like 'team_name', 'offensive_rating', etc.
+
+    Returns:
+        Formatted multi-line string with team stats
+    """
+    team_name = data.get("team_name", "Unknown Team")
+    season = data.get("season", "N/A")
+
+    return f"""**{team_name}** ({season})
+**Games Played**: {data.get('games_played', 'N/A')}
+
+**RATINGS (Per 100 Possessions)**
+• Offensive Rating: {data.get('offensive_rating', 0):.1f}
+• Defensive Rating: {data.get('defensive_rating', 0):.1f}
+• Net Rating: {data.get('net_rating', 0):.1f}
+• Pace: {data.get('pace', 0):.2f}
+
+**SHOOTING EFFICIENCY**
+• Effective FG%: {data.get('effective_fg_pct', 0):.1%}
+• True Shooting%: {data.get('true_shooting_pct', 0):.1%}
+
+**FOUR FACTORS (Offense)**
+• eFG%: {data.get('efg_pct_off', 0):.1%}
+• Turnover%: {data.get('tov_pct_off', 0):.1%}
+• Offensive Rebound%: {data.get('oreb_pct', 0):.1%}
+• Free Throw Rate: {data.get('fta_rate', 0):.3f}
+
+**FOUR FACTORS (Defense)**
+• Opponent eFG%: {data.get('opp_efg_pct', 0):.1%}
+• Opponent TOV%: {data.get('opp_tov_pct', 0):.1%}
+• Defensive Rebound%: {data.get('dreb_pct', 0):.1%}
+• Opponent FT Rate: {data.get('opp_fta_rate', 0):.3f}"""
 
 
 if __name__ == "__main__":

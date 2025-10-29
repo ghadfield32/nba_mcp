@@ -1,0 +1,252 @@
+{
+  "mvp": [
+    {"season": "2023-24", "player_id": 203999, "player_name": "Nikola Jokić", "team": "DEN"},
+    {"season": "2022-23", "player_id": 203954, "player_name": "Joel Embiid", "team": "PHI"},
+    {"season": "2021-22", "player_id": 203999, "player_name": "Nikola Jokić", "team": "DEN"},
+    {"season": "2020-21", "player_id": 203999, "player_name": "Nikola Jokić", "team": "DEN"},
+    {"season": "2019-20", "player_id": 203507, "player_name": "Giannis Antetokounmpo", "team": "MIL"},
+    {"season": "2018-19", "player_id": 203507, "player_name": "Giannis Antetokounmpo", "team": "MIL"},
+    {"season": "2017-18", "player_id": 201935, "player_name": "James Harden", "team": "HOU"},
+    {"season": "2016-17", "player_id": 201566, "player_name": "Russell Westbrook", "team": "OKC"},
+    {"season": "2015-16", "player_id": 201939, "player_name": "Stephen Curry", "team": "GSW"},
+    {"season": "2014-15", "player_id": 201939, "player_name": "Stephen Curry", "team": "GSW"},
+    {"season": "2013-14", "player_id": 201142, "player_name": "Kevin Durant", "team": "OKC"},
+    {"season": "2012-13", "player_id": 2544, "player_name": "LeBron James", "team": "MIA"},
+    {"season": "2011-12", "player_id": 2544, "player_name": "LeBron James", "team": "MIA"},
+    {"season": "2010-11", "player_id": 1717, "player_name": "Derrick Rose", "team": "CHI"},
+    {"season": "2009-10", "player_id": 2544, "player_name": "LeBron James", "team": "CLE"},
+    {"season": "2008-09", "player_id": 2544, "player_name": "LeBron James", "team": "CLE"},
+    {"season": "2007-08", "player_id": 977, "player_name": "Kobe Bryant", "team": "LAL"},
+    {"season": "2006-07", "player_id": 708, "player_name": "Dirk Nowitzki", "team": "DAL"},
+    {"season": "2005-06", "player_id": 1713, "player_name": "Steve Nash", "team": "PHX"},
+    {"season": "2004-05", "player_id": 1713, "player_name": "Steve Nash", "team": "PHX"}
+  ],
+  "finals_mvp": [
+    {"season": "2023-24", "player_id": 1627759, "player_name": "Jaylen Brown", "team": "BOS"},
+    {"season": "2022-23", "player_id": 203999, "player_name": "Nikola Jokić", "team": "DEN"},
+    {"season": "2021-22", "player_id": 201939, "player_name": "Stephen Curry", "team": "GSW"},
+    {"season": "2020-21", "player_id": 203507, "player_name": "Giannis Antetokounmpo", "team": "MIL"},
+    {"season": "2019-20", "player_id": 2544, "player_name": "LeBron James", "team": "LAL"},
+    {"season": "2018-19", "player_id": 202331, "player_name": "Kawhi Leonard", "team": "TOR"},
+    {"season": "2017-18", "player_id": 201142, "player_name": "Kevin Durant", "team": "GSW"},
+    {"season": "2016-17", "player_id": 201142, "player_name": "Kevin Durant", "team": "GSW"},
+    {"season": "2015-16", "player_id": 2544, "player_name": "LeBron James", "team": "CLE"},
+    {"season": "2014-15", "player_id": 202326, "player_name": "Andre Iguodala", "team": "GSW"}
+  ],
+  "dpoy": [
+    {"season": "2023-24", "player_id": 1629750, "player_name": "Rudy Gobert", "team": "MIN"},
+    {"season": "2022-23", "player_id": 1628991, "player_name": "Jaren Jackson Jr.", "team": "MEM"},
+    {"season": "2021-22", "player_id": 203457, "player_name": "Marcus Smart", "team": "BOS"},
+    {"season": "2020-21", "player_id": 1629750, "player_name": "Rudy Gobert", "team": "UTA"},
+    {"season": "2019-20", "player_id": 203507, "player_name": "Giannis Antetokounmpo", "team": "MIL"},
+    {"season": "2018-19", "player_id": 1629750, "player_name": "Rudy Gobert", "team": "UTA"},
+    {"season": "2017-18", "player_id": 1629750, "player_name": "Rudy Gobert", "team": "UTA"},
+    {"season": "2016-17", "player_id": 201939, "player_name": "Draymond Green", "team": "GSW"},
+    {"season": "2015-16", "player_id": 202331, "player_name": "Kawhi Leonard", "team": "SAS"},
+    {"season": "2014-15", "player_id": 202331, "player_name": "Kawhi Leonard", "team": "SAS"}
+  ],
+  "roy": [
+    {"season": "2023-24", "player_id": 1641705, "player_name": "Victor Wembanyama", "team": "SAS"},
+    {"season": "2022-23", "player_id": 1631094, "player_name": "Paolo Banchero", "team": "ORL"},
+    {"season": "2021-22", "player_id": 1630625, "player_name": "Scottie Barnes", "team": "TOR"},
+    {"season": "2020-21", "player_id": 1630163, "player_name": "LaMelo Ball", "team": "CHA"},
+    {"season": "2019-20", "player_id": 1629630, "player_name": "Ja Morant", "team": "MEM"},
+    {"season": "2018-19", "player_id": 1629029, "player_name": "Luka Dončić", "team": "DAL"},
+    {"season": "2017-18", "player_id": 1628365, "player_name": "Ben Simmons", "team": "PHI"},
+    {"season": "2016-17", "player_id": 1627750, "player_name": "Malcolm Brogdon", "team": "MIL"},
+    {"season": "2015-16", "player_id": 1626157, "player_name": "Karl-Anthony Towns", "team": "MIN"},
+    {"season": "2014-15", "player_id": 203952, "player_name": "Andrew Wiggins", "team": "MIN"}
+  ],
+  "smoy": [
+    {"season": "2023-24", "player_id": 1627827, "player_name": "Naz Reid", "team": "MIN"},
+    {"season": "2022-23", "player_id": 1627750, "player_name": "Malcolm Brogdon", "team": "BOS"},
+    {"season": "2021-22", "player_id": 1630235, "player_name": "Tyler Herro", "team": "MIA"},
+    {"season": "2020-21", "player_id": 203905, "player_name": "Jordan Clarkson", "team": "UTA"},
+    {"season": "2019-20", "player_id": 203144, "player_name": "Montrezl Harrell", "team": "LAC"}
+  ],
+  "mip": [
+    {"season": "2023-24", "player_id": 1629632, "player_name": "Coby White", "team": "CHI"},
+    {"season": "2022-23", "player_id": 1629673, "player_name": "Lauri Markkanen", "team": "UTA"},
+    {"season": "2021-22", "player_id": 1629012, "player_name": "Ja Morant", "team": "MEM"},
+    {"season": "2020-21", "player_id": 1628398, "player_name": "Julius Randle", "team": "NYK"},
+    {"season": "2019-20", "player_id": 203115, "player_name": "Brandon Ingram", "team": "NOP"}
+  ],
+  "coy": [
+    {"season": "2023-24", "coach_name": "Mark Daigneault", "team": "OKC"},
+    {"season": "2022-23", "coach_name": "Mike Brown", "team": "SAC"},
+    {"season": "2021-22", "coach_name": "Monty Williams", "team": "PHX"},
+    {"season": "2020-21", "coach_name": "Tom Thibodeau", "team": "NYK"},
+    {"season": "2019-20", "coach_name": "Nick Nurse", "team": "TOR"}
+  ],
+  "all_nba_first": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Shai Gilgeous-Alexander", "team": "OKC", "position": "G"},
+      {"player_name": "Luka Dončić", "team": "DAL", "position": "G"},
+      {"player_name": "Giannis Antetokounmpo", "team": "MIL", "position": "F"},
+      {"player_name": "Jayson Tatum", "team": "BOS", "position": "F"},
+      {"player_name": "Nikola Jokić", "team": "DEN", "position": "C"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Damian Lillard", "team": "POR", "position": "G"},
+      {"player_name": "Luka Dončić", "team": "DAL", "position": "G"},
+      {"player_name": "Giannis Antetokounmpo", "team": "MIL", "position": "F"},
+      {"player_name": "Jayson Tatum", "team": "BOS", "position": "F"},
+      {"player_name": "Joel Embiid", "team": "PHI", "position": "C"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Luka Dončić", "team": "DAL", "position": "G"},
+      {"player_name": "Devin Booker", "team": "PHX", "position": "G"},
+      {"player_name": "Giannis Antetokounmpo", "team": "MIL", "position": "F"},
+      {"player_name": "Kevin Durant", "team": "BKN", "position": "F"},
+      {"player_name": "Nikola Jokić", "team": "DEN", "position": "C"}
+    ]}
+  ],
+  "all_nba_second": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Jalen Brunson", "team": "NYK", "position": "G"},
+      {"player_name": "Anthony Edwards", "team": "MIN", "position": "G"},
+      {"player_name": "Kawhi Leonard", "team": "LAC", "position": "F"},
+      {"player_name": "Kevin Durant", "team": "PHX", "position": "F"},
+      {"player_name": "Anthony Davis", "team": "LAL", "position": "C"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Stephen Curry", "team": "GSW", "position": "G"},
+      {"player_name": "Donovan Mitchell", "team": "CLE", "position": "G"},
+      {"player_name": "Jaylen Brown", "team": "BOS", "position": "F"},
+      {"player_name": "LeBron James", "team": "LAL", "position": "F"},
+      {"player_name": "Nikola Jokić", "team": "DEN", "position": "C"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Ja Morant", "team": "MEM", "position": "G"},
+      {"player_name": "Stephen Curry", "team": "GSW", "position": "G"},
+      {"player_name": "DeMar DeRozan", "team": "CHI", "position": "F"},
+      {"player_name": "LeBron James", "team": "LAL", "position": "F"},
+      {"player_name": "Joel Embiid", "team": "PHI", "position": "C"}
+    ]}
+  ],
+  "all_nba_third": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Tyrese Haliburton", "team": "IND", "position": "G"},
+      {"player_name": "Domantas Sabonis", "team": "SAC", "position": "F"},
+      {"player_name": "LeBron James", "team": "LAL", "position": "F"},
+      {"player_name": "Devin Booker", "team": "PHX", "position": "G"},
+      {"player_name": "Joel Embiid", "team": "PHI", "position": "C"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "De'Aaron Fox", "team": "SAC", "position": "G"},
+      {"player_name": "Shai Gilgeous-Alexander", "team": "OKC", "position": "G"},
+      {"player_name": "Jimmy Butler", "team": "MIA", "position": "F"},
+      {"player_name": "DeMar DeRozan", "team": "CHI", "position": "F"},
+      {"player_name": "Domantas Sabonis", "team": "SAC", "position": "C"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Trae Young", "team": "ATL", "position": "G"},
+      {"player_name": "Chris Paul", "team": "PHX", "position": "G"},
+      {"player_name": "Jimmy Butler", "team": "MIA", "position": "F"},
+      {"player_name": "Pascal Siakam", "team": "TOR", "position": "F"},
+      {"player_name": "Karl-Anthony Towns", "team": "MIN", "position": "C"}
+    ]}
+  ],
+  "all_defensive_first": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Jrue Holiday", "team": "BOS", "position": "G"},
+      {"player_name": "Herb Jones", "team": "NOP", "position": "G"},
+      {"player_name": "Bam Adebayo", "team": "MIA", "position": "F"},
+      {"player_name": "Victor Wembanyama", "team": "SAS", "position": "F"},
+      {"player_name": "Rudy Gobert", "team": "MIN", "position": "C"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Jrue Holiday", "team": "MIL", "position": "G"},
+      {"player_name": "Ja Morant", "team": "MEM", "position": "G"},
+      {"player_name": "Giannis Antetokounmpo", "team": "MIL", "position": "F"},
+      {"player_name": "Jaren Jackson Jr.", "team": "MEM", "position": "F"},
+      {"player_name": "Brook Lopez", "team": "MIL", "position": "C"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Marcus Smart", "team": "BOS", "position": "G"},
+      {"player_name": "Jrue Holiday", "team": "MIL", "position": "G"},
+      {"player_name": "Mikal Bridges", "team": "PHX", "position": "F"},
+      {"player_name": "Giannis Antetokounmpo", "team": "MIL", "position": "F"},
+      {"player_name": "Rudy Gobert", "team": "UTA", "position": "C"}
+    ]}
+  ],
+  "all_defensive_second": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Lu Dort", "team": "OKC", "position": "G"},
+      {"player_name": "Derrick White", "team": "BOS", "position": "G"},
+      {"player_name": "Anthony Davis", "team": "LAL", "position": "F"},
+      {"player_name": "Bam Adebayo", "team": "MIA", "position": "F"},
+      {"player_name": "Alex Caruso", "team": "CHI", "position": "G"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Draymond Green", "team": "GSW", "position": "F"},
+      {"player_name": "Evan Mobley", "team": "CLE", "position": "F"},
+      {"player_name": "Anthony Davis", "team": "LAL", "position": "F"},
+      {"player_name": "Alex Caruso", "team": "CHI", "position": "G"},
+      {"player_name": "OG Anunoby", "team": "TOR", "position": "F"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Matisse Thybulle", "team": "PHI", "position": "G"},
+      {"player_name": "Dejounte Murray", "team": "SAS", "position": "G"},
+      {"player_name": "Jaren Jackson Jr.", "team": "MEM", "position": "F"},
+      {"player_name": "Draymond Green", "team": "GSW", "position": "F"},
+      {"player_name": "Bam Adebayo", "team": "MIA", "position": "C"}
+    ]}
+  ],
+  "all_rookie_first": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Victor Wembanyama", "team": "SAS"},
+      {"player_name": "Chet Holmgren", "team": "OKC"},
+      {"player_name": "Brandon Miller", "team": "CHA"},
+      {"player_name": "Jaime Jaquez Jr.", "team": "MIA"},
+      {"player_name": "Brandin Podziemski", "team": "GSW"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Paolo Banchero", "team": "ORL"},
+      {"player_name": "Walker Kessler", "team": "UTA"},
+      {"player_name": "Jalen Williams", "team": "OKC"},
+      {"player_name": "Bennedict Mathurin", "team": "IND"},
+      {"player_name": "Keegan Murray", "team": "SAC"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Scottie Barnes", "team": "TOR"},
+      {"player_name": "Evan Mobley", "team": "CLE"},
+      {"player_name": "Cade Cunningham", "team": "DET"},
+      {"player_name": "Franz Wagner", "team": "ORL"},
+      {"player_name": "Josh Giddey", "team": "OKC"}
+    ]}
+  ],
+  "all_rookie_second": [
+    {"season": "2023-24", "players": [
+      {"player_name": "Gradey Dick", "team": "TOR"},
+      {"player_name": "Dereck Lively II", "team": "DAL"},
+      {"player_name": "Amen Thompson", "team": "HOU"},
+      {"player_name": "Keyonte George", "team": "UTA"},
+      {"player_name": "Jordan Hawkins", "team": "NOP"}
+    ]},
+    {"season": "2022-23", "players": [
+      {"player_name": "Jaden Ivey", "team": "DET"},
+      {"player_name": "Jabari Smith Jr.", "team": "HOU"},
+      {"player_name": "Tari Eason", "team": "HOU"},
+      {"player_name": "Jeremy Sochan", "team": "SAS"},
+      {"player_name": "AJ Griffin", "team": "ATL"}
+    ]},
+    {"season": "2021-22", "players": [
+      {"player_name": "Jalen Green", "team": "HOU"},
+      {"player_name": "Alperen Şengün", "team": "HOU"},
+      {"player_name": "Chris Duarte", "team": "IND"},
+      {"player_name": "Ayo Dosunmu", "team": "CHI"},
+      {"player_name": "Bones Hyland", "team": "DEN"}
+    ]}
+  ],
+  "metadata": {
+    "last_updated": "2025-10-29",
+    "coverage": "2004-05 through 2023-24 (individual awards), 2021-22 through 2023-24 (team selections)",
+    "data_source": "NBA.com official awards",
+    "note": "Individual awards: 10-20 winners. Team selections (All-NBA, All-Defensive, All-Rookie): Last 3 seasons. Each team selection includes 5 players.",
+    "award_types": {
+      "individual": ["mvp", "finals_mvp", "dpoy", "roy", "smoy", "mip", "coy"],
+      "team_selections": ["all_nba_first", "all_nba_second", "all_nba_third", "all_defensive_first", "all_defensive_second", "all_rookie_first", "all_rookie_second"]
+    }
+  }
+}

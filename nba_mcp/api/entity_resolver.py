@@ -24,6 +24,11 @@ from nba_api.stats.static import players, teams
 
 from .errors import EntityNotFoundError
 from .models import EntityReference
+from .name_variations import (
+    get_team_abbreviation,
+    get_player_nickname_search,
+    get_alternate_spelling,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +41,37 @@ logger = logging.getLogger(__name__)
 # LRU cache for resolved entities (1000 most recent lookups)
 @lru_cache(maxsize=1000)
 def _cached_player_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
-    """Cached player lookup by name (case-insensitive)."""
+    """
+    Cached player lookup by name (case-insensitive).
+
+    Enhanced with:
+    - Player nicknames ("King James" → "LeBron James", "Greek Freak" → "Giannis")
+    - Alternate spellings ("Doncic" → "Dončić", "Jokic" → "Jokić")
+    - Fuzzy matching fallback
+    """
     all_players = players.get_players()
 
-    # Exact match
+    # ========================================================================
+    # FAST PATH: Check nickname dictionary first
+    # ========================================================================
+    # Examples: "King James" → "LeBron James", "Greek Freak" → "Giannis"
+    search_name = get_player_nickname_search(query_lower)
+    if search_name != query_lower:
+        # Nickname found - search for the actual name
+        logger.debug(f"Player nickname resolved: '{query_lower}' → '{search_name}'")
+        query_lower = search_name
+
+    # ========================================================================
+    # ALTERNATE SPELLINGS: Handle diacritical marks
+    # ========================================================================
+    # Examples: "Doncic" → "Dončić", "Jokic" → "Jokić"
+    query_lower = get_alternate_spelling(query_lower)
+
+    # ========================================================================
+    # STANDARD PATH: Exact matches (original logic)
+    # ========================================================================
+
+    # Exact full name match
     for player in all_players:
         full_name = f"{player['first_name']} {player['last_name']}".lower()
         if query_lower == full_name:
@@ -61,8 +93,28 @@ def _cached_player_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
 
 @lru_cache(maxsize=1000)
 def _cached_team_lookup(query_lower: str) -> Optional[Dict[str, Any]]:
-    """Cached team lookup by name/abbreviation (case-insensitive)."""
+    """
+    Cached team lookup by name/abbreviation (case-insensitive).
+
+    Enhanced with comprehensive name variations for maximum flexibility.
+    Checks variations dictionary first (O(1)) before fuzzy matching.
+    """
     all_teams = teams.get_teams()
+
+    # ========================================================================
+    # FAST PATH: Check comprehensive variations dictionary first (O(1) lookup)
+    # ========================================================================
+    # Examples: "Dubs" → "GSW", "Clips" → "LAC", "Sixers" → "PHI"
+    abbreviation = get_team_abbreviation(query_lower)
+    if abbreviation:
+        # Found in variations dict - lookup by abbreviation
+        for team in all_teams:
+            if team["abbreviation"] == abbreviation:
+                return team
+
+    # ========================================================================
+    # STANDARD PATH: Exact matches (original logic - kept for non-variation queries)
+    # ========================================================================
 
     # Exact full name match
     for team in all_teams:
@@ -158,8 +210,14 @@ def resolve_player(
     full_name = f"{player['first_name']} {player['last_name']}"
     query_lower = query.lower()
 
+    # Import variation check function
+    from .name_variations import get_player_nickname_search
+
     # Calculate confidence: 1.0 for exact matches, fuzzy for partial
-    if query_lower == full_name.lower():
+    # Check if query matched via nickname dictionary first
+    if get_player_nickname_search(query_lower) != query_lower:
+        confidence = 1.0  # Found via nickname dictionary (e.g., "The King" -> "LeBron James")
+    elif query_lower == full_name.lower():
         confidence = 1.0  # Exact full name match
     elif query_lower == player["last_name"].lower():
         confidence = 0.9  # Last name match (high confidence but not perfect)
@@ -216,8 +274,14 @@ def resolve_team(query: str, min_confidence: float = 0.6) -> Optional[EntityRefe
     full_name = team["full_name"]
     query_lower = query.lower()
 
+    # Import variation check function
+    from .name_variations import get_team_abbreviation
+
     # Calculate confidence: 1.0 for exact matches, fuzzy for partial
-    if query_lower == team["abbreviation"].lower():
+    # Check if query matched via variations dictionary first
+    if get_team_abbreviation(query_lower):
+        confidence = 1.0  # Found via variations dictionary (e.g., "Dubs" -> "GSW")
+    elif query_lower == team["abbreviation"].lower():
         confidence = 1.0  # Exact abbreviation match
     elif query_lower == team["city"].lower():
         confidence = 1.0  # Exact city match

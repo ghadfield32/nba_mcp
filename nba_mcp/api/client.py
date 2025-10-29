@@ -6,6 +6,7 @@ import re
 import sys
 import traceback
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -18,7 +19,10 @@ apply_all_patches()
 # Import from nba_api package
 from nba_api.live.nba.endpoints import scoreboard
 from nba_api.stats.endpoints import (
+    BoxScoreTraditionalV2,
     CommonPlayerInfo,
+    LeagueDashPlayerClutch,
+    LeagueDashTeamClutch,
     LeagueGameLog,
     LeagueLeaders,
     PlayerGameLog,
@@ -521,3 +525,795 @@ class NBAApiClient:
 
         except Exception as e:
             return self._handle_response_error(e, "get_games_by_date")
+
+    async def get_player_game_log(
+        self,
+        player_name: str,
+        season: Optional[str] = None,
+        season_type: str = "Regular Season",
+        last_n_games: Optional[int] = None,
+        as_dataframe: bool = True,
+    ) -> Union[pd.DataFrame, Dict[str, Any]]:
+        """
+        Get game-by-game stats for a specific player.
+
+        This method provides individual game statistics for a player, supporting:
+        - Full season game logs
+        - Last N games filtering
+        - Regular season and playoffs
+
+        Args:
+            player_name: Player name (supports fuzzy matching)
+            season: Season in 'YYYY-YY' format (defaults to current season)
+            season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
+            last_n_games: Optional limit to most recent N games
+            as_dataframe: Return DataFrame if True, dict if False
+
+        Returns:
+            DataFrame with columns: GAME_DATE, MATCHUP, WL, MIN, PTS, REB, AST, etc.
+            Or dict with error information if request fails
+
+        Example:
+            # Get LeBron's last 10 games
+            df = await client.get_player_game_log("LeBron James", last_n_games=10)
+
+            # Get full season stats
+            df = await client.get_player_game_log("Stephen Curry", season="2023-24")
+        """
+        try:
+            # Get player ID
+            player_id = get_player_id(player_name)
+            if not player_id:
+                return {"error": f"Player not found: {player_name}"}
+
+            # Default to current season if not specified
+            if season is None:
+                # Import here to avoid circular dependency
+                from nba_mcp.api.season_context import get_current_season
+                season = get_current_season()
+
+            # Normalize season format
+            season = normalize_season(season)
+
+            # Fetch game log from NBA API
+            logger.debug(f"Fetching game log for player_id={player_id}, season={season}")
+
+            game_log = await asyncio.to_thread(
+                PlayerGameLog,
+                player_id=player_id,
+                season=season,
+                season_type_all_star=season_type
+            )
+
+            # Get DataFrame
+            df = game_log.get_data_frames()[0]
+
+            if df.empty:
+                return {"error": f"No games found for {player_name} in {season} {season_type}"}
+
+            # Sort by date (most recent first)
+            if "GAME_DATE" in df.columns:
+                df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+                df = df.sort_values("GAME_DATE", ascending=False)
+
+            # Apply last_n_games filter if specified
+            if last_n_games and last_n_games > 0:
+                df = df.head(last_n_games)
+
+            if as_dataframe:
+                return df
+            else:
+                return {"data": df.to_dict(orient="records")}
+
+        except Exception as e:
+            logger.error(f"Error fetching player game log: {str(e)}")
+            return self._handle_response_error(e, "get_player_game_log")
+
+    async def get_box_score(
+        self,
+        game_id: str,
+        as_dataframe: bool = False,
+    ) -> Union[Dict[str, Any], pd.DataFrame]:
+        """
+        Get full box score for a specific game with quarter-by-quarter breakdowns.
+
+        This method provides comprehensive game statistics including:
+        - Player stats for both teams
+        - Team totals
+        - Quarter-by-quarter scores
+        - Starter/bench breakdowns
+
+        Args:
+            game_id: 10-digit game ID (e.g., "0022300500")
+            as_dataframe: Return DataFrames if True, dict if False
+
+        Returns:
+            Dict with keys: player_stats, team_stats, line_score
+            Or DataFrames if as_dataframe=True
+
+        Example:
+            # Get box score for specific game
+            box_score = await client.get_box_score("0022300500")
+            print(box_score['team_stats'])  # Team totals
+            print(box_score['line_score'])  # Quarter scores
+        """
+        try:
+            # Fetch box score from NBA API
+            logger.debug(f"Fetching box score for game_id={game_id}")
+
+            box_score = await asyncio.to_thread(
+                BoxScoreTraditionalV2,
+                game_id=game_id
+            )
+
+            # Get DataFrames
+            dfs = box_score.get_data_frames()
+
+            # Extract the different data tables
+            player_stats = dfs[0] if len(dfs) > 0 else pd.DataFrame()
+            team_stats = dfs[1] if len(dfs) > 1 else pd.DataFrame()
+            team_starter_bench = dfs[2] if len(dfs) > 2 else pd.DataFrame()
+            line_score = dfs[3] if len(dfs) > 3 else pd.DataFrame()
+
+            if player_stats.empty:
+                return {"error": f"No box score data found for game_id={game_id}"}
+
+            if as_dataframe:
+                return {
+                    "player_stats": player_stats,
+                    "team_stats": team_stats,
+                    "team_starter_bench": team_starter_bench,
+                    "line_score": line_score
+                }
+            else:
+                return {
+                    "player_stats": player_stats.to_dict(orient="records"),
+                    "team_stats": team_stats.to_dict(orient="records"),
+                    "team_starter_bench": team_starter_bench.to_dict(orient="records"),
+                    "line_score": line_score.to_dict(orient="records")
+                }
+
+        except Exception as e:
+            logger.error(f"Error fetching box score: {str(e)}")
+            return self._handle_response_error(e, "get_box_score")
+
+    async def get_clutch_stats(
+        self,
+        entity_name: str,
+        entity_type: str = "player",
+        season: Optional[str] = None,
+        per_mode: str = "PerGame",
+    ) -> Union[pd.DataFrame, Dict[str, Any]]:
+        """
+        Get clutch time statistics (final 5 minutes, score within 5 points).
+
+        This method provides clutch performance metrics including:
+        - Points, rebounds, assists in clutch situations
+        - Shooting percentages in clutch time
+        - Win-loss record in clutch games
+        - Clutch time efficiency ratings
+
+        Args:
+            entity_name: Player or team name
+            entity_type: "player" or "team" (default: "player")
+            season: Season in 'YYYY-YY' format (defaults to current season)
+            per_mode: "PerGame" or "Totals" (default: "PerGame")
+
+        Returns:
+            DataFrame with clutch statistics
+            Or dict with error information if request fails
+
+        Example:
+            # Get LeBron's clutch stats
+            df = await client.get_clutch_stats("LeBron James", entity_type="player")
+
+            # Get Lakers' clutch stats
+            df = await client.get_clutch_stats("Lakers", entity_type="team")
+        """
+        try:
+            # Default to current season if not specified
+            if season is None:
+                from nba_mcp.api.season_context import get_current_season
+                season = get_current_season()
+
+            # Normalize season format
+            season = normalize_season(season)
+
+            logger.debug(f"Fetching clutch stats for {entity_name} ({entity_type}), season={season}")
+
+            if entity_type == "player":
+                # For players, we get league-wide clutch stats and filter
+                clutch_data = await asyncio.to_thread(
+                    LeagueDashPlayerClutch,
+                    season=season,
+                    per_mode_detailed=per_mode,
+                    clutch_time="Last 5 Minutes",
+                    point_diff="5"
+                )
+
+                df = clutch_data.get_data_frames()[0]
+
+                if df.empty:
+                    return {"error": f"No clutch stats found for season {season}"}
+
+                # Filter for specific player
+                player_id = get_player_id(entity_name)
+                if not player_id:
+                    return {"error": f"Player not found: {entity_name}"}
+
+                df = df[df["PLAYER_ID"] == player_id]
+
+                if df.empty:
+                    return {"error": f"No clutch stats found for {entity_name} in {season}"}
+
+            elif entity_type == "team":
+                # For teams, get league-wide team clutch stats and filter
+                clutch_data = await asyncio.to_thread(
+                    LeagueDashTeamClutch,
+                    season=season,
+                    per_mode_detailed=per_mode,
+                    clutch_time="Last 5 Minutes",
+                    point_diff="5"
+                )
+
+                df = clutch_data.get_data_frames()[0]
+
+                if df.empty:
+                    return {"error": f"No clutch stats found for season {season}"}
+
+                # Filter for specific team
+                team_id = get_team_id(entity_name)
+                if not team_id:
+                    return {"error": f"Team not found: {entity_name}"}
+
+                df = df[df["TEAM_ID"] == team_id]
+
+                if df.empty:
+                    return {"error": f"No clutch stats found for {entity_name} in {season}"}
+
+            else:
+                return {"error": f"Invalid entity_type: {entity_type}. Must be 'player' or 'team'"}
+
+            return df
+
+        except Exception as e:
+            logger.error(f"Error fetching clutch stats: {str(e)}")
+            return self._handle_response_error(e, "get_clutch_stats")
+
+    async def get_player_head_to_head(
+        self,
+        player1_name: str,
+        player2_name: str,
+        season: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get head-to-head matchup stats for two players.
+
+        Finds all games where both players participated and compares their performance
+        in those specific matchups.
+
+        Args:
+            player1_name: First player name
+            player2_name: Second player name
+            season: Season in 'YYYY-YY' format (defaults to current season)
+
+        Returns:
+            Dict with keys:
+            - player1_stats: DataFrame of player 1's stats in matchup games
+            - player2_stats: DataFrame of player 2's stats in matchup games
+            - common_games: List of game IDs where both played
+            - player1_record: Win-loss record for player 1
+            - player2_record: Win-loss record for player 2
+            - matchup_count: Number of games they faced each other
+
+        Example:
+            # Get LeBron vs Durant head-to-head
+            h2h = await client.get_player_head_to_head("LeBron James", "Kevin Durant")
+        """
+        try:
+            # Default to current season if not specified
+            if season is None:
+                from nba_mcp.api.season_context import get_current_season
+                season = get_current_season()
+
+            # Normalize season format
+            season = normalize_season(season)
+
+            logger.debug(f"Fetching head-to-head: {player1_name} vs {player2_name}, season={season}")
+
+            # Get player IDs and names (for proper name resolution)
+            player1_id = get_player_id(player1_name)
+            player2_id = get_player_id(player2_name)
+
+            # Get full player names from ID lookup
+            from nba_api.stats.static import players
+            all_players = players.get_players()
+            player1_full = next((p["full_name"] for p in all_players if p["id"] == player1_id), player1_name)
+            player2_full = next((p["full_name"] for p in all_players if p["id"] == player2_id), player2_name)
+
+            # Fetch game logs for both players
+            player1_games = await self.get_player_game_log(
+                player_name=player1_name,
+                season=season,
+                as_dataframe=True
+            )
+
+            player2_games = await self.get_player_game_log(
+                player_name=player2_name,
+                season=season,
+                as_dataframe=True
+            )
+
+            # Check for errors
+            if isinstance(player1_games, dict) and "error" in player1_games:
+                return {"error": f"Player 1: {player1_games['error']}"}
+
+            if isinstance(player2_games, dict) and "error" in player2_games:
+                return {"error": f"Player 2: {player2_games['error']}"}
+
+            if player1_games.empty or player2_games.empty:
+                return {"error": "One or both players have no games in this season"}
+
+            # Add player names to the DataFrames
+            player1_games["PLAYER_NAME"] = player1_full
+            player2_games["PLAYER_NAME"] = player2_full
+
+            # Find common games (where both players participated)
+            player1_game_ids = set(player1_games["Game_ID"].tolist())
+            player2_game_ids = set(player2_games["Game_ID"].tolist())
+
+            common_game_ids = player1_game_ids.intersection(player2_game_ids)
+
+            if not common_game_ids:
+                return {
+                    "error": f"No head-to-head matchups found between {player1_name} and {player2_name} in {season}",
+                    "matchup_count": 0
+                }
+
+            # Filter to only common games
+            player1_matchup_games = player1_games[player1_games["Game_ID"].isin(common_game_ids)]
+            player2_matchup_games = player2_games[player2_games["Game_ID"].isin(common_game_ids)]
+
+            # Sort by date
+            player1_matchup_games = player1_matchup_games.sort_values("GAME_DATE", ascending=False)
+            player2_matchup_games = player2_matchup_games.sort_values("GAME_DATE", ascending=False)
+
+            # Calculate records
+            player1_wins = len(player1_matchup_games[player1_matchup_games["WL"] == "W"])
+            player1_losses = len(player1_matchup_games[player1_matchup_games["WL"] == "L"])
+
+            player2_wins = len(player2_matchup_games[player2_matchup_games["WL"] == "W"])
+            player2_losses = len(player2_matchup_games[player2_matchup_games["WL"] == "L"])
+
+            return {
+                "player1_stats": player1_matchup_games,
+                "player2_stats": player2_matchup_games,
+                "common_games": list(common_game_ids),
+                "player1_record": {"wins": player1_wins, "losses": player1_losses},
+                "player2_record": {"wins": player2_wins, "losses": player2_losses},
+                "matchup_count": len(common_game_ids),
+                "season": season
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching head-to-head stats: {str(e)}")
+            return self._handle_response_error(e, "get_player_head_to_head")
+
+    async def get_player_performance_splits(
+        self,
+        player_name: str,
+        season: Optional[str] = None,
+        last_n_games: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get comprehensive performance splits and advanced analytics for a player.
+
+        Provides detailed performance breakdowns including:
+        - Recent form analysis (last N games vs season average)
+        - Home vs Away splits
+        - Win vs Loss performance
+        - Per-100 possessions normalization
+        - Trend detection (hot/cold streaks)
+
+        Args:
+            player_name: Player name
+            season: Season in 'YYYY-YY' format (defaults to current season)
+            last_n_games: Analyze last N games (default: 10)
+
+        Returns:
+            Dict with keys:
+            - season_stats: Full season averages
+            - last_n_stats: Last N games averages
+            - home_stats: Home games averages
+            - away_stats: Away games averages
+            - wins_stats: Performance in wins
+            - losses_stats: Performance in losses
+            - trends: Hot/cold streak analysis
+            - per_100_stats: Per-100 possessions stats
+
+        Example:
+            # Get LeBron's performance splits
+            splits = await client.get_player_performance_splits("LeBron James", last_n_games=10)
+        """
+        try:
+            # Default to current season if not specified
+            if season is None:
+                from nba_mcp.api.season_context import get_current_season
+                season = get_current_season()
+
+            # Normalize season format
+            season = normalize_season(season)
+
+            # Default to last 10 games if not specified
+            if last_n_games is None:
+                last_n_games = 10
+
+            logger.debug(f"Fetching performance splits: {player_name}, season={season}, last_n={last_n_games}")
+
+            # Fetch full season game log
+            game_log = await self.get_player_game_log(
+                player_name=player_name,
+                season=season,
+                as_dataframe=True
+            )
+
+            # Check for errors
+            if isinstance(game_log, dict) and "error" in game_log:
+                return {"error": game_log["error"]}
+
+            if game_log.empty:
+                return {"error": f"No games found for {player_name} in {season}"}
+
+            # Sort by date (most recent first)
+            game_log = game_log.sort_values("GAME_DATE", ascending=False)
+
+            # Helper function to calculate averages
+            def calc_averages(df: pd.DataFrame) -> Dict[str, float]:
+                """Calculate statistical averages from game log"""
+                if df.empty:
+                    return {}
+
+                return {
+                    "games": len(df),
+                    "ppg": df["PTS"].mean(),
+                    "rpg": df["REB"].mean(),
+                    "apg": df["AST"].mean(),
+                    "spg": df["STL"].mean() if "STL" in df.columns else 0.0,
+                    "bpg": df["BLK"].mean() if "BLK" in df.columns else 0.0,
+                    "tpg": df["TOV"].mean() if "TOV" in df.columns else 0.0,
+                    "fg_pct": df["FG_PCT"].mean(),
+                    "fg3_pct": df["FG3_PCT"].mean() if "FG3_PCT" in df.columns else 0.0,
+                    "ft_pct": df["FT_PCT"].mean() if "FT_PCT" in df.columns else 0.0,
+                    "mpg": df["MIN"].mean(),
+                    "plus_minus": df["PLUS_MINUS"].mean() if "PLUS_MINUS" in df.columns else 0.0,
+                }
+
+            # Calculate season averages
+            season_stats = calc_averages(game_log)
+
+            # Calculate last N games averages
+            last_n_df = game_log.head(last_n_games)
+            last_n_stats = calc_averages(last_n_df)
+
+            # Calculate home vs away splits
+            # MATCHUP format: "TEAM vs. OPPONENT" (home) or "TEAM @ OPPONENT" (away)
+            home_games = game_log[game_log["MATCHUP"].str.contains("vs\\.", na=False, regex=True)]
+            away_games = game_log[game_log["MATCHUP"].str.contains("@", na=False, regex=False)]
+
+            home_stats = calc_averages(home_games)
+            away_stats = calc_averages(away_games)
+
+            # Calculate win vs loss splits
+            wins = game_log[game_log["WL"] == "W"]
+            losses = game_log[game_log["WL"] == "L"]
+
+            wins_stats = calc_averages(wins)
+            losses_stats = calc_averages(losses)
+
+            # Trend analysis (comparing last N to season average)
+            trends = {}
+            if last_n_stats and season_stats:
+                trends = {
+                    "ppg_trend": last_n_stats["ppg"] - season_stats["ppg"],
+                    "rpg_trend": last_n_stats["rpg"] - season_stats["rpg"],
+                    "apg_trend": last_n_stats["apg"] - season_stats["apg"],
+                    "fg_pct_trend": last_n_stats["fg_pct"] - season_stats["fg_pct"],
+                    "is_hot_streak": last_n_stats["ppg"] > season_stats["ppg"] * 1.1,  # >10% above average
+                    "is_cold_streak": last_n_stats["ppg"] < season_stats["ppg"] * 0.9,  # >10% below average
+                }
+
+            # Per-100 possessions calculation
+            # Estimate possessions: FGA + 0.44*FTA + TOV
+            def calc_per_100(df: pd.DataFrame) -> Dict[str, float]:
+                """Calculate per-100 possession stats"""
+                if df.empty or "FGA" not in df.columns:
+                    return {}
+
+                # Estimate possessions per game
+                fga = df["FGA"].mean() if "FGA" in df.columns else 0
+                fta = df["FTA"].mean() if "FTA" in df.columns else 0
+                tov = df["TOV"].mean() if "TOV" in df.columns else 0
+
+                possessions_per_game = fga + (0.44 * fta) + tov
+
+                if possessions_per_game == 0:
+                    return {}
+
+                scaling_factor = 100.0 / possessions_per_game
+
+                return {
+                    "pts_per_100": df["PTS"].mean() * scaling_factor,
+                    "reb_per_100": df["REB"].mean() * scaling_factor,
+                    "ast_per_100": df["AST"].mean() * scaling_factor,
+                    "tov_per_100": tov * scaling_factor,
+                }
+
+            per_100_stats = calc_per_100(game_log)
+
+            # Build response
+            return {
+                "player_name": player_name,
+                "season": season,
+                "season_stats": season_stats,
+                "last_n_stats": last_n_stats,
+                "last_n_games": last_n_games,
+                "home_stats": home_stats,
+                "away_stats": away_stats,
+                "wins_stats": wins_stats,
+                "losses_stats": losses_stats,
+                "trends": trends,
+                "per_100_stats": per_100_stats,
+                "home_games_count": len(home_games),
+                "away_games_count": len(away_games),
+                "wins_count": len(wins),
+                "losses_count": len(losses),
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching performance splits: {str(e)}")
+            return self._handle_response_error(e, "get_player_performance_splits")
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # NBA Awards Methods
+    # ═══════════════════════════════════════════════════════════════════════════════
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def load_historical_awards() -> Dict[str, List[Dict]]:
+        """
+        Load historical awards data from static JSON file.
+
+        This method loads major NBA awards from a static data file containing
+        historical winners from 2004-05 through 2023-24. The data is cached
+        in memory using LRU cache for instant access on subsequent calls.
+
+        Awards included:
+        - MVP (Most Valuable Player)
+        - Finals MVP
+        - DPOY (Defensive Player of the Year)
+        - ROY (Rookie of the Year)
+        - SMOY (Sixth Man of the Year)
+        - MIP (Most Improved Player)
+        - COY (Coach of the Year)
+
+        Returns:
+            Dict mapping award types to lists of winners, where each winner
+            contains: season, player_name (or coach_name), team, player_id
+
+        Example:
+            >>> awards = NBAApiClient.load_historical_awards()
+            >>> mvp_winners = awards['mvp']
+            >>> print(mvp_winners[0])
+            {'season': '2023-24', 'player_name': 'Nikola Jokić', 'team': 'DEN', ...}
+
+        Note:
+            - Static method for shared access across all instances
+            - LRU cache ensures file is loaded only once
+            - File path is relative to this module's location
+        """
+        # Construct path relative to this file's location
+        # Path: nba_mcp/api/client.py → api_documentation/awards_data.json (at project root)
+        # __file__ = .../nba_mcp/api/client.py
+        # parent = .../nba_mcp/api
+        # parent.parent = .../nba_mcp
+        # parent.parent.parent = .../ (project root)
+        awards_file = Path(__file__).parent.parent.parent / "api_documentation" / "awards_data.json"
+
+        try:
+            with open(awards_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logger.error(f"Awards data file not found: {awards_file}")
+            raise FileNotFoundError(
+                f"Awards data file not found at {awards_file}. "
+                "Please ensure api_documentation/awards_data.json exists."
+            )
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in awards data file: {e}")
+            raise ValueError(f"Invalid JSON format in awards data file: {e}")
+
+    def get_award_winners(
+        self,
+        award_type: str,
+        start_season: Optional[str] = None,
+        end_season: Optional[str] = None,
+        last_n: Optional[int] = None
+    ) -> List[Dict]:
+        """
+        Get award winners from historical data with flexible filtering.
+
+        This method queries the historical awards data with various filtering options:
+        - Get last N winners (most recent first)
+        - Filter by season range (start and/or end season)
+        - Get specific season winner
+
+        Args:
+            award_type: Award type identifier. Valid options:
+                - "mvp": Most Valuable Player
+                - "finals_mvp": Finals MVP
+                - "dpoy": Defensive Player of the Year
+                - "roy": Rookie of the Year
+                - "smoy": Sixth Man of the Year
+                - "mip": Most Improved Player
+                - "coy": Coach of the Year
+            start_season: Filter from this season (inclusive), format "YYYY-YY" (e.g., "2015-16")
+            end_season: Filter to this season (inclusive), format "YYYY-YY" (e.g., "2020-21")
+            last_n: Get last N winners (most recent first). Overrides season filters if specified.
+
+        Returns:
+            List of award winner dictionaries, sorted by season (newest first).
+            Each dict contains: season, player_name/coach_name, team, player_id (for players)
+
+        Raises:
+            ValueError: If award_type is invalid
+
+        Examples:
+            >>> client = NBAApiClient()
+
+            # Get last 10 MVP winners
+            >>> mvps = client.get_award_winners("mvp", last_n=10)
+            >>> print(len(mvps))  # 10
+
+            # Get DPOY winners from 2018-19 to 2022-23
+            >>> dpoy = client.get_award_winners("dpoy", start_season="2018-19", end_season="2022-23")
+
+            # Get 2023-24 ROY winner
+            >>> roy = client.get_award_winners("roy", start_season="2023-24", end_season="2023-24")
+            >>> print(roy[0]['player_name'])  # "Victor Wembanyama"
+
+        Performance:
+            - <10ms response time (in-memory cache)
+            - No API calls required
+        """
+        # Load cached awards data
+        awards_data = self.load_historical_awards()
+
+        # Validate award type
+        valid_awards = [k for k in awards_data.keys() if k != "metadata"]
+        if award_type not in valid_awards:
+            available = ", ".join(valid_awards)
+            raise ValueError(
+                f"Invalid award type '{award_type}'. "
+                f"Available awards: {available}"
+            )
+
+        # Get winners (copy to avoid modifying cached data)
+        winners = awards_data[award_type].copy()
+
+        # Filter by season range if specified
+        if start_season or end_season:
+            filtered = []
+            for winner in winners:
+                season = winner.get("season", "")
+
+                # Skip if before start_season
+                if start_season and season < start_season:
+                    continue
+
+                # Skip if after end_season
+                if end_season and season > end_season:
+                    continue
+
+                filtered.append(winner)
+
+            winners = filtered
+
+        # Get last N winners (data is already sorted newest first)
+        if last_n:
+            winners = winners[:last_n]
+
+        return winners
+
+    async def get_player_awards(
+        self,
+        player_name: str,
+        award_filter: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        Get all awards for a specific player from NBA API.
+
+        This method fetches comprehensive award data for a player directly from
+        the NBA API, including major awards, All-NBA/All-Defensive teams, and
+        weekly/monthly honors.
+
+        Args:
+            player_name: Player name (will be resolved to ID using fuzzy matching)
+            award_filter: Optional filter for award description (case-insensitive substring match)
+                         Examples: "MVP", "All-NBA", "Player of the Month"
+
+        Returns:
+            DataFrame with columns:
+            - PERSON_ID: NBA player ID
+            - FIRST_NAME, LAST_NAME: Player names
+            - TEAM: Team at time of award
+            - DESCRIPTION: Award description (e.g., "NBA Most Valuable Player")
+            - SEASON: Season in "YYYY-YY" format
+            - TYPE: Award type (usually "Award")
+            - Additional metadata columns
+
+        Raises:
+            ValueError: If player not found
+
+        Examples:
+            >>> client = NBAApiClient()
+
+            # Get all LeBron James awards
+            >>> lebron_awards = await client.get_player_awards("LeBron James")
+            >>> print(len(lebron_awards))  # 100+ awards
+
+            # Get only MVP awards for LeBron
+            >>> mvp_awards = await client.get_player_awards("LeBron James", award_filter="MVP")
+            >>> print(mvp_awards[['SEASON', 'DESCRIPTION']])
+
+            # Get All-NBA selections
+            >>> all_nba = await client.get_player_awards("LeBron James", award_filter="All-NBA")
+
+        Performance:
+            - Single API call (cached via Redis)
+            - Typical response time: <500ms with cache
+            - Cache TTL: 7 days (awards don't change frequently)
+
+        Note:
+            - Uses existing player name resolution system
+            - Leverages NBA API caching infrastructure
+            - Returns empty DataFrame if no awards found (not an error)
+        """
+        from nba_api.stats.endpoints import playerawards
+
+        # Resolve player name to ID using existing method
+        player = self.find_player_by_name(player_name)
+        if not player:
+            raise ValueError(
+                f"Player '{player_name}' not found. "
+                "Please check spelling or try a different name variant."
+            )
+
+        player_id = player['id']
+        logger.debug(f"Fetching awards for {player_name} (ID: {player_id})")
+
+        try:
+            # Fetch awards from NBA API (runs in thread to avoid blocking)
+            awards_response = await asyncio.to_thread(
+                playerawards.PlayerAwards,
+                player_id=player_id
+            )
+
+            # Extract DataFrame
+            awards_df = awards_response.get_data_frames()[0]
+
+            # Apply optional filter
+            if award_filter and len(awards_df) > 0:
+                awards_df = awards_df[
+                    awards_df['DESCRIPTION'].str.contains(
+                        award_filter,
+                        case=False,
+                        na=False
+                    )
+                ]
+
+            logger.debug(f"Found {len(awards_df)} awards for {player_name}")
+            return awards_df
+
+        except Exception as e:
+            logger.error(f"Error fetching player awards: {str(e)}")
+            raise ValueError(f"Failed to fetch awards for {player_name}: {str(e)}")

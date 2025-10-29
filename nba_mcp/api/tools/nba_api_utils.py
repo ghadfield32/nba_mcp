@@ -113,6 +113,31 @@ _PLAYER_NAME_TO_ID = {name: pid for pid, name in _PLAYER_LOOKUP.items()}
 
 
 def get_player_id(player_name: str) -> Optional[int]:
+    """
+    Convert player name to ID using comprehensive entity resolution.
+
+    This function now supports:
+    - Exact name matches (LeBron James)
+    - Nicknames (King James, The King, Greek Freak, etc.)
+    - First names (Luka, Giannis)
+    - Common abbreviations (KD, AD, CP3)
+    - International name variations (Jokic → Jokić)
+
+    Args:
+        player_name: Player name, nickname, or abbreviation
+
+    Returns:
+        Player ID if found, None otherwise
+    """
+    # Import here to avoid circular imports
+    from nba_mcp.api.entity_resolver import resolve_player
+
+    # Use new entity resolution with name variations
+    entity = resolve_player(player_name, min_confidence=0.6)
+    if entity:
+        return entity.entity_id
+
+    # Fallback to old method for edge cases
     key = player_name.lower()
     # exact match
     for name, pid in _PLAYER_NAME_TO_ID.items():
@@ -131,10 +156,34 @@ def get_player_name(player_id: Union[int, str]) -> Optional[str]:
 
 
 def get_team_id(team_name: str) -> Optional[int]:
-    """Convert team name to ID, with case-insensitive partial matching."""
+    """
+    Convert team name to ID using comprehensive entity resolution.
+
+    This function now supports:
+    - Exact team names (Los Angeles Lakers)
+    - Nicknames (Dubs, Lake Show, Clips, Sixers, etc.)
+    - Abbreviations (LAL, GSW, LAC, PHI)
+    - City names (Los Angeles, Boston, Golden State)
+    - Historical team names (Sonics → OKC, Bobcats → CHA)
+
+    Args:
+        team_name: Team name, nickname, or abbreviation
+
+    Returns:
+        Team ID if found, None otherwise
+    """
     if not team_name:
         return None
 
+    # Import here to avoid circular imports
+    from nba_mcp.api.entity_resolver import resolve_team
+
+    # Use new entity resolution with name variations
+    entity = resolve_team(team_name, min_confidence=0.6)
+    if entity:
+        return entity.entity_id
+
+    # Fallback to old method for edge cases
     team_name_lower = team_name.lower()
     # Try exact match first
     for name, id in _TEAM_REVLOOKUP.items():

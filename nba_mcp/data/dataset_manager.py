@@ -52,6 +52,175 @@ def get_default_save_path(
     return base / date_folder / filename
 
 
+def generate_descriptive_filename(data: Dict[str, Any]) -> str:
+    """
+    Generate descriptive filename from NBA data content.
+
+    Analyzes the data structure to create meaningful filenames that
+    include entity names, dates, and data types.
+
+    Args:
+        data: NBA data dictionary (shot charts, game context, stats, etc.)
+
+    Returns:
+        Descriptive filename string (without extension or timestamp)
+
+    Examples:
+        Shot chart (team): "warriors_shot_chart_2025-10-28"
+        Shot chart (player): "stephen_curry_shot_chart_2023-24"
+        Game context: "lakers_vs_warriors_context"
+        Player stats: "lebron_james_advanced_stats_2023-24"
+    """
+    parts = []
+
+    # Check if this is a ResponseEnvelope with nested data
+    actual_data = data.get("data", data)
+
+    # Detect data type and extract relevant information
+
+    # 1. Shot Chart Data
+    if "entity" in actual_data and "zone_summary" in actual_data:
+        entity = actual_data["entity"]
+        entity_name = entity.get("name", "unknown")
+        entity_type = entity.get("type", "")
+
+        # Sanitize entity name
+        clean_name = entity_name.lower().replace(" ", "_")
+        clean_name = "".join(c for c in clean_name if c.isalnum() or c == "_")
+        parts.append(clean_name)
+        parts.append("shot_chart")
+
+        # Add date context
+        if "date_from" in actual_data:
+            parts.append(actual_data["date_from"])
+        elif "season" in actual_data:
+            parts.append(actual_data["season"].replace("-", "_"))
+
+    # 2. Game Context Data
+    elif "matchup" in actual_data and "narrative" in actual_data:
+        matchup = actual_data["matchup"]
+        team1 = matchup.get("team1_name", "team1")
+        team2 = matchup.get("team2_name", "team2")
+
+        # Sanitize team names
+        clean_team1 = team1.lower().replace(" ", "_")
+        clean_team1 = "".join(c for c in clean_team1 if c.isalnum() or c == "_")
+        clean_team2 = team2.lower().replace(" ", "_")
+        clean_team2 = "".join(c for c in clean_team2 if c.isalnum() or c == "_")
+
+        parts.append(clean_team1)
+        parts.append("vs")
+        parts.append(clean_team2)
+        parts.append("context")
+
+    # 3. Player Advanced Stats
+    elif "player_name" in actual_data or "player" in actual_data:
+        player_name = actual_data.get("player_name") or actual_data.get("player", {}).get("name", "unknown")
+        clean_name = player_name.lower().replace(" ", "_")
+        clean_name = "".join(c for c in clean_name if c.isalnum() or c == "_")
+        parts.append(clean_name)
+
+        # Detect stats type
+        if "ts_pct" in actual_data or "usage_pct" in actual_data:
+            parts.append("advanced_stats")
+        else:
+            parts.append("stats")
+
+        # Add season if available
+        if "season" in actual_data:
+            parts.append(actual_data["season"].replace("-", "_"))
+
+    # 4. Team Stats
+    elif "team_name" in actual_data or "team" in actual_data:
+        team_name = actual_data.get("team_name") or actual_data.get("team", {}).get("name", "unknown")
+        clean_name = team_name.lower().replace(" ", "_")
+        clean_name = "".join(c for c in clean_name if c.isalnum() or c == "_")
+        parts.append(clean_name)
+
+        # Detect stats type
+        if "off_rating" in actual_data or "def_rating" in actual_data:
+            parts.append("advanced_stats")
+        else:
+            parts.append("stats")
+
+        # Add season if available
+        if "season" in actual_data:
+            parts.append(actual_data["season"].replace("-", "_"))
+
+    # 5. Standings Data
+    elif "standings" in actual_data or isinstance(actual_data, list):
+        parts.append("standings")
+        if isinstance(data, dict) and "season" in data:
+            parts.append(data["season"].replace("-", "_"))
+
+    # 6. Default fallback
+    if not parts:
+        parts.append("nba_data")
+
+    return "_".join(parts)
+
+
+def save_json_data(
+    data: Dict[str, Any],
+    endpoint: str = "data",
+    base_dir: str = "mcp_data",
+    custom_filename: Optional[str] = None
+) -> Path:
+    """
+    Save JSON data to organized mcp_data/ folder structure with smart naming.
+
+    Creates structure: mcp_data/YYYY-MM-DD/descriptive_name_HHMMSS.json
+
+    Args:
+        data: JSON-serializable data (dict, list, etc.)
+        endpoint: Fallback endpoint name if descriptive generation fails
+        base_dir: Base directory name (default: "mcp_data")
+        custom_filename: Optional custom filename (without extension)
+
+    Returns:
+        Path object where data was saved
+
+    Examples:
+        >>> # Auto-generate descriptive name from data
+        >>> data = {"entity": {"name": "Warriors"}, "zone_summary": {...}}
+        >>> path = save_json_data(data)
+        >>> print(path)
+        mcp_data/2025-10-29/warriors_shot_chart_2025-10-28_143052.json
+
+        >>> # Use custom filename
+        >>> path = save_json_data(data, custom_filename="my_analysis")
+        >>> print(path)
+        mcp_data/2025-10-29/my_analysis_143052.json
+    """
+    # Determine filename base
+    if custom_filename:
+        # Use custom filename (sanitize it)
+        filename_base = "".join(c for c in custom_filename if c.isalnum() or c in "_-")
+    else:
+        # Try to generate descriptive filename from data content
+        try:
+            filename_base = generate_descriptive_filename(data)
+        except Exception:
+            # Fallback to endpoint if generation fails
+            filename_base = endpoint
+
+    # Create full path with timestamp
+    base = Path(base_dir)
+    date_folder = datetime.now().strftime("%Y-%m-%d")
+    timestamp = datetime.now().strftime("%H%M%S")
+    filename = f"{filename_base}_{timestamp}.json"
+    file_path = base / date_folder / filename
+
+    # Create directories if they don't exist
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save to JSON with pretty formatting
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+    return file_path
+
+
 class ProvenanceInfo(BaseModel):
     """Tracks the lineage and history of a dataset."""
 
