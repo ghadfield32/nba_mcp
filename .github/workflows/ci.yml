@@ -2,7 +2,7 @@ name: NBA MCP CI
 
 on:
   push:
-    branches: [ main, develop, "claude/**" ]
+    branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
 
