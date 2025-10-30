@@ -146,7 +146,7 @@ async def test_pipeline_leaders_query():
 @pytest.mark.asyncio
 async def test_pipeline_comparison_query():
     """Test complete pipeline for comparison query."""
-    answer = await answer_nba_question("Compare LeBron James and Kevin Durant")
+    answer = await answer_nba_question("Compare LeBron James and Kevin Durant in 2023-24")  # Use historical season with data
 
     assert isinstance(answer, str)
     assert len(answer) > 0

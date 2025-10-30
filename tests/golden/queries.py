@@ -220,7 +220,7 @@ GOLDEN_QUERIES = [
     GoldenQuery(
         id="complex_001",
         name="Best players and standings",
-        query="Who are the top scorers and what are the standings?",
+        query="Who are the top scorers and what are the standings in 2023-24?",  # Use historical season
         intent="multi",
         category="complex",
         tools_expected=["get_league_leaders_info", "get_team_standings"],
@@ -230,7 +230,7 @@ GOLDEN_QUERIES = [
     GoldenQuery(
         id="complex_002",
         name="LeBron vs Curry with team context",
-        query="Compare LeBron and Curry and show their team standings",
+        query="Compare LeBron and Curry in 2023-24 and show their team standings",  # Use historical season
         intent="multi",
         category="complex",
         tools_expected=["compare_players", "get_team_standings"],

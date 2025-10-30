@@ -1279,11 +1279,11 @@ async def get_season_stats(
             team_id = None
             if team_filter:
                 team_entity = resolve_entity(team_filter, entity_type="team")
-                team_id = team_entity.id
+                team_id = team_entity.entity_id
 
             stats = await get_player_season_stats(
                 season=season,
-                player_id=entity.id,
+                player_id=entity.entity_id,
                 team_id=team_id
             )
 
@@ -1292,7 +1292,7 @@ async def get_season_stats(
         else:  # team
             stats = await get_team_season_stats(
                 season=season,
-                team_id=entity.id
+                team_id=entity.entity_id
             )
 
             grouping_level = "team/season"

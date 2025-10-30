@@ -499,7 +499,7 @@ class AdvancedMetricsCalculator:
         # Fetch season stats
         stats_dict = await get_player_season_stats(
             season=season,
-            player_id=player_entity.id
+            player_id=player_entity.entity_id
         )
 
         return stats_dict

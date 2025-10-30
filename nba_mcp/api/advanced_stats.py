@@ -334,16 +334,20 @@ async def get_player_advanced_stats(
 
         logger.info(f"Fetching advanced stats for {player_entity.name} ({season_str})")
 
-        # Fetch player dashboard with advanced metrics
+        # Fetch player dashboard - using "Base" measure type to get counting stats
+        # Note: "Advanced" measure type does not include PTS, REB, AST columns
         dashboard = await asyncio.to_thread(
             LeagueDashPlayerStats,
             season=season_str,
             season_type_all_star="Regular Season",
-            measure_type_detailed_defense="Advanced",
+            measure_type_detailed_defense="Base",  # Changed from "Advanced" to get counting stats
             per_mode_detailed="PerGame",
         )
 
         player_stats_df = dashboard.get_data_frames()[0]
+
+        # Debug logging: Log available columns
+        logger.debug(f"Available columns in Base measure type: {list(player_stats_df.columns)}")
 
         # Filter to requested player
         player_row = player_stats_df[player_stats_df["PLAYER_ID"] == int(player_id)]
@@ -353,7 +357,33 @@ async def get_player_advanced_stats(
 
         row = player_row.iloc[0]
 
-        # Build response with deterministic dtypes
+        # Debug logging: Log actual values
+        logger.debug(f"PTS={row.get('PTS')}, REB={row.get('REB')}, AST={row.get('AST')}")
+
+        # Fetch advanced metrics separately if needed
+        # Try to get advanced stats with "Advanced" measure type
+        try:
+            adv_dashboard = await asyncio.to_thread(
+                LeagueDashPlayerStats,
+                season=season_str,
+                season_type_all_star="Regular Season",
+                measure_type_detailed_defense="Advanced",
+                per_mode_detailed="PerGame",
+            )
+            adv_stats_df = adv_dashboard.get_data_frames()[0]
+            adv_row = adv_stats_df[adv_stats_df["PLAYER_ID"] == int(player_id)]
+
+            if not adv_row.empty:
+                adv_data = adv_row.iloc[0]
+                logger.debug(f"Advanced stats available: TS%={adv_data.get('TS_PCT')}, USG%={adv_data.get('USG_PCT')}")
+            else:
+                adv_data = None
+                logger.warning("Advanced stats not available, using base stats only")
+        except Exception as e:
+            logger.warning(f"Could not fetch advanced stats, using base stats only: {e}")
+            adv_data = None
+
+        # Build response with deterministic dtypes, merging base and advanced stats
         stats = {
             "player_id": int(row.get("PLAYER_ID")),
             "player_name": str(row.get("PLAYER_NAME", player_entity.name)),
@@ -361,22 +391,27 @@ async def get_player_advanced_stats(
             "team_abbreviation": str(row.get("TEAM_ABBREVIATION", "")),
             "games_played": int(row.get("GP", 0)),
             "minutes_per_game": float(row.get("MIN", 0.0)),
-            # Efficiency metrics
-            "true_shooting_pct": float(row.get("TS_PCT", 0.0)),
-            "effective_fg_pct": float(row.get("EFG_PCT", 0.0)),
-            "usage_pct": float(row.get("USG_PCT", 0.0)),
-            "pie": float(row.get("PIE", 0.0)),  # Player Impact Estimate
-            # Advanced metrics (if available)
-            "offensive_rating": float(row.get("OFF_RATING", 0.0)),
-            "defensive_rating": float(row.get("DEF_RATING", 0.0)),
-            "net_rating": float(row.get("NET_RATING", 0.0)),
-            "assist_pct": float(row.get("AST_PCT", 0.0)),
-            "rebound_pct": float(row.get("REB_PCT", 0.0)),
-            "turnover_pct": float(row.get("TM_TOV_PCT", 0.0)),
-            # Basic counting stats (for context)
+            # Efficiency metrics (try advanced first, fall back to base)
+            "true_shooting_pct": float(adv_data.get("TS_PCT", 0.0) if adv_data is not None else row.get("TS_PCT", 0.0)),
+            "effective_fg_pct": float(adv_data.get("EFG_PCT", 0.0) if adv_data is not None else row.get("EFG_PCT", 0.0)),
+            "usage_pct": float(adv_data.get("USG_PCT", 0.0) if adv_data is not None else row.get("USG_PCT", 0.0)),
+            "pie": float(adv_data.get("PIE", 0.0) if adv_data is not None else row.get("PIE", 0.0)),
+            # Advanced metrics (prefer advanced stats)
+            "offensive_rating": float(adv_data.get("OFF_RATING", 0.0) if adv_data is not None else row.get("OFF_RATING", 0.0)),
+            "defensive_rating": float(adv_data.get("DEF_RATING", 0.0) if adv_data is not None else row.get("DEF_RATING", 0.0)),
+            "net_rating": float(adv_data.get("NET_RATING", 0.0) if adv_data is not None else row.get("NET_RATING", 0.0)),
+            "assist_pct": float(adv_data.get("AST_PCT", 0.0) if adv_data is not None else row.get("AST_PCT", 0.0)),
+            "rebound_pct": float(adv_data.get("REB_PCT", 0.0) if adv_data is not None else row.get("REB_PCT", 0.0)),
+            "turnover_pct": float(adv_data.get("TM_TOV_PCT", 0.0) if adv_data is not None else row.get("TM_TOV_PCT", 0.0)),
+            # Basic counting stats from base measure type
             "points_per_game": float(row.get("PTS", 0.0)),
             "rebounds_per_game": float(row.get("REB", 0.0)),
             "assists_per_game": float(row.get("AST", 0.0)),
+            "steals_per_game": float(row.get("STL", 0.0)),
+            "blocks_per_game": float(row.get("BLK", 0.0)),
+            "field_goal_pct": float(row.get("FG_PCT", 0.0)),
+            "three_point_pct": float(row.get("FG3_PCT", 0.0)),
+            "free_throw_pct": float(row.get("FT_PCT", 0.0)),
         }
 
         return stats
