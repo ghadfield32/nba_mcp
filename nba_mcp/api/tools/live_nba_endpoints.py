@@ -1,42 +1,176 @@
-# live_nba_endpoints.py
+"""
+Helpers for combining live NBA API data (box score, play by play) with ESPN odds.
+"""
+
+from __future__ import annotations
 
 import json
-
-# --------------------------------------------------------------------------- #
-# ──   HELPERS                                                               ──
-# --------------------------------------------------------------------------- #
 import logging
+from datetime import datetime
 from json import JSONDecodeError
+from typing import Dict, List, Optional
 
+import httpx
 import pandas as pd
 from nba_api.live.nba.endpoints.boxscore import BoxScore
-from nba_api.live.nba.endpoints.odds import Odds
 from nba_api.live.nba.endpoints.playbyplay import PlayByPlay
 from nba_api.live.nba.endpoints.scoreboard import ScoreBoard
 from nba_api.stats.endpoints.scoreboardv2 import ScoreboardV2
 
+# Import ESPN metrics tracking for observability
+from nba_mcp.observability.espn_metrics import track_espn_call
+
 logger = logging.getLogger(__name__)
 
+# ESPN's unofficial scoreboard endpoint (provides betting odds when available)
+ESPN_SCOREBOARD_URL = (
+    "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
+)
+
+
+# ---------------------------------------------------------------------------
+# ESPN helpers
+# ---------------------------------------------------------------------------
+
+def _normalize_date_for_espn(date_label: Optional[str]) -> Optional[str]:
+    """
+    ESPN expects dates as YYYYMMDD; normalize NBA strings when possible.
+    """
+    if not date_label:
+        return None
+
+    try:
+        return datetime.strptime(date_label, "%Y-%m-%d").strftime("%Y%m%d")
+    except ValueError:
+        cleaned = date_label.replace("-", "")
+        return cleaned if cleaned.isdigit() and len(cleaned) == 8 else None
+
+
+def _extract_team_abbr(team_blob: Dict[str, str]) -> Optional[str]:
+    """
+    Pull a consistent team abbreviation from the scoreboard payload.
+    """
+    for key in (
+        "teamTricode",
+        "teamAbbreviation",
+        "TEAM_ABBREVIATION",
+        "tricode",
+        "teamCode",
+        "abbreviation",
+    ):
+        value = team_blob.get(key)
+        if value:
+            return str(value).upper()
+    return None
+
+
+def _build_odds_key(home_abbr: Optional[str], away_abbr: Optional[str]) -> Optional[str]:
+    """
+    Generate the lookup key used to join ESPN odds back to NBA scoreboard data.
+    """
+    if not home_abbr or not away_abbr:
+        return None
+    return f"{home_abbr}_{away_abbr}"
+
+
+@track_espn_call
+def _fetch_espn_scoreboard(date_label: Optional[str], timeout: int) -> Optional[dict]:
+    """
+    Invoke ESPN's scoreboard endpoint and return the decoded JSON payload.
+
+    ESPN API calls are automatically tracked for observability (success rate,
+    response times, odds coverage). Metrics are collected via the track_espn_call
+    decorator for production monitoring.
+    """
+    params: Dict[str, str] = {}
+    normalized = _normalize_date_for_espn(date_label)
+    if normalized:
+        params["dates"] = normalized
+
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            response = client.get(ESPN_SCOREBOARD_URL, params=params)
+            response.raise_for_status()
+            return response.json()
+    except Exception as exc:  # pragma: no cover - network failures are expected sometimes
+        logger.debug("ESPN odds fetch failed: %s", exc)
+        return None
+
+
+def _extract_odds_map(scoreboard_json: dict) -> Dict[str, dict]:
+    """
+    Convert ESPN's events list into a {home_away_key: odds_payload} mapping.
+    """
+    odds_map: Dict[str, dict] = {}
+
+    for event in scoreboard_json.get("events", []):
+        competitions = event.get("competitions") or []
+        if not competitions:
+            continue
+
+        comp = competitions[0]
+        competitors = comp.get("competitors") or []
+        if len(competitors) < 2:
+            continue
+
+        home = next((c for c in competitors if c.get("homeAway") == "home"), None)
+        away = next((c for c in competitors if c.get("homeAway") == "away"), None)
+        if not home or not away:
+            continue
+
+        home_abbr = _extract_team_abbr(home.get("team", {}))
+        away_abbr = _extract_team_abbr(away.get("team", {}))
+        odds_key = _build_odds_key(home_abbr, away_abbr)
+        if not odds_key:
+            continue
+
+        odds_list = comp.get("odds") or []
+        if not odds_list:
+            continue
+
+        odds_entry = odds_list[0]
+        odds_map[odds_key] = {
+            "provider": odds_entry.get("provider", {}).get("name"),
+            "details": odds_entry.get("details"),
+            "spread": odds_entry.get("spread"),
+            "overUnder": odds_entry.get("overUnder"),
+            "homeMoneyline": home.get("moneyline"),
+            "awayMoneyline": away.get("moneyline"),
+            "lastUpdated": odds_entry.get("lastUpdated"),
+            "espnEventId": event.get("id"),
+        }
+
+    return odds_map
+
+
+def _fetch_odds_lookup(
+    games_list: List[dict], date_label: Optional[str], timeout: int
+) -> Dict[str, dict]:
+    """
+    Fetch odds once per scoreboard response and build a lookup keyed by team pair.
+    """
+    if not games_list:
+        return {}
+    scoreboard_json = _fetch_espn_scoreboard(date_label, timeout)
+    if not scoreboard_json:
+        return {}
+    return _extract_odds_map(scoreboard_json)
+
+
+# ---------------------------------------------------------------------------
+# Live NBA API helpers
+# ---------------------------------------------------------------------------
 
 def fetch_game_live_data(
     game_id: str,
-    proxy: str | None = None,
-    headers: dict | None = None,
+    proxy: Optional[str] = None,
+    headers: Optional[dict] = None,
     timeout: int = 30,
 ) -> dict:
     """
-    Fetch **live** box‑score, play‑by‑play and odds for a single game.
-
-    Always returns the same top‑level keys so that callers do not need to
-    branch on "data missing vs. data present".
-
-    Keys:
-        * gameId       – the 10‑digit game code
-        * boxScore     – dict | None           (None when not yet available)
-        * playByPlay   – list[dict]            (empty list when not yet available)
-        * odds         – dict                  ({} when no odds for this game)
+    Fetch live box score and play by play for a single game.
     """
-    # ---------- 1) Box‑score -------------------------------------------------
+    # Box score
     try:
         box = BoxScore(
             game_id=game_id,
@@ -46,13 +180,15 @@ def fetch_game_live_data(
             get_request=False,
         )
         box.get_request()
-        box_data: dict | None = box.get_dict()["game"]
+        box_data = box.get_dict().get("game")
     except JSONDecodeError:
-        # Endpoint has no body yet (game not started)
-        logger.debug("No box‑score JSON for game %s – tip‑off not reached.", game_id)
-        box_data = None  # explicit "missing" marker
+        logger.debug("No box score JSON for game %s (tip-off not reached).", game_id)
+        box_data = None
+    except Exception as exc:
+        logger.debug("Box score fetch failed for %s: %s", game_id, exc)
+        box_data = None
 
-    # ---------- 2) Play‑by‑play ---------------------------------------------
+    # Play by play
     try:
         pbp = PlayByPlay(
             game_id=game_id,
@@ -62,61 +198,55 @@ def fetch_game_live_data(
             get_request=False,
         )
         pbp.get_request()
-        pbp_actions: list[dict] = pbp.get_dict()["game"].get("actions", [])
+        pbp_actions = pbp.get_dict().get("game", {}).get("actions", [])
     except JSONDecodeError:
-        pbp_actions = []  # same rationale as box‑score
+        pbp_actions = []
+    except Exception as exc:
+        logger.debug("Play by play fetch failed for %s: %s", game_id, exc)
+        pbp_actions = []
 
-    # ---------- 3) Odds ------------------------------------------------------
-    odds_ep = Odds(proxy=proxy, headers=headers, timeout=timeout, get_request=False)
-    odds_ep.get_request()
-    odds_all = odds_ep.get_dict().get("games", [])
-    odds_for_us = next((g for g in odds_all if g["gameId"] == game_id), {})
-
-    # ---------- 4) Assemble --------------------------------------------------
+    # Odds are injected by the caller (we default to an empty payload here).
     return {
         "gameId": game_id,
         "boxScore": box_data,
         "playByPlay": pbp_actions,
-        "odds": odds_for_us,
+        "odds": {},
     }
 
 
 def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
-    game_date: str | None = None,
-    proxy: str | None = None,
-    headers: dict | None = None,
+    game_date: Optional[str] = None,
+    proxy: Optional[str] = None,
+    headers: Optional[dict] = None,
     timeout: int = 30,
 ) -> dict:
     """
-    Wrapper returning *all* games for a date.
+    Wrapper returning all games for the provided date (or today when None).
 
-    * When `game_date` is **None** → use Live API (today).
-    * When `game_date` is  'YYYY‑MM‑DD' → use historical ScoreboardV2 snapshot.
-
-    For **live** mode, each game dict now *always* contains:
-        - gameId, boxScore, playByPlay, odds, scoreBoardSummary
-    For **historical** mode, structure is unchanged (scoreBoardSnapshot only).
+    Live mode enriches each game with box score, play by play, and ESPN odds.
+    Historical mode (game_date provided) returns the ScoreboardV2 snapshot only.
     """
-    logger.debug(f"[DEBUG] fetch_live_boxsc_odds_playbyplaydelayed_livescores: Called with game_date={game_date}")
+    logger.debug(
+        "fetch_live_boxsc_odds_playbyplaydelayed_livescores called with game_date=%s",
+        game_date,
+    )
 
-    # ---------------- 1) Which API to hit? ----------------------------------
     if game_date:
-        logger.debug(f"[DEBUG] Using historical ScoreboardV2 for date={game_date}")
+        # Historical snapshot via ScoreboardV2
         sb2 = ScoreboardV2(day_offset=0, game_date=game_date, league_id="00")
         dfs = sb2.get_data_frames()
         df_header = next(df for df in dfs if "GAME_STATUS_TEXT" in df.columns)
         df_line = next(df for df in dfs if "TEAM_ID" in df.columns)
-        games_list: list[dict] = []
+        games_list: List[dict] = []
 
         for _, row in df_header.iterrows():
             gid = row["GAME_ID"]
 
             def _line_for(team_id_col: str, abbrev_col: str) -> dict:
+                # Match by team id; fall back to abbreviation when necessary.
                 try:
                     return (
-                        df_line[df_line["TEAM_ID"] == row[team_id_col]]
-                        .iloc[0]
-                        .to_dict()
+                        df_line[df_line["TEAM_ID"] == row[team_id_col]].iloc[0].to_dict()
                     )
                 except Exception:
                     abbrev = row.get(abbrev_col)
@@ -129,7 +259,7 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
             games_list.append(
                 {
                     "gameId": gid,
-                    "gameStatusText": row["GAME_STATUS_TEXT"],
+                    "gameStatusText": row.get("GAME_STATUS_TEXT"),
                     "period": row.get("LIVE_PERIOD"),
                     "gameClock": row.get("LIVE_PC_TIME"),
                     "homeTeam": _line_for("HOME_TEAM_ID", "HOME_TEAM_ABBREVIATION"),
@@ -138,43 +268,53 @@ def fetch_live_boxsc_odds_playbyplaydelayed_livescores(
                     ),
                 }
             )
+
         date_label = game_date
-        logger.debug(f"[DEBUG] Historical mode: date_label={date_label}, games_count={len(games_list)}")
+        odds_lookup: Dict[str, dict] = {}
     else:
-        # Live ScoreBoard doesn't accept game_date parameter, only day_offset
-        logger.debug(f"[DEBUG] Using live ScoreBoard API (no game_date provided)")
+        # Live scoreboard does not accept game_date; rely on day_offset and the
+        # internal date that comes back in the payload.
         sb = ScoreBoard(proxy=proxy, headers=headers, timeout=timeout, get_request=True)
         games_list = sb.games.get_dict()
         date_label = sb.score_board_date
-        logger.debug(f"[DEBUG] Live mode: NBA API returned date_label={date_label}, games_count={len(games_list)}")
+        odds_lookup = _fetch_odds_lookup(games_list, date_label, timeout)
 
-    # ---------------- 2) Per‑game enrichment --------------------------------
-    all_data: list[dict] = []
+    all_data: List[dict] = []
+
     for gmeta in games_list:
         gid = gmeta["gameId"]
+
         if game_date:
             all_data.append({"scoreBoardSnapshot": gmeta})
-        else:
-            game_payload = fetch_game_live_data(
-                game_id=gid,
-                proxy=proxy,
-                headers=headers,
-                timeout=timeout,
-            )
-            # Will *always* succeed because fetch_game_live_data never returns {}
-            game_payload["scoreBoardSummary"] = gmeta
-            all_data.append(game_payload)
+            continue
 
-    # ---------------- 3) Return ---------------------------------------------
-    logger.debug(f"[DEBUG] Returning: date={date_label}, total_games={len(all_data)}")
+        game_payload = fetch_game_live_data(
+            game_id=gid,
+            proxy=proxy,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        # Attach the scoreboard summary
+        game_payload["scoreBoardSummary"] = gmeta
+
+        # Attach odds from ESPN when they exist
+        home_abbr = _extract_team_abbr(gmeta.get("homeTeam", {}))
+        away_abbr = _extract_team_abbr(gmeta.get("awayTeam", {}))
+        odds_key = _build_odds_key(home_abbr, away_abbr)
+        if odds_key:
+            game_payload["odds"] = odds_lookup.get(odds_key, {})
+
+        all_data.append(game_payload)
+
+    logger.debug(
+        "Returning scoreboard payload for date=%s with total_games=%s",
+        date_label,
+        len(all_data),
+    )
     return {"date": date_label, "games": all_data}
 
 
-if __name__ == "__main__":
-    # Example: real-time fetch
+if __name__ == "__main__":  # pragma: no cover - manual debugging helper
     print("\nReal-time today:\n")
     print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores(), indent=2))
-
-    # # Example: historical fetch for testing (e.g., April 16, 2025)
-    # print("\nHistorical snapshot (2025-04-16):\n")
-    # print(json.dumps(fetch_live_boxsc_odds_playbyplaydelayed_livescores('2025-04-16'), indent=2))

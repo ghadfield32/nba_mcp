@@ -576,20 +576,44 @@ class GroupingFactory:
 
 async def fetch_grouping(
     grouping_level: Union[GroupingLevel, str],
+    enrich: bool = True,
+    enrichments: Optional[List[str]] = None,
+    exclude_enrichments: Optional[List[str]] = None,
     **filters
 ) -> pd.DataFrame:
     """
-    Convenience function to fetch data at a specific grouping level
+    Convenience function to fetch data at a specific grouping level with optional enrichment.
 
     Args:
         grouping_level: Grouping level (e.g., "player/game", GroupingLevel.PLAYER_GAME)
+        enrich: Whether to apply default enrichments (default: True)
+        enrichments: Specific enrichments to apply (overrides defaults)
+        exclude_enrichments: Enrichments to exclude from defaults
         **filters: Filters for the grouping (season, player_id, team_id, etc.)
 
     Returns:
-        DataFrame with data at the specified grouping level
+        DataFrame with data at the specified grouping level (enriched by default)
 
     Example:
+        # Fetch with default enrichments (recommended)
         df = await fetch_grouping("player/game", season="2023-24", player_id=2544)
+
+        # Fetch without enrichment
+        df = await fetch_grouping("player/game", season="2023-24", enrich=False)
+
+        # Fetch with specific enrichments
+        df = await fetch_grouping(
+            "player/game",
+            season="2023-24",
+            enrichments=["advanced_metrics", "shot_chart"]
+        )
+
+        # Fetch with defaults except shot charts
+        df = await fetch_grouping(
+            "player/game",
+            season="2023-24",
+            exclude_enrichments=["shot_chart"]
+        )
     """
     grouping = GroupingFactory.create(grouping_level)
 
@@ -597,16 +621,47 @@ async def fetch_grouping(
         required = grouping.get_required_params()
         raise ValueError(f"Missing required parameters for {grouping_level}: {required}")
 
-    return await grouping.fetch(**filters)
+    # Fetch base data
+    df = await grouping.fetch(**filters)
+
+    # Apply enrichment if requested
+    if enrich and not df.empty:
+        from nba_mcp.data.enrichment_strategy import (
+            enrich_dataset,
+            EnrichmentType,
+        )
+
+        # Convert string enrichment names to EnrichmentType
+        enrichment_types = None
+        if enrichments:
+            enrichment_types = [EnrichmentType(e) for e in enrichments]
+
+        exclude_types = None
+        if exclude_enrichments:
+            exclude_types = [EnrichmentType(e) for e in exclude_enrichments]
+
+        # Enrich the dataset
+        df = await enrich_dataset(
+            df,
+            grouping_level=GroupingLevel(grouping_level) if isinstance(grouping_level, str) else grouping_level,
+            enrichments=enrichment_types,
+            use_defaults=(enrichments is None),  # Use defaults if no specific enrichments requested
+            exclude=exclude_types,
+        )
+
+    return df
 
 
 async def fetch_grouping_multi_season(
     grouping_level: Union[GroupingLevel, str],
     seasons: List[str],
+    enrich: bool = True,
+    enrichments: Optional[List[str]] = None,
+    exclude_enrichments: Optional[List[str]] = None,
     **filters
 ) -> pd.DataFrame:
     """
-    Fetch data for multiple seasons concurrently and combine results.
+    Fetch data for multiple seasons concurrently and combine results with optional enrichment.
 
     Uses asyncio.gather() for parallel API calls - approximately N times faster
     than sequential fetching for N seasons.
@@ -614,17 +669,28 @@ async def fetch_grouping_multi_season(
     Args:
         grouping_level: Grouping level (e.g., "player/game")
         seasons: List of season strings (e.g., ["2021-22", "2022-23", "2023-24"])
+        enrich: Whether to apply default enrichments (default: True)
+        enrichments: Specific enrichments to apply (overrides defaults)
+        exclude_enrichments: Enrichments to exclude from defaults
         **filters: Additional filters (player_id, team_id, etc.) - do NOT include season
 
     Returns:
-        Combined DataFrame with all seasons
+        Combined DataFrame with all seasons (enriched by default)
 
     Example:
-        # Fetch LeBron's games for last 3 seasons (concurrent)
+        # Fetch LeBron's games for last 3 seasons with enrichment (concurrent)
         df = await fetch_grouping_multi_season(
             "player/game",
             seasons=["2021-22", "2022-23", "2023-24"],
             player_id=2544
+        )
+
+        # Fetch without enrichment
+        df = await fetch_grouping_multi_season(
+            "player/game",
+            seasons=["2021-22", "2022-23", "2023-24"],
+            player_id=2544,
+            enrich=False
         )
     """
     import asyncio
@@ -641,7 +707,13 @@ async def fetch_grouping_multi_season(
     async def fetch_season(season_str: str) -> pd.DataFrame:
         """Fetch data for a single season"""
         try:
-            season_filters = {**filters, "season": season_str}
+            season_filters = {
+                **filters,
+                "season": season_str,
+                "enrich": enrich,
+                "enrichments": enrichments,
+                "exclude_enrichments": exclude_enrichments,
+            }
             df = await fetch_grouping(grouping_level, **season_filters)
             logger.info(f"Fetched {season_str}: {len(df)} rows")
             return df
@@ -696,3 +768,229 @@ def list_available_groupings() -> List[str]:
         List of grouping level strings (e.g., ["player/game", "team/game", ...])
     """
     return [level.value for level in GroupingFactory.get_available_groupings()]
+
+
+# ============================================================================
+# MERGE INTEGRATION FUNCTIONS
+# ============================================================================
+
+def merge_with_advanced_metrics(
+    game_data: Union[pd.DataFrame, Any],
+    grouping_level: Union[GroupingLevel, str],
+    metrics: Optional[List[str]] = None,
+    how: Literal["left", "inner"] = "left",
+    validation_level: str = "warn",
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """
+    Merge advanced metrics onto game-level or season-level data.
+
+    This function computes advanced metrics (Game Score, True Shooting %, etc.)
+    from the base data and merges them back at the appropriate granularity.
+
+    Args:
+        game_data: Base game data (must include PTS, FGA, FTA, etc.)
+        grouping_level: Target grouping level (e.g., "player/game", "player/season")
+        metrics: Specific metrics to compute (default: all available)
+        how: Join type - "left" (preserve all base rows) or "inner" (only matched)
+        validation_level: "strict", "warn", or "minimal"
+
+    Returns:
+        Tuple of (data_with_metrics, merge_statistics_dict)
+
+    Example:
+        # Add advanced metrics to player game logs
+        game_logs = await fetch_grouping("player/game", season="2023-24")
+        merged_df, stats = merge_with_advanced_metrics(
+            game_logs,
+            grouping_level="player/game"
+        )
+        print(f"Added metrics with {stats['match_rate_pct']:.1f}% match rate")
+    """
+    from nba_mcp.data.merge_manager import MergeManager, MergeValidationLevel
+
+    # Map string to validation level
+    validation_map = {
+        "strict": MergeValidationLevel.STRICT,
+        "warn": MergeValidationLevel.WARN,
+        "minimal": MergeValidationLevel.MINIMAL,
+    }
+    validation_enum = validation_map.get(validation_level.lower(), MergeValidationLevel.WARN)
+
+    manager = MergeManager(validation_level=validation_enum)
+    result_data, merge_stats = manager.merge_advanced_metrics(
+        game_data=game_data,
+        grouping_level=grouping_level,
+        metrics=metrics,
+        how=how,
+    )
+
+    return result_data, merge_stats.to_dict()
+
+
+def merge_with_shot_chart_data(
+    game_data: Union[pd.DataFrame, Any],
+    shot_chart_data: Union[pd.DataFrame, Any],
+    grouping_level: Union[GroupingLevel, str],
+    aggregation: Literal["count", "avg", "zone_summary"] = "zone_summary",
+    how: Literal["left", "inner"] = "left",
+    validation_level: str = "warn",
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """
+    Merge shot chart data onto game-level data with spatial aggregation.
+
+    This function aggregates shot chart data (with LOC_X, LOC_Y coordinates)
+    and merges it onto game-level data at the appropriate granularity.
+
+    Args:
+        game_data: Base game data
+        shot_chart_data: Raw shot chart data with LOC_X, LOC_Y columns
+        grouping_level: Target grouping level (must be game-level)
+        aggregation: How to aggregate shots:
+            - "count": Total shot count per game
+            - "avg": Average shot statistics (made, %, distance)
+            - "zone_summary": Breakdown by zone (paint, mid-range, 3PT)
+        how: Join type
+        validation_level: "strict", "warn", or "minimal"
+
+    Returns:
+        Tuple of (data_with_shots, merge_statistics_dict)
+
+    Example:
+        # Fetch game logs and shot chart data
+        game_logs = await fetch_grouping("player/game", season="2023-24", player_id=2544)
+        shot_data = get_shot_chart("LeBron James", season="2023-24")
+
+        # Merge with zone summary
+        merged_df, stats = merge_with_shot_chart_data(
+            game_logs,
+            shot_data,
+            grouping_level="player/game",
+            aggregation="zone_summary"
+        )
+        print(f"Added shot zones: {merged_df['PAINT_PCT'].mean():.1%} from paint")
+    """
+    from nba_mcp.data.merge_manager import MergeManager, MergeValidationLevel
+
+    validation_map = {
+        "strict": MergeValidationLevel.STRICT,
+        "warn": MergeValidationLevel.WARN,
+        "minimal": MergeValidationLevel.MINIMAL,
+    }
+    validation_enum = validation_map.get(validation_level.lower(), MergeValidationLevel.WARN)
+
+    manager = MergeManager(validation_level=validation_enum)
+    result_data, merge_stats = manager.merge_shot_chart_data(
+        game_data=game_data,
+        shot_chart_data=shot_chart_data,
+        grouping_level=grouping_level,
+        aggregation=aggregation,
+        how=how,
+    )
+
+    return result_data, merge_stats.to_dict()
+
+
+def merge_datasets_by_grouping(
+    base_data: Union[pd.DataFrame, Any],
+    merge_data: Union[pd.DataFrame, Any],
+    grouping_level: Union[GroupingLevel, str],
+    how: Literal["inner", "left", "right", "outer"] = "left",
+    identifier_columns: Optional[List[str]] = None,
+    validation_level: str = "warn",
+) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """
+    Generic merge of two datasets at a specific grouping level with validation.
+
+    This function provides a flexible way to merge any two datasets at the
+    correct granularity, with automatic identifier column selection and
+    comprehensive validation.
+
+    Args:
+        base_data: Base dataset (left side of join)
+        merge_data: Dataset to merge (right side of join)
+        grouping_level: Grouping level (e.g., "player/game", "team/season")
+        how: Join type (inner, left, right, outer)
+        identifier_columns: Override default identifier columns (optional)
+        validation_level: "strict", "warn", or "minimal"
+
+    Returns:
+        Tuple of (merged_data, merge_statistics_dict)
+
+    Example:
+        # Merge team game logs with team advanced stats
+        team_games = await fetch_grouping("team/game", season="2023-24")
+        team_advanced = get_team_advanced_stats("Lakers", season="2023-24")
+
+        merged_df, stats = merge_datasets_by_grouping(
+            team_games,
+            team_advanced,
+            grouping_level="team/game",
+            how="left"
+        )
+        print(f"Merged {stats['result_rows']} rows with {stats['result_columns']} columns")
+    """
+    from nba_mcp.data.merge_manager import MergeManager, MergeValidationLevel
+
+    validation_map = {
+        "strict": MergeValidationLevel.STRICT,
+        "warn": MergeValidationLevel.WARN,
+        "minimal": MergeValidationLevel.MINIMAL,
+    }
+    validation_enum = validation_map.get(validation_level.lower(), MergeValidationLevel.WARN)
+
+    manager = MergeManager(validation_level=validation_enum)
+    result_data, merge_stats = manager.merge(
+        base_data=base_data,
+        merge_data=merge_data,
+        grouping_level=grouping_level,
+        how=how,
+        identifier_columns=identifier_columns,
+        validate=True,
+    )
+
+    return result_data, merge_stats.to_dict()
+
+
+def get_merge_identifier_columns(grouping_level: Union[GroupingLevel, str]) -> Dict[str, List[str]]:
+    """
+    Get the identifier columns used for merging at a specific grouping level.
+
+    Args:
+        grouping_level: Grouping level to query
+
+    Returns:
+        Dictionary with 'required' and 'optional' identifier columns
+
+    Example:
+        identifiers = get_merge_identifier_columns("player/game")
+        print(f"Required: {identifiers['required']}")
+        print(f"Optional: {identifiers['optional']}")
+    """
+    from nba_mcp.data.merge_manager import get_merge_config
+
+    config = get_merge_config(grouping_level)
+    return {
+        "required": config.identifier_columns,
+        "optional": config.optional_identifier_columns,
+        "special": config.special_columns,
+        "granularity": config.granularity.value,
+    }
+
+
+def list_all_merge_configs() -> Dict[str, Dict[str, Any]]:
+    """
+    List all available merge configurations for all grouping levels.
+
+    Returns:
+        Dictionary mapping grouping levels to their merge configurations
+
+    Example:
+        configs = list_all_merge_configs()
+        for level, config in configs.items():
+            print(f"{level}:")
+            print(f"  Required IDs: {config['identifier_columns']}")
+            print(f"  Granularity: {config['granularity']}")
+    """
+    from nba_mcp.data.merge_manager import list_merge_configs
+
+    return list_merge_configs()

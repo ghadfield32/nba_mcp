@@ -34,8 +34,12 @@ from nba_mcp.api.errors import (
     retry_with_backoff,
 )
 
-# Import Phase 3 feature modules (shot charts, game context)
+# Import Phase 3 feature modules (shot charts, game context, schedule)
 from nba_mcp.api.game_context import get_game_context as fetch_game_context
+from nba_mcp.api.schedule import (
+    get_nba_schedule as fetch_nba_schedule,
+    format_schedule_markdown,
+)
 
 # Import data groupings and advanced metrics (Phase 4)
 from nba_mcp.api.season_aggregator import get_player_season_stats, get_team_season_stats
@@ -44,6 +48,9 @@ from nba_mcp.api.lineup_tracker import add_lineups_to_play_by_play
 
 # Import season context for LLM temporal awareness
 from nba_mcp.api.season_context import get_season_context, get_current_season
+
+# Import date parser for natural language date support
+from nba_mcp.api.tools.date_parser import parse_and_normalize_date_params
 
 # Import new response models and error handling
 from nba_mcp.api.models import (
@@ -684,81 +691,141 @@ async def get_league_leaders_info(
 
 
 @mcp_server.tool()
-async def get_live_scores(target_date: Optional[str] = None) -> str:
+async def get_live_scores(target_date: Optional[str] = None, **kwargs) -> str:
     """
     Provides live or historical NBA scores for a specified date.
 
+    Supports natural language dates like "yesterday", "today", "tomorrow" and
+    relative offsets like "-1 day", "+2 days".
+
     Parameters:
-        target_date (Optional[str]): Date string 'YYYY-MM-DD'; uses today if None.
+        target_date (Optional[str]): Date for scores. Supports multiple formats:
+            - Absolute: 'YYYY-MM-DD' (e.g., '2024-12-25')
+            - Natural language: 'yesterday', 'today', 'tomorrow'
+            - Relative: '-1 day', '+2 days', 'last week'
+            - If None or omitted, defaults to today's scores
+
+    Parameter Aliases:
+        - 'date' can be used instead of 'target_date'
+        - 'game_date' can be used instead of 'target_date'
 
     Returns:
         str: Formatted game summaries like 'Lakers vs Suns – 102-99 (Final)'.
+
+    Examples:
+        get_live_scores()                    # Today's games
+        get_live_scores(target_date="yesterday")
+        get_live_scores(date="2024-12-25")  # Parameter alias
+        get_live_scores(target_date="-1 day")
     """
+    # Step 1: Normalize parameters (handle aliases and parse dates)
+    params = {"target_date": target_date, **kwargs}
+    normalized_params, debug_messages = parse_and_normalize_date_params(
+        params,
+        date_param_name="target_date",
+        date_param_aliases=["date", "game_date", "day"]
+    )
+
+    # Log parameter transformations for debugging
+    if debug_messages:
+        logger.info(f"[get_live_scores] Parameter normalization:")
+        for msg in debug_messages:
+            logger.info(f"  - {msg}")
+
+    # Extract the normalized target_date
+    target_date = normalized_params.get("target_date")
+
+    # Log what we're about to query
+    if target_date:
+        logger.info(f"[get_live_scores] Querying historical scores for date: {target_date}")
+    else:
+        logger.info(f"[get_live_scores] Querying live scores (no date specified, using today)")
+
+    # Step 2: Initialize NBA API client
     client = NBAApiClient()
 
-    # For live scores, pass None to use live API; for historical, use the provided date
-    if target_date:
-        logger.debug(f"[DEBUG] get_live_scores: Using provided target_date = {target_date} (historical)")
-    else:
-        logger.debug(f"[DEBUG] get_live_scores: No target_date provided, using live API (target_date=None)")
-
     try:
+        # Step 3: Fetch scoreboard data
         result = await client.get_live_scoreboard(
             target_date=target_date, as_dataframe=False
         )
-        # result is either a dict with {date, games} or an error string
+
+        # Handle error responses
         if isinstance(result, str):
+            logger.warning(f"[get_live_scores] API returned error string: {result}")
             return result
 
-        # Extract date and games from result
-        date = result.get("date")
+        # Step 4: Extract and validate response data
+        response_date = result.get("date")
         games = result.get("games", [])
 
-        if not games:
-            return f"No games found for {date}."
+        logger.info(
+            f"[get_live_scores] Successfully retrieved {len(games)} game(s) for date: {response_date}"
+        )
 
-        # Format each into "Lakers vs Suns – 102-99 (Final)"
+        if not games:
+            return f"No games found for {response_date}."
+
+        # Step 5: Format game summaries
         lines = []
         for g in games:
-            # Skip if game object is a string (error message)
+            # Skip invalid game objects
             if isinstance(g, str):
-                logger.warning(f"Skipping invalid game object: {g}")
+                logger.warning(f"[get_live_scores] Skipping invalid game object: {g}")
                 continue
 
-            summary = g.get("scoreBoardSummary") or g.get("scoreBoardSnapshot")
-            home = summary["homeTeam"]
-            away = summary["awayTeam"]
+            try:
+                summary = g.get("scoreBoardSummary") or g.get("scoreBoardSnapshot")
+                home = summary["homeTeam"]
+                away = summary["awayTeam"]
 
-            # Real‑time if the live‑API gave us `teamName`+`score`
-            if "teamName" in home:
-                home_team = home["teamName"]
-                away_team = away["teamName"]
-                home_pts = home["score"]
-                away_pts = away["score"]
-            else:
-                # Historical if we got uppercase keys from Stats API
-                home_team = home.get("TEAM_ABBREVIATION") or get_team_name(
-                    home["TEAM_ID"]
+                # Real-time if the live-API gave us `teamName`+`score`
+                if "teamName" in home:
+                    home_team = home["teamName"]
+                    away_team = away["teamName"]
+                    home_pts = home["score"]
+                    away_pts = away["score"]
+                else:
+                    # Historical if we got uppercase keys from Stats API
+                    home_team = home.get("TEAM_ABBREVIATION") or get_team_name(
+                        home["TEAM_ID"]
+                    )
+                    away_team = away.get("TEAM_ABBREVIATION") or get_team_name(
+                        away["TEAM_ID"]
+                    )
+                    home_pts = home.get("PTS")
+                    away_pts = away.get("PTS")
+
+                status = summary.get("gameStatusText", "")
+                lines.append(
+                    f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})"
                 )
-                away_team = away.get("TEAM_ABBREVIATION") or get_team_name(
-                    away["TEAM_ID"]
-                )
-                home_pts = home.get("PTS")
-                away_pts = away.get("PTS")
+            except (KeyError, TypeError) as e:
+                logger.error(f"[get_live_scores] Error parsing game data: {e}")
+                continue
 
-            status = summary.get("gameStatusText", "")
-            lines.append(
-                f"{home_team} vs {away_team} – {home_pts}-{away_pts} ({status})"
-            )
-
-        header = f"NBA Games for {date}:\n"
+        # Step 6: Format and return response
+        header = f"NBA Games for {response_date}:\n"
         return header + "\n".join(lines)
 
     except Exception as e:
-        # Log full traceback via the logger (MCP will strip this out),
-        # and return the concise error message to the caller.
-        logger.exception("Unexpected error in get_live_scores")
-        return f"Unexpected error in get_live_scores: {e}"
+        # Log full traceback for debugging
+        logger.exception(f"[get_live_scores] Unexpected error occurred")
+
+        # Return user-friendly error message
+        error_msg = str(e)
+        if "Not Found" in error_msg or "404" in error_msg:
+            return (
+                f"❌ Could not find games for the specified date. "
+                f"This might be because:\n"
+                f"  - The date is too far in the future (schedule not released)\n"
+                f"  - The date format was invalid\n"
+                f"  - There were no games on that date\n\n"
+                f"💡 Try using get_nba_schedule() to see upcoming games, or "
+                f"specify a date within the current season."
+            )
+
+        return f"❌ Error fetching live scores: {error_msg}"
 
 
 # Allowed season types per NBA API; we will always query all
@@ -769,6 +836,91 @@ _ALLOWED_SEASON_TYPES = [
     "All Star",
     "All-Star",
 ]
+
+
+def format_game_log(df: pd.DataFrame, team: Optional[str] = None, season: Optional[str] = None) -> str:
+    """
+    Format team game log DataFrame into human-readable string.
+
+    Args:
+        df: DataFrame with game log data (columns: GAME_DATE, MATCHUP, WL, PTS, etc.)
+        team: Team name for header (optional)
+        season: Season string for header (optional)
+
+    Returns:
+        Multi-line formatted string with game results
+
+    Example output:
+        Team: Los Angeles Lakers | Season: 2024-25 | Games: 3
+
+        Date         Matchup           W/L  PTS  OPP_PTS  +/-
+        2024-11-15   LAL vs. GSW       W    115  110      +5
+        2024-11-13   LAL @ PHX         L    108  112      -4
+        2024-11-11   LAL vs. DEN       W    120  115      +5
+    """
+    if df.empty:
+        return "No games found"
+
+    # Build header
+    header_parts = []
+    if team:
+        header_parts.append(f"Team: {team}")
+    if season:
+        header_parts.append(f"Season: {season}")
+    header_parts.append(f"Games: {len(df)}")
+    header = " | ".join(header_parts)
+
+    # Prepare lines for each game
+    lines = [header, ""]  # Header + blank line
+
+    # Column headers
+    lines.append(f"{'Date':<12} {'Matchup':<20} {'W/L':<4} {'PTS':<4} {'OPP_PTS':<8} {'+/-':<6}")
+    lines.append("-" * 60)
+
+    # Format each game
+    for _, row in df.iterrows():
+        try:
+            # Extract fields with safe defaults
+            game_date = row.get("GAME_DATE", "N/A")
+            if isinstance(game_date, pd.Timestamp):
+                game_date = game_date.strftime("%Y-%m-%d")
+            elif isinstance(game_date, str):
+                # Already a string, use as-is
+                pass
+            else:
+                game_date = str(game_date)
+
+            matchup = str(row.get("MATCHUP", "N/A"))
+            wl = str(row.get("WL", "N/A"))
+            pts = int(row.get("PTS", 0)) if pd.notna(row.get("PTS")) else 0
+            plus_minus = int(row.get("PLUS_MINUS", 0)) if pd.notna(row.get("PLUS_MINUS")) else 0
+
+            # Calculate opponent points (PTS - PLUS_MINUS = OPP_PTS)
+            opp_pts = pts - plus_minus
+
+            # Format plus/minus with sign
+            pm_str = f"+{plus_minus}" if plus_minus >= 0 else str(plus_minus)
+
+            # Format line
+            line = f"{game_date:<12} {matchup:<20} {wl:<4} {pts:<4} {opp_pts:<8} {pm_str:<6}"
+            lines.append(line)
+
+        except Exception as e:
+            # Log error but continue with other games
+            logger.warning(f"Error formatting game row: {e}")
+            lines.append(f"{'ERROR':<12} {'Error formatting game':<20} {'N/A':<4} {'N/A':<4} {'N/A':<8} {'N/A':<6}")
+
+    # Add summary
+    wins = len(df[df["WL"] == "W"]) if "WL" in df.columns else 0
+    losses = len(df[df["WL"] == "L"]) if "WL" in df.columns else 0
+    lines.append("")
+    lines.append(f"Record: {wins}-{losses}")
+
+    if "PTS" in df.columns:
+        avg_pts = df["PTS"].mean() if len(df) > 0 else 0
+        lines.append(f"Average Points: {avg_pts:.1f}")
+
+    return "\n".join(lines)
 
 
 @mcp_server.tool()
@@ -788,8 +940,55 @@ async def get_date_range_game_log_or_team_game_log(
         date_to: End date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
 
     Returns:
-        Formatted game log with wins, losses, scores, and opponents
+        JSON string with ResponseEnvelope containing game log data as list of dicts.
+
+        Response structure:
+        {
+            "status": "success",
+            "data": [
+                {
+                    "GAME_ID": "0022300123",
+                    "GAME_DATE": "2024-01-15",
+                    "MATCHUP": "LAL vs. BOS",
+                    "WL": "W",
+                    "PTS": 115,
+                    ...
+                },
+                ...
+            ],
+            "metadata": {
+                "version": "v1",
+                "timestamp": "2025-10-30T...",
+                "source": "historical",
+                "cache_status": "miss",
+                "rows": 82,
+                "columns": 30,
+                "date_range": {
+                    "from": "2023-10-24",
+                    "to": "2024-04-14"
+                }
+            }
+        }
+
+    Examples:
+        # All games for team in season
+        >>> result = await get_date_range_game_log_or_team_game_log(
+        ...     season="2024-25",
+        ...     team="Lakers"
+        ... )
+
+        # Filtered by date range
+        >>> result = await get_date_range_game_log_or_team_game_log(
+        ...     season="2023-24",
+        ...     team="Celtics",
+        ...     date_from="2023-12-01",
+        ...     date_to="2023-12-31"
+        ... )
     """
+    
+    import time
+    start_time = time.time()
+
     logger.debug(
         "get_date_range_game_log_or_team_game_log(season=%s, team=%s, date_from=%s, date_to=%s)",
         season,
@@ -807,31 +1006,42 @@ async def get_date_range_game_log_or_team_game_log(
         )
 
         # ========================================================================
-        # BUG FIX: Check type BEFORE using as DataFrame
+        # Error handling: Check type BEFORE using as DataFrame
         # ========================================================================
-        # Check if result is a dict (error response)
         if isinstance(result, dict):
             if "error" in result:
-                season_ctx = get_season_context()
-                return f"📅 {season_ctx}\n\n❌ {result['error']}"
-            # If dict but not error, it's unexpected format
-            season_ctx = get_season_context()
-            return f"📅 {season_ctx}\n\nUnexpected response format: {type(result)}"
+                return error_response(
+                    error_code="API_ERROR",
+                    error_message=f"Error fetching game log: {result['error']}",
+                    details={"season": season, "team": team}
+                ).to_json_string()
+            # Unexpected format
+            return error_response(
+                error_code="UNEXPECTED_FORMAT",
+                error_message=f"Expected DataFrame, got dict: {type(result)}",
+                details={"season": season, "team": team}
+            ).to_json_string()
 
-        # Check if result is not a DataFrame
         if not isinstance(result, pd.DataFrame):
-            season_ctx = get_season_context()
-            return f"📅 {season_ctx}\n\nExpected DataFrame, got {type(result)}"
+            return error_response(
+                error_code="UNEXPECTED_FORMAT",
+                error_message=f"Expected DataFrame, got {type(result)}",
+                details={"season": season, "team": team}
+            ).to_json_string()
 
         # Now safe to use DataFrame methods
         df = result
 
         if df.empty:
             team_str = f" for {team}" if team else ""
-            season_ctx = get_season_context()
-            return f"📅 {season_ctx}\n\nNo games found{team_str} in {season}"
+            return error_response(
+                error_code="NO_DATA",
+                error_message=f"No games found{team_str} in {season}",
+                details={"season": season, "team": team}
+            ).to_json_string()
 
         # Apply date filtering if specified
+        original_count = len(df)
         if date_from or date_to:
             if "GAME_DATE" in df.columns:
                 df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
@@ -843,23 +1053,91 @@ async def get_date_range_game_log_or_team_game_log(
                     df = df[df["GAME_DATE"] <= date_to_dt]
 
         if df.empty:
-            season_ctx = get_season_context()
-            return f"📅 {season_ctx}\n\nNo games found for specified date range"
+            return error_response(
+                error_code="NO_DATA",
+                error_message=f"No games found for specified date range",
+                details={
+                    "season": season,
+                    "team": team,
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "original_count": original_count
+                }
+            ).to_json_string()
 
-        # Format response
-        response = format_game_log(df, team, season)
+        # ========================================================================
+        # Convert DataFrame to list of dicts for JSON response
+        # ========================================================================
 
-        # Add season context
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n{response}"
+        # Convert GAME_DATE to string format for JSON serialization
+        if "GAME_DATE" in df.columns:
+            df["GAME_DATE"] = df["GAME_DATE"].astype(str)
+
+        # Convert DataFrame to list of dicts
+        games = df.to_dict('records')
+
+        logger.debug(f"Returning {len(games)} games with {len(df.columns)} columns")
+
+        # ========================================================================
+        # Build metadata
+        # ========================================================================
+        metadata_dict = {
+            "rows": len(games),
+            "columns": len(df.columns),
+            "season": season,
+        }
+
+        if team:
+            metadata_dict["team"] = team
+
+        # Add date range from actual data
+        if "GAME_DATE" in df.columns and not df.empty:
+            date_col = pd.to_datetime(df["GAME_DATE"])
+            metadata_dict["date_range"] = {
+                "from": str(date_col.min().date()),
+                "to": str(date_col.max().date())
+            }
+
+        # Add filter info if provided
+        if date_from or date_to:
+            metadata_dict["filters_applied"] = {
+                "date_from": date_from,
+                "date_to": date_to,
+                "original_count": original_count,
+                "filtered_count": len(games)
+            }
+
+        # Calculate execution time
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # ========================================================================
+        # Return JSON response
+        # ========================================================================
+        response = success_response(
+            data=games,
+            source="historical",
+            cache_status="miss",  # Could be enhanced with caching later
+            execution_time_ms=execution_time_ms,
+        )
+
+        logger.info(f"Returning {len(games)} games as JSON (execution: {execution_time_ms:.1f}ms)")
+        return response.to_json_string()
 
     except EntityNotFoundError as e:
-        season_ctx = get_season_context()
-        return f"📅 {season_ctx}\n\n❌ {str(e)}"
+        return error_response(
+            error_code="ENTITY_NOT_FOUND",
+            error_message=str(e),
+            details={"season": season, "team": team}
+        ).to_json_string()
+
     except Exception as e:
         logger.exception("Unexpected error in get_date_range_game_log_or_team_game_log")
-        season_ctx = get_season_context()
-        return f"📅 {season_ctx}\n\n❌ Error fetching game log: {str(e)}"
+        return error_response(
+            error_code="UNEXPECTED_ERROR",
+            error_message=f"Error fetching game log: {str(e)}",
+            details={"season": season, "team": team}
+        ).to_json_string()
+
 
 
 @mcp_server.tool()
@@ -1303,9 +1581,16 @@ async def get_season_stats(
         stats["_grouping_level"] = grouping_level
         stats["_granularity"] = "season"
 
+        # ========================================================================
+        # DEBUG: Log season stats structure to understand format
+        # ========================================================================
+        logger.debug(f"DEBUG - Season stats type: {type(stats)}")
+        logger.debug(f"DEBUG - Season stats keys: {stats.keys() if isinstance(stats, dict) else 'Not dict'}")
+        logger.debug(f"DEBUG - Season stats sample (first 500 chars): {str(stats)[:500]}")
+
         response = success_response(
             data=stats,
-            source="aggregated",
+            source="composed",  # Aggregated from historical game data
             cache_status="miss",
             execution_time_ms=execution_time_ms,
         )
@@ -2005,6 +2290,163 @@ async def get_game_context(
         response = error_response(
             error_code="NBA_API_ERROR",
             error_message=f"Failed to fetch game context: {str(e)}",
+        )
+        return response.to_json_string()
+
+
+@mcp_server.tool()
+async def get_nba_schedule(
+    season: Optional[str] = None,
+    season_stage: Optional[str] = None,
+    team: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    format: str = "markdown",
+) -> str:
+    """
+    Get NBA schedule from the official NBA CDN with automatic current season detection.
+
+    Fetches schedule data from https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json
+    with comprehensive filtering and automatic season rollover support.
+
+    Args:
+        season: Season identifier (optional, defaults to current season)
+                Examples: "2025-26", "2024-25"
+                Auto-detection: If month >= August, uses next season (e.g., Oct 2025 → 2025-26)
+        season_stage: Filter by season stage (optional)
+                     Values: "preseason", "regular", "playoffs"
+                     Aliases: "pre", "regular_season", "post"
+        team: Filter by team abbreviation (optional)
+              Examples: "LAL", "BOS", "GSW"
+        date_from: Start date filter in YYYY-MM-DD format (optional)
+                   Example: "2025-12-01"
+        date_to: End date filter in YYYY-MM-DD format (optional)
+                 Example: "2025-12-31"
+        format: Output format - "markdown" (default) or "json"
+
+    Returns:
+        Formatted schedule as markdown or JSON string
+
+    Schedule Data Includes:
+        - Game ID, date/time (UTC and local)
+        - Teams (home/away with IDs, names, abbreviations)
+        - Venue information (arena, city, state)
+        - Game status (Scheduled, In Progress, Final)
+        - Scores (for completed games)
+        - National TV broadcasters
+        - Playoff series information (if applicable)
+
+    Common Use Cases:
+        # Get current season schedule (auto-detects 2025-26 if in Oct 2025)
+        get_nba_schedule()
+
+        # Get 2025-26 regular season only
+        get_nba_schedule(season="2025-26", season_stage="regular")
+
+        # Get all Lakers games this season
+        get_nba_schedule(team="LAL")
+
+        # Get next season's schedule (2026-27)
+        get_nba_schedule(season="2026-27")
+
+        # Get playoff schedule
+        get_nba_schedule(season_stage="playoffs")
+
+        # Get December 2025 games
+        get_nba_schedule(date_from="2025-12-01", date_to="2025-12-31")
+
+        # Combined filters: Lakers home regular season games in December
+        get_nba_schedule(
+            season="2025-26",
+            season_stage="regular",
+            team="LAL",
+            date_from="2025-12-01",
+            date_to="2025-12-31"
+        )
+
+    Season Auto-Detection Logic:
+        - Current date in August or later → Next season (e.g., Aug 2025 → 2025-26)
+        - Current date before August → Current season (e.g., Jul 2025 → 2024-25)
+        - This ensures schedule always shows "current" or "upcoming" season
+
+    Season Stages:
+        - Preseason (stage_id=1): Exhibition games in October
+        - Regular Season (stage_id=2): 82-game regular season (Oct-Apr)
+        - Playoffs (stage_id=4): Postseason tournament (Apr-Jun)
+
+    Automated Updates:
+        - NBA CDN updates this endpoint throughout the season
+        - Schedule changes (flex scheduling, postponements) reflected automatically
+        - Can be called daily to refresh schedule data
+        - Idempotent: Safe to call repeatedly, always returns latest data
+
+    Data Freshness:
+        - Source: Official NBA CDN (https://cdn.nba.com)
+        - Updates: Real-time during season, pre-published for future seasons
+        - Reliability: Same source as NBA.com website
+
+    Integration with save_nba_data():
+        result = get_nba_schedule(season="2025-26", team="LAL")
+        save_nba_data(result, custom_filename="lakers_2025_26_schedule")
+
+    Note:
+        - Game times are shown in UTC. Convert to local timezone as needed.
+        - Team abbreviations are case-insensitive (LAL = lal = Lal)
+        - Date filters are inclusive (date_from and date_to included)
+    """
+    start_time = time.time()
+
+    try:
+        # Fetch and filter schedule
+        df = await fetch_nba_schedule(
+            season=season,
+            season_stage=season_stage,
+            team=team,
+            date_from=date_from,
+            date_to=date_to,
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        # Format output
+        if format.lower() == "json":
+            # Return as ResponseEnvelope
+            data = df.to_dict(orient="records") if not df.empty else []
+            response = success_response(
+                data=data,
+                source="nba_cdn",
+                cache_status="miss",
+                execution_time_ms=execution_time_ms,
+                rows=len(df),
+                columns=len(df.columns) if not df.empty else 0,
+            )
+            return response.to_json_string()
+        else:
+            # Return as markdown
+            markdown = format_schedule_markdown(df)
+            return markdown
+
+    except ValueError as e:
+        logger.error(f"Validation error in get_nba_schedule: {e}")
+        response = error_response(
+            error_code="VALIDATION_ERROR",
+            error_message=str(e),
+        )
+        return response.to_json_string()
+
+    except requests.RequestException as e:
+        logger.error(f"Network error fetching NBA schedule: {e}")
+        response = error_response(
+            error_code="NETWORK_ERROR",
+            error_message=f"Failed to fetch schedule from NBA CDN: {str(e)}",
+        )
+        return response.to_json_string()
+
+    except Exception as e:
+        logger.exception("Unexpected error in get_nba_schedule")
+        response = error_response(
+            error_code="INTERNAL_ERROR",
+            error_message=f"Failed to fetch NBA schedule: {str(e)}",
         )
         return response.to_json_string()
 
@@ -2766,45 +3208,53 @@ async def build_dataset(spec: Dict[str, Any]) -> str:
 @mcp_server.tool()
 async def save_nba_data(
     data_json: str,
-    custom_filename: Optional[str] = None
+    custom_filename: Optional[str] = None,
+    format: str = "auto"
 ) -> str:
     """
-    Save NBA data to organized mcp_data/ folder with descriptive filenames.
+    Save NBA data to organized mcp_data/ folder with smart format selection.
 
-    Automatically generates meaningful filenames based on data content
-    (team/player names, dates, data type), or uses custom filename if provided.
+    Automatically detects data type and saves in optimal format:
+    - Tabular data → Parquet (85% smaller, 10-100x faster queries)
+    - Markdown text → TXT (human-readable)
+    - Other data → JSON (fallback)
 
-    This tool provides explicit, user-controlled data persistence. Unlike auto-save,
-    you choose exactly when to save data after fetching it.
+    Uses DuckDB + Snappy compression for Parquet files.
 
     Args:
         data_json: JSON string from any NBA MCP tool response
         custom_filename: Optional custom filename (without extension or timestamp)
+        format: Format selection - "auto" (default), "parquet", "json", "txt"
+                "auto" intelligently chooses based on data structure
 
     Returns:
-        JSON string with save confirmation, file location, size, and generated filename
+        JSON string with save confirmation, file location, size, and format used
 
     Examples:
-        # Auto-generate descriptive filename from shot chart data
-        shot_data = get_shot_chart("Warriors", entity_type="team", date_from="2025-10-28")
-        save_nba_data(shot_data)
-        → Saves as: mcp_data/2025-10-29/warriors_shot_chart_2025-10-28_143052.json
+        # Auto-format (recommended) - uses Parquet for tabular data
+        player_data = fetch_player_games(season="2024-25", player="LeBron James")
+        save_nba_data(player_data)
+        → Saves as: mcp_data/2025-10-30/lebron_james_games_143052.parquet
 
-        # Auto-generate from game context data
-        context_data = get_game_context("Lakers", "Warriors")
-        save_nba_data(context_data)
-        → Saves as: mcp_data/2025-10-29/lakers_vs_warriors_context_143052.json
+        # Markdown play-by-play → saved as TXT
+        pbp_data = play_by_play(game_date="2025-10-29", team="Lakers")
+        save_nba_data(pbp_data)
+        → Saves as: mcp_data/2025-10-30/lakers_play_by_play_143052.txt
 
-        # Use custom filename
-        save_nba_data(shot_data, custom_filename="my_analysis")
-        → Saves as: mcp_data/2025-10-29/my_analysis_143052.json
+        # Force specific format
+        save_nba_data(player_data, format="json")  # Force JSON
+        → Saves as: mcp_data/2025-10-30/player_data_143052.json
 
-    Filename Generation:
-        - Shot charts: "{team/player}_shot_chart_{date/season}"
-        - Game context: "{team1}_vs_{team2}_context"
-        - Player stats: "{player}_stats_{season}"
-        - Team stats: "{team}_advanced_stats_{season}"
-        - Fallback: "nba_data" if type cannot be determined
+    Format Selection (when format="auto"):
+        - Tabular data (game logs, stats, lineups) → Parquet
+        - Markdown text (play-by-play) → TXT
+        - Other structures → JSON
+
+    Benefits of Parquet:
+        - 85% size reduction vs JSON
+        - 10-100x faster queries with DuckDB
+        - Column-level compression
+        - Efficient data science workflows
 
     Note:
         All filenames include timestamp (HHMMSS) for uniqueness.
@@ -2816,9 +3266,60 @@ async def save_nba_data(
         # Parse JSON data
         data = json.loads(data_json)
 
-        # Save with smart filename generation
-        from nba_mcp.data.dataset_manager import save_json_data
-        file_path = save_json_data(data, custom_filename=custom_filename)
+        # Import helper functions
+        from nba_mcp.data.dataset_manager import (
+            is_tabular_data,
+            extract_dataframe,
+            save_parquet,
+            save_text,
+            save_json_data
+        )
+
+        # Auto-detect format if "auto"
+        if format == "auto":
+            # Check if markdown text
+            if isinstance(data, dict) and data.get('format') == 'markdown':
+                format = "txt"
+                logger.info("Auto-detected format: TXT (markdown content)")
+            # Check if tabular data (can convert to DataFrame)
+            elif is_tabular_data(data):
+                format = "parquet"
+                logger.info("Auto-detected format: Parquet (tabular data)")
+            else:
+                format = "json"
+                logger.info("Auto-detected format: JSON (non-tabular data)")
+
+        # Determine filename base
+        if custom_filename:
+            filename_base = custom_filename
+        else:
+            from nba_mcp.data.dataset_manager import generate_descriptive_filename
+            try:
+                filename_base = generate_descriptive_filename(data)
+            except Exception:
+                filename_base = "nba_data"
+
+        # Save in appropriate format
+        if format == "parquet":
+            # Extract DataFrame and save as Parquet
+            df = extract_dataframe(data)
+            file_path = save_parquet(df, filename_base)
+            logger.info(f"Saved {len(df)} rows × {len(df.columns)} columns as Parquet")
+
+        elif format == "txt":
+            # Extract text content
+            if isinstance(data, dict) and 'data' in data:
+                text = data['data']
+            elif isinstance(data, str):
+                text = data
+            else:
+                text = json.dumps(data, indent=2)
+            file_path = save_text(text, filename_base)
+            logger.info(f"Saved {len(text)} characters as TXT")
+
+        else:  # JSON format (fallback)
+            file_path = save_json_data(data, custom_filename=custom_filename)
+            logger.info(f"Saved as JSON")
 
         # Get file stats
         file_size = file_path.stat().st_size
@@ -2827,19 +3328,27 @@ async def save_nba_data(
         # Build response
         response = {
             "status": "success",
-            "message": "Data saved successfully",
+            "message": f"Data saved successfully as {format.upper()}",
             "file_info": {
                 "path": str(file_path),
                 "filename": file_path.name,
+                "format": format,
                 "size_bytes": file_size,
                 "size_kb": round(file_size / 1024, 2),
+                "size_mb": round(file_size / (1024 * 1024), 2),
                 "folder": str(file_path.parent),
             },
             "metadata": {
                 "execution_time_ms": round(execution_time_ms, 2),
                 "timestamp": datetime.now().isoformat(),
+                "format_auto_detected": custom_filename is None,
             }
         }
+
+        # Add DataFrame info if Parquet
+        if format == "parquet":
+            response["file_info"]["rows"] = len(df)
+            response["file_info"]["columns"] = len(df.columns)
 
         return json.dumps(response, indent=2)
 
@@ -2856,6 +3365,7 @@ async def save_nba_data(
             "status": "error",
             "error_code": "SAVE_ERROR",
             "error_message": f"Failed to save data: {str(e)}",
+            "format_attempted": format,
         }, indent=2)
 
 

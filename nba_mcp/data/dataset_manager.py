@@ -8,7 +8,7 @@ Datasets are stored in-memory with TTL and can be exported to various formats.
 import uuid
 import time
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Any, Dict, List, Optional, Literal
 from pathlib import Path
 import pyarrow as pa
@@ -17,6 +17,8 @@ import pyarrow.feather as feather
 import pyarrow.csv as csv_arrow
 from pydantic import BaseModel, Field
 import json
+import pandas as pd
+import duckdb
 
 
 def get_default_save_path(
@@ -158,6 +160,256 @@ def generate_descriptive_filename(data: Dict[str, Any]) -> str:
         parts.append("nba_data")
 
     return "_".join(parts)
+
+
+# ============================================================================
+# Parquet Migration - New Helper Functions
+# ============================================================================
+
+
+def is_tabular_data(data: Any) -> bool:
+    """
+    Check if data has tabular structure (can be converted to DataFrame).
+
+    Checks for:
+    - ResponseEnvelope with 'data' key containing list of dicts
+    - Direct list of dicts
+    - Dict with 'events' key (lineup data)
+    - Dict with 'raw_shots' key (shot chart data)
+    - Aggregated stats (single dict with many columns)
+
+    Args:
+        data: Any data structure to check
+
+    Returns:
+        True if data can be converted to DataFrame, False otherwise
+
+    Examples:
+        >>> # Game log data (list of dicts)
+        >>> data = {"data": [{"GAME_ID": "123", "PTS": 25}, ...]}
+        >>> is_tabular_data(data)
+        True
+
+        >>> # Markdown play-by-play
+        >>> data = {"format": "markdown", "data": "Q1 12:00..."}
+        >>> is_tabular_data(data)
+        False
+
+        >>> # Lineup events
+        >>> data = {"events": [{"gameid": "123", ...}, ...]}
+        >>> is_tabular_data(data)
+        True
+    """
+    # Check for markdown format (NOT tabular)
+    if isinstance(data, dict) and data.get('format') == 'markdown':
+        return False
+
+    # Check for ResponseEnvelope format
+    if isinstance(data, dict):
+        # Has 'data' key with list?
+        if 'data' in data:
+            inner_data = data['data']
+            if isinstance(inner_data, list) and len(inner_data) > 0:
+                # Check if list items are dicts
+                return isinstance(inner_data[0], dict)
+            # Check if inner_data has tabular sub-keys (raw_shots, events)
+            if isinstance(inner_data, dict):
+                # Shot chart data has 'raw_shots'
+                if 'raw_shots' in inner_data:
+                    shots = inner_data['raw_shots']
+                    if isinstance(shots, list) and len(shots) > 0:
+                        return isinstance(shots[0], dict)
+                # Lineup data has 'events'
+                if 'events' in inner_data:
+                    events = inner_data['events']
+                    if isinstance(events, list) and len(events) > 0:
+                        return isinstance(events[0], dict)
+                # Single dict with multiple keys (aggregated stats)
+                if len(inner_data) > 5:
+                    return True
+
+        # Has 'events' key (lineup data)?
+        if 'events' in data:
+            events = data['events']
+            if isinstance(events, list) and len(events) > 0:
+                return isinstance(events[0], dict)
+
+        # Has 'raw_shots' key (shot chart data)?
+        if 'raw_shots' in data:
+            shots = data['raw_shots']
+            if isinstance(shots, list) and len(shots) > 0:
+                return isinstance(shots[0], dict)
+
+    # Direct list of dicts?
+    if isinstance(data, list) and len(data) > 0:
+        return isinstance(data[0], dict)
+
+    return False
+
+
+def extract_dataframe(data: Any) -> pd.DataFrame:
+    """
+    Extract DataFrame from various data structures.
+
+    Handles:
+    - ResponseEnvelope with 'data' key
+    - Lineup data with 'events' key
+    - Shot chart data with 'raw_shots' key
+    - Direct list of dicts
+    - Aggregated stats (single dict)
+
+    Args:
+        data: Data structure to convert
+
+    Returns:
+        pandas DataFrame
+
+    Raises:
+        ValueError: If data cannot be converted to DataFrame
+
+    Examples:
+        >>> # Extract from ResponseEnvelope
+        >>> data = {"data": [{"PTS": 25}, {"PTS": 30}]}
+        >>> df = extract_dataframe(data)
+        >>> df.shape
+        (2, 1)
+
+        >>> # Extract from lineup events
+        >>> data = {"events": [{"gameid": "123"}, {"gameid": "124"}]}
+        >>> df = extract_dataframe(data)
+        >>> df.shape
+        (2, 1)
+    """
+    # ResponseEnvelope with 'data' key
+    if isinstance(data, dict) and 'data' in data:
+        inner_data = data['data']
+
+        # List of dicts (game logs, etc.)
+        if isinstance(inner_data, list):
+            return pd.DataFrame(inner_data)
+
+        # Single dict - check for nested tabular data
+        if isinstance(inner_data, dict):
+            # Shot chart data nested in ResponseEnvelope
+            if 'raw_shots' in inner_data:
+                return pd.DataFrame(inner_data['raw_shots'])
+            # Lineup data nested in ResponseEnvelope
+            if 'events' in inner_data:
+                return pd.DataFrame(inner_data['events'])
+            # Aggregated season stats (convert to single-row DataFrame)
+            return pd.DataFrame([inner_data])
+
+    # Lineup data with 'events' key
+    if isinstance(data, dict) and 'events' in data:
+        return pd.DataFrame(data['events'])
+
+    # Shot chart data with 'raw_shots' key
+    if isinstance(data, dict) and 'raw_shots' in data:
+        return pd.DataFrame(data['raw_shots'])
+
+    # Direct list of dicts
+    if isinstance(data, list):
+        return pd.DataFrame(data)
+
+    # Fallback: try to convert as-is
+    try:
+        return pd.DataFrame(data)
+    except Exception as e:
+        raise ValueError(f"Cannot convert data to DataFrame: {e}")
+
+
+def save_parquet(
+    df: pd.DataFrame,
+    filename_base: str,
+    base_dir: str = "mcp_data"
+) -> Path:
+    """
+    Save DataFrame as Parquet file using DuckDB with snappy compression.
+
+    Uses:
+    - Snappy compression for optimal size/speed tradeoff
+    - Date-based folder structure (mcp_data/YYYY-MM-DD/)
+    - Timestamp in filename for uniqueness
+    - DuckDB for efficient conversion
+
+    Args:
+        df: pandas DataFrame to save
+        filename_base: Base filename (without extension or timestamp)
+        base_dir: Base directory name (default: "mcp_data")
+
+    Returns:
+        Path object where file was saved
+
+    Examples:
+        >>> df = pd.DataFrame({"PTS": [25, 30], "REB": [10, 12]})
+        >>> path = save_parquet(df, "player_game")
+        >>> print(path)
+        mcp_data/2025-10-30/player_game_143052.parquet
+    """
+    # Create folder structure
+    today = date.today().strftime("%Y-%m-%d")
+    folder = Path(base_dir) / today
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%H%M%S")
+    filename = f"{filename_base}_{timestamp}.parquet"
+    file_path = folder / filename
+
+    # Save using DuckDB for better compression
+    # DuckDB automatically handles PyArrow tables efficiently
+    duckdb.sql(f"""
+        COPY (SELECT * FROM df)
+        TO '{file_path}'
+        (FORMAT PARQUET, COMPRESSION SNAPPY)
+    """)
+
+    return file_path
+
+
+def save_text(
+    text: str,
+    filename_base: str,
+    base_dir: str = "mcp_data"
+) -> Path:
+    """
+    Save text data to .txt file.
+
+    Used for markdown play-by-play data and other text formats.
+
+    Args:
+        text: Text content to save
+        filename_base: Base filename (without extension or timestamp)
+        base_dir: Base directory name (default: "mcp_data")
+
+    Returns:
+        Path object where file was saved
+
+    Examples:
+        >>> text = "Q1 12:00 | Start of game\\nQ1 11:45 | Jump ball"
+        >>> path = save_text(text, "play_by_play")
+        >>> print(path)
+        mcp_data/2025-10-30/play_by_play_143052.txt
+    """
+    # Create folder structure
+    today = date.today().strftime("%Y-%m-%d")
+    folder = Path(base_dir) / today
+    folder.mkdir(parents=True, exist_ok=True)
+
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%H%M%S")
+    filename = f"{filename_base}_{timestamp}.txt"
+    file_path = folder / filename
+
+    # Save text with UTF-8 encoding
+    file_path.write_text(text, encoding='utf-8')
+
+    return file_path
+
+
+# ============================================================================
+# End of Parquet Migration Helper Functions
+# ============================================================================
 
 
 def save_json_data(
