@@ -57,10 +57,18 @@ async def answer_nba_question(query: str, return_metadata: bool = False) -> str:
             f"Parsed: intent={parsed.intent}, confidence={parsed.confidence:.2f}"
         )
 
-        # Validate parse quality
-        if not validate_parsed_query(parsed):
-            error_msg = f"Unable to understand query: '{query}'. Try rephrasing or being more specific."
-            logger.warning(error_msg)
+        # Validate parse quality (Phase 2.5: Enhanced validation with hints)
+        validation = validate_parsed_query(parsed)
+        if not validation.valid:
+            error_msg = f"Unable to understand query: '{query}'.\n\n"
+            error_msg += "**Errors:**\n"
+            for error in validation.errors:
+                error_msg += f"- {error}\n"
+            if validation.hints:
+                error_msg += "\n**Suggestions:**\n"
+                for hint in validation.hints:
+                    error_msg += f"- {hint}\n"
+            logger.warning(f"Validation failed: {validation.errors}")
             return error_msg
 
         # Step 2: Plan
@@ -132,6 +140,11 @@ def get_pipeline_status() -> dict:
         Dictionary with pipeline info
     """
     from .tool_registry import get_registry_info
+    from .llm_fallback import get_llm_metrics, get_llm_config
+
+    # Get LLM metrics (Phase 3.7: LLM metrics tracking)
+    llm_metrics = get_llm_metrics()
+    llm_config = get_llm_config()
 
     return {
         "status": "ready",
@@ -144,5 +157,25 @@ def get_pipeline_status() -> dict:
             "team_stats",
             "player_stats",
             "standings",
+            # Phase 2.2: New intent types
+            "rankings",
+            "streaks",
+            "milestones",
+            "awards",
         ],
+        # Phase 3.7: LLM fallback metrics
+        "llm_fallback": {
+            "enabled": llm_config.enabled,
+            "model": llm_config.model,
+            "parse_refinement_calls": llm_metrics.parse_refinement_calls,
+            "plan_generation_calls": llm_metrics.plan_generation_calls,
+            "successes": llm_metrics.successes,
+            "failures": llm_metrics.failures,
+            "avg_latency_ms": (
+                llm_metrics.total_latency_ms
+                / (llm_metrics.parse_refinement_calls + llm_metrics.plan_generation_calls)
+                if (llm_metrics.parse_refinement_calls + llm_metrics.plan_generation_calls) > 0
+                else 0.0
+            ),
+        },
     }

@@ -3,3 +3,7 @@
 __pycache__/
 *.pyc
 .claude/
+
+# Environment variables (Phase 3: LLM Fallback)
+.env
+.env.local

@@ -16,10 +16,13 @@ import asyncio
 import time
 import json
 import hashlib
+import os
 from pathlib import Path
 from typing import Dict, Any
 import sys
-sys.path.insert(0, '/home/user/nba_mcp')
+
+# Phase 6: Cross-platform path handling (2025-11-01)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from tests.golden import GOLDEN_QUERIES, GoldenQuery, get_query_statistics
 from nba_mcp.nlq.pipeline import answer_nba_question
@@ -41,10 +44,18 @@ def get_snapshot_path(query_id: str) -> Path:
 
 
 def save_snapshot(query_id: str, data: Dict[str, Any]):
-    """Save snapshot to file."""
-    snapshot_path = get_snapshot_path(query_id)
-    with open(snapshot_path, 'w') as f:
-        json.dump(data, f, indent=2, sort_keys=True)
+    """
+    Save snapshot to file.
+
+    Phase 6: Added error handling for read-only environments (2025-11-01)
+    """
+    try:
+        snapshot_path = get_snapshot_path(query_id)
+        snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(snapshot_path, 'w') as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+    except (IOError, PermissionError, OSError) as e:
+        pytest.skip(f"Cannot write snapshot for {query_id}: {e}")
 
 
 def load_snapshot(query_id: str) -> Dict[str, Any]:
@@ -88,13 +99,27 @@ def extract_schema_keys(response: str) -> list:
 # FIXTURES
 # ============================================================================
 
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_registry():
+    """
+    Clear tool registry before and after each test.
+
+    Phase 6: Added registry cleanup to prevent test pollution (2025-11-01)
+    """
+    from nba_mcp.nlq.tool_registry import clear_registry
+    clear_registry()  # Clear before test
+    register_mock_tools()  # Register mocks
+    yield
+    clear_registry()  # Clear after test
+
+
 @pytest.fixture(scope="module")
 def setup_tools():
-    """Initialize tools for testing."""
+    """Initialize tools for testing (deprecated, use cleanup_registry)."""
     # Use mock tools to avoid NBA API rate limits
     register_mock_tools()
     yield
-    # Cleanup (if needed)
+    # Cleanup handled by cleanup_registry fixture
 
 
 @pytest.fixture
@@ -190,11 +215,11 @@ async def test_golden_query(query: GoldenQuery, setup_tools, update_snapshots):
 
 @pytest.mark.asyncio
 async def test_golden_queries_statistics(setup_tools):
-    """Test statistics about golden queries."""
+    """Test statistics about golden queries (Phase 6: Updated for 50 queries)."""
     stats = get_query_statistics()
 
-    assert stats["total_queries"] == 20, "Should have 20 golden queries"
-    assert len(stats["categories"]) >= 5, "Should have at least 5 categories"
+    assert stats["total_queries"] == 50, "Should have 50 golden queries (Phase 6 expansion)"
+    assert len(stats["categories"]) >= 10, "Should have at least 10 categories (Phase 6)"
     assert stats["avg_max_duration_ms"] < 3000, "Average duration should be reasonable"
 
 

@@ -26,22 +26,39 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolResult:
-    """Result from executing a single tool."""
+    """
+    Result from executing a single tool.
+
+    Phase 6.8: Enhanced error structure for LLM recovery (2025-11-02)
+    """
 
     tool_name: str
     success: bool
     data: Any = None
-    error: Optional[str] = None
+    error: Optional[str] = None  # Human-readable error message (backward compatible)
     execution_time_ms: float = 0.0
+    # Phase 6.8: Structured error details for LLM recovery
+    error_code: Optional[str] = None  # ErrorCode constant (e.g., "ENTITY_NOT_FOUND")
+    error_details: Optional[Dict[str, Any]] = None  # Structured error context
+    retry_after: Optional[int] = None  # Retry hint in seconds
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        """Convert to dictionary with structured error details."""
+        result = {
             "tool_name": self.tool_name,
             "success": self.success,
             "data": self.data,
             "error": self.error,
             "execution_time_ms": self.execution_time_ms,
         }
+        # Include structured error fields if present (Phase 6.8)
+        if self.error_code:
+            result["error_code"] = self.error_code
+        if self.error_details:
+            result["error_details"] = self.error_details
+        if self.retry_after:
+            result["retry_after"] = self.retry_after
+        return result
 
 
 @dataclass
@@ -118,6 +135,7 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
 
     except NBAMCPError as e:
         # Known NBA MCP error
+        # Phase 6.8: Preserve structured error details for LLM recovery
         execution_time_ms = (time.time() - start_time) * 1000
         error_msg = f"{e.code}: {e.message}"
         logger.error(f"Tool {tool_name} failed: {error_msg}")
@@ -127,10 +145,15 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             success=False,
             error=error_msg,
             execution_time_ms=execution_time_ms,
+            # Phase 6.8: Structured error details
+            error_code=e.code,
+            error_details=e.details,
+            retry_after=e.retry_after,
         )
 
     except Exception as e:
         # Unexpected error
+        # Phase 6.8: Preserve exception type for debugging
         execution_time_ms = (time.time() - start_time) * 1000
         error_msg = f"Unexpected error: {type(e).__name__}: {str(e)}"
         logger.exception(f"Tool {tool_name} failed with unexpected error")
@@ -140,6 +163,12 @@ async def execute_tool(tool_call: ToolCall) -> ToolResult:
             success=False,
             error=error_msg,
             execution_time_ms=execution_time_ms,
+            # Phase 6.8: Include exception type in details
+            error_code="INTERNAL_ERROR",
+            error_details={
+                "exception_type": type(e).__name__,
+                "exception_message": str(e),
+            },
         )
 
 

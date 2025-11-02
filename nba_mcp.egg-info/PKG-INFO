@@ -80,13 +80,10 @@ source nbavenv/bin/activate
 
 3. **Install dependencies**
 ```bash
-# Basic installation
-uv pip install -r requirements.txt
+# Using uv (resolves deps from pyproject.toml / uv.lock)
+uv sync --extra dev
 
-# Or install from setup.py
-pip install -e .
-
-# For development (includes testing tools)
+# Or use pip directly (editable install with dev extras)
 pip install -e ".[dev]"
 ```
 

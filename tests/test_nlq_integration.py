@@ -7,7 +7,10 @@ Tests the complete pipeline from natural language query to formatted answer.
 import pytest
 import asyncio
 import sys
-sys.path.insert(0, '/home/user/nba_mcp')
+import os
+
+# Add parent directory to path (works on all platforms)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from nba_mcp.nlq.parser import parse_query
 from nba_mcp.nlq.planner import plan_query_execution

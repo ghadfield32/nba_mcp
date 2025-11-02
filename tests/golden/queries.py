@@ -275,6 +275,356 @@ GOLDEN_QUERIES = [
         min_response_length=50,
         max_duration_ms=1500
     ),
+
+    # ════════════════════════════════════════════════════════════════════
+    # PHASE 6: NEW QUERIES (2025-11-01) - Expanding to 50 total
+    # ════════════════════════════════════════════════════════════════════
+
+    # ────────────────────────────────────────────────────────────────────
+    # RANKINGS QUERIES (Phase 1.1 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="rankings_001",
+        name="Where does LeBron rank in scoring",
+        query="Where does LeBron James rank in points?",
+        intent="rankings",
+        category="rankings",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="rankings_002",
+        name="Team ranking by offensive rating",
+        query="Rank teams by offensive rating",
+        intent="rankings",
+        category="rankings",
+        tools_expected=["get_team_standings"],
+        min_response_length=150,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="rankings_003",
+        name="Defensive rankings",
+        query="Who are the top defenders this season?",
+        intent="rankings",
+        category="rankings",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="rankings_004",
+        name="Three-point leaders ranking",
+        query="Rank players by three-pointers made",
+        intent="rankings",
+        category="rankings",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # STREAKS QUERIES (Phase 2.2 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="streaks_001",
+        name="Lakers winning streak",
+        query="What is the Lakers current winning streak?",
+        intent="streaks",
+        category="streaks",
+        tools_expected=["get_date_range_game_log_or_team_game_log"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="streaks_002",
+        name="LeBron scoring streak",
+        query="How many consecutive 30-point games does LeBron have?",
+        intent="streaks",
+        category="streaks",
+        tools_expected=["fetch_player_games"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="streaks_003",
+        name="Team losing streak",
+        query="Show me the Warriors losing streak",
+        intent="streaks",
+        category="streaks",
+        tools_expected=["get_date_range_game_log_or_team_game_log"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # MILESTONES QUERIES (Phase 2.2 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="milestones_001",
+        name="Career 30000 points",
+        query="Has LeBron scored 30,000 career points?",
+        intent="milestones",
+        category="milestones",
+        tools_expected=["get_player_career_information"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="milestones_002",
+        name="Triple double milestone",
+        query="How many triple doubles does Westbrook have?",
+        intent="milestones",
+        category="milestones",
+        tools_expected=["fetch_player_games"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="milestones_003",
+        name="Career assists record",
+        query="Is Chris Paul close to 10,000 assists?",
+        intent="milestones",
+        category="milestones",
+        tools_expected=["get_player_career_information"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # AWARDS QUERIES (Phase 2.2 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="awards_001",
+        name="MVP this season",
+        query="Who won MVP this season?",
+        intent="awards",
+        category="awards",
+        tools_expected=["get_nba_awards"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="awards_002",
+        name="LeBron awards",
+        query="Show me all of LeBron James awards",
+        intent="awards",
+        category="awards",
+        tools_expected=["get_nba_awards"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="awards_003",
+        name="Defensive Player of Year",
+        query="Who is the Defensive Player of the Year?",
+        intent="awards",
+        category="awards",
+        tools_expected=["get_nba_awards"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="awards_004",
+        name="Rookie of the Year",
+        query="Who won Rookie of the Year in 2023-24?",
+        intent="awards",
+        category="awards",
+        tools_expected=["get_nba_awards"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="awards_005",
+        name="All-NBA selections",
+        query="Show me the All-NBA first team",
+        intent="awards",
+        category="awards",
+        tools_expected=["get_nba_awards"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # FILTERED GAMES QUERIES (Phase 5.1 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="filtered_001",
+        name="LeBron 30-point games",
+        query="Show me LeBron games with 30+ points",
+        intent="filtered_games",
+        category="filtered",
+        tools_expected=["fetch_player_games"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="filtered_002",
+        name="Curry triple double games",
+        query="Find games where Stephen Curry had a triple double",
+        intent="filtered_games",
+        category="filtered",
+        tools_expected=["fetch_player_games"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="filtered_003",
+        name="Giannis 40-point games",
+        query="Giannis games where he scored over 40",
+        intent="filtered_games",
+        category="filtered",
+        tools_expected=["fetch_player_games"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="filtered_004",
+        name="Jokic 15-assist games",
+        query="Show me Nikola Jokic games with 15+ assists",
+        intent="filtered_games",
+        category="filtered",
+        tools_expected=["fetch_player_games"],
+        min_response_length=80,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # ALL-TIME LEADERS QUERIES (Phase 5.2 P4 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="alltime_001",
+        name="All-time scoring leaders",
+        query="Who are the all-time leading scorers?",
+        intent="all_time_leaders",
+        category="all_time",
+        tools_expected=["get_all_time_leaders"],
+        min_response_length=100,
+        max_duration_ms=2000
+    ),
+    GoldenQuery(
+        id="alltime_002",
+        name="Career assists leaders",
+        query="All-time assist leaders in NBA history",
+        intent="all_time_leaders",
+        category="all_time",
+        tools_expected=["get_all_time_leaders"],
+        min_response_length=100,
+        max_duration_ms=2000
+    ),
+    GoldenQuery(
+        id="alltime_003",
+        name="Career rebounds leaders",
+        query="Who has the most career rebounds?",
+        intent="all_time_leaders",
+        category="all_time",
+        tools_expected=["get_all_time_leaders"],
+        min_response_length=100,
+        max_duration_ms=2000
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # LINEUP ANALYSIS QUERIES (Phase 5.2 P6 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="lineup_001",
+        name="Lakers best lineup",
+        query="What is the Lakers best 5-man lineup?",
+        intent="lineup_analysis",
+        category="lineup",
+        tools_expected=["get_lineup_stats"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="lineup_002",
+        name="Warriors starting lineup stats",
+        query="Show me the Warriors starting lineup statistics",
+        intent="lineup_analysis",
+        category="lineup",
+        tools_expected=["get_lineup_stats"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="lineup_003",
+        name="Celtics lineup with Tatum",
+        query="Celtics lineups with Jayson Tatum",
+        intent="lineup_analysis",
+        category="lineup",
+        tools_expected=["get_lineup_stats"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # HIGHLIGHT QUERIES (Phase 2.1 enhancement)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="highlight_001",
+        name="Players with 30+ points",
+        query="Show me players with 30+ points per game",
+        intent="highlight",
+        category="highlight",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="highlight_002",
+        name="Teams with 10+ wins",
+        query="Highlight teams with 10 or more wins",
+        intent="highlight",
+        category="highlight",
+        tools_expected=["get_team_standings"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+    GoldenQuery(
+        id="highlight_003",
+        name="Players shooting over 50%",
+        query="Find players shooting over 50% from the field",
+        intent="highlight",
+        category="highlight",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=100,
+        max_duration_ms=1500
+    ),
+
+    # ────────────────────────────────────────────────────────────────────
+    # LLM FALLBACK EDGE CASES (Phase 3 LLM integration)
+    # ────────────────────────────────────────────────────────────────────
+    GoldenQuery(
+        id="llm_001",
+        name="Ambiguous query needing LLM",
+        query="Who's hot right now?",  # Requires LLM to interpret "hot"
+        intent="unknown",  # Will trigger LLM fallback
+        category="llm_fallback",
+        tools_expected=["get_league_leaders_info"],  # After LLM refinement
+        min_response_length=50,
+        max_duration_ms=3000  # Longer for LLM call
+    ),
+    GoldenQuery(
+        id="llm_002",
+        name="Complex multi-intent query",
+        query="Tell me about the best players and their teams",
+        intent="unknown",  # Will trigger LLM fallback
+        category="llm_fallback",
+        tools_expected=["get_league_leaders_info", "get_team_standings"],
+        min_response_length=100,
+        max_duration_ms=3000
+    ),
+    GoldenQuery(
+        id="llm_003",
+        name="Colloquial phrasing",
+        query="Who's ballin out lately?",  # Slang requiring LLM
+        intent="unknown",  # Will trigger LLM fallback
+        category="llm_fallback",
+        tools_expected=["get_league_leaders_info"],
+        min_response_length=50,
+        max_duration_ms=3000
+    ),
 ]
 
 
