@@ -12,6 +12,12 @@ from typing import Any, Dict, List, Optional, Union
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+from pathlib import Path
+
+# Load .env at module level (before BASE_PORT is set)
+_project_root = Path(__file__).parent.parent  # nba_mcp/nba_mcp/nba_server.py -> nba_mcp/
+_env_path = _project_root / ".env"
+load_dotenv(dotenv_path=_env_path)  # ✅ Load BEFORE BASE_PORT
 
 import pandas as pd
 from fastmcp import Context
@@ -109,7 +115,11 @@ from nba_mcp.rate_limit.token_bucket import (
     rate_limited,
 )
 
-# only grab "--mode" here and ignore any other flags
+# Read BASE_PORT from .env file (NBA_MCP_PORT), defaults to 8005
+# .env is loaded at module level above, so this reads the configured value
+BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8005"))  # ✅ Gets 8005 from .env
+
+# only grab "--mode" here for backward compatibility (not used for port selection)
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument(
     "--mode",
@@ -118,14 +128,6 @@ parser.add_argument(
     help="Which port profile to use",
 )
 args, _ = parser.parse_known_args()
-
-if args.mode == "claude":
-    BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8000"))
-else:
-    BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8001"))
-
-# python nba_server.py --mode local       # runs on 8001
-# python nba_server.py --mode claude      # runs on 8000
 
 
 # import logger
@@ -6571,9 +6573,7 @@ async def get_nba_awards(
 # ------------------------------------------------------------------
 def main():
     """Parse CLI args and start FastMCP server (with fallback)."""
-    # Load environment variables from .env file (centralized configuration)
-    load_dotenv()
-
+    # Note: .env is loaded at module level, so NBA_MCP_PORT is already available
     parser = argparse.ArgumentParser(prog="nba-mcp")
     parser.add_argument(
         "--mode",

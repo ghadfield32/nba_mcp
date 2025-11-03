@@ -10,12 +10,13 @@
 ### Port Configuration Centralization - Complete ✅
 - **Status**: ✅ COMPLETE (2025-11-03)
 - **Purpose**: Centralize port configuration in .env file for consistent environment management across dev/prod
-- **Changes**: Added NBA_MCP_PORT=8005 to .env with comprehensive documentation; integrated load_dotenv() in nba_server.py main(); simplified port logic to read directly from .env (removed mode-based conditional)
-- **Implementation**: Single line port read `port = int(os.getenv("NBA_MCP_PORT", "8005"))` - no mode conditionals, just pulls from .env with 8005 fallback
-- **Files Modified**: .env (+17L PORT CONFIGURATION section), nba_server.py (+3L: import load_dotenv, call in main(), simplified port read)
-- **Backward Compatibility**: 100% - CLI --port flag still overrides, NBA_MCP_PORT env var still works, fallback defaults preserved
-- **Testing**: ✅ Environment loading verified, simplified port logic validated, server import successful, integration tests passed
-- **Impact**: Single source of truth for port config; simplified logic (no mode conditionals); Docker-friendly (-e override); no breaking changes
+- **Changes**: Added NBA_MCP_PORT=8005 to .env with comprehensive documentation; moved load_dotenv() to module level (before BASE_PORT); simplified port logic to read directly from .env
+- **Implementation**: Module-level .env loading ensures BASE_PORT reads correctly: `load_dotenv()` at line 20 → `BASE_PORT = int(os.getenv("NBA_MCP_PORT", "8005"))` at line 120
+- **Files Modified**: .env (+17L PORT CONFIGURATION section), nba_server.py (+8L: module-level load_dotenv with path resolution, simplified BASE_PORT read, removed mode conditionals)
+- **Path Resolution**: `Path(__file__).parent.parent` correctly resolves to repo root (nba_mcp/) where .env is located
+- **Backward Compatibility**: 100% - CLI --port flag still overrides, NBA_MCP_PORT env var still works, fallback defaults preserved, --mode flag kept for compatibility
+- **Testing**: ✅ Module-level loading verified (BASE_PORT=8005), env var accessible (NBA_MCP_PORT=8005), server imports successfully, integration tests passed
+- **Impact**: Single source of truth for port config; module-level loading ensures BASE_PORT set correctly; no mode conditionals; Docker-friendly (-e override); no breaking changes
 
 ### NLQ Pipeline Optimization for Open/Free Models - Phase 1 Complete ✅
 - **Status**: ✅ Phase 1 COMPLETE, Phase 2 Ready (2025-11-01)
