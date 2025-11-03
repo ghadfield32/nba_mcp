@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 import traceback
 from datetime import date, datetime, timezone
@@ -18,6 +19,7 @@ from nba_api.stats.static import players, teams
 # nba_server.py (add near the top)
 from pydantic import BaseModel, Field
 
+from nba_mcp.api.advanced_metrics_calculator import AdvancedMetricsCalculator
 from nba_mcp.api.client import NBAApiClient
 from nba_mcp.api.entity_resolver import (
     get_cache_info,
@@ -36,21 +38,7 @@ from nba_mcp.api.errors import (
 
 # Import Phase 3 feature modules (shot charts, game context, schedule)
 from nba_mcp.api.game_context import get_game_context as fetch_game_context
-from nba_mcp.api.schedule import (
-    get_nba_schedule as fetch_nba_schedule,
-    format_schedule_markdown,
-)
-
-# Import data groupings and advanced metrics (Phase 4)
-from nba_mcp.api.season_aggregator import get_player_season_stats, get_team_season_stats
-from nba_mcp.api.advanced_metrics_calculator import AdvancedMetricsCalculator
 from nba_mcp.api.lineup_tracker import add_lineups_to_play_by_play
-
-# Import season context for LLM temporal awareness
-from nba_mcp.api.season_context import get_season_context, get_current_season
-
-# Import date parser for natural language date support
-from nba_mcp.api.tools.date_parser import parse_and_normalize_date_params
 
 # Import new response models and error handling
 from nba_mcp.api.models import (
@@ -63,7 +51,18 @@ from nba_mcp.api.models import (
     partial_response,
     success_response,
 )
+from nba_mcp.api.schedule import format_schedule_markdown
+from nba_mcp.api.schedule import get_nba_schedule as fetch_nba_schedule
+
+# Import data groupings and advanced metrics (Phase 4)
+from nba_mcp.api.season_aggregator import get_player_season_stats, get_team_season_stats
+
+# Import season context for LLM temporal awareness
+from nba_mcp.api.season_context import get_current_season, get_season_context
 from nba_mcp.api.shot_charts import get_shot_chart as fetch_shot_chart
+
+# Import date parser for natural language date support
+from nba_mcp.api.tools.date_parser import parse_and_normalize_date_params
 from nba_mcp.api.tools.nba_api_utils import (
     format_game,
     get_player_id,
@@ -77,20 +76,19 @@ from nba_mcp.api.tools.nba_api_utils import (
     normalize_stat_category,
 )
 
-# Import dataset and joins features
-from nba_mcp.data.catalog import get_catalog
-from nba_mcp.data.dataset_manager import get_manager as get_dataset_manager, initialize_manager, shutdown_manager
-from nba_mcp.data.fetch import fetch_endpoint, validate_parameters
-from nba_mcp.data.joins import join_tables, join_with_stats, filter_table
-
 # Import Week 4 infrastructure (cache + rate limiting)
 from nba_mcp.cache.redis_cache import CacheTier, cached, get_cache, initialize_cache
 
+# Import dataset and joins features
+from nba_mcp.data.catalog import get_catalog
+from nba_mcp.data.dataset_manager import get_manager as get_dataset_manager
+from nba_mcp.data.dataset_manager import initialize_manager, shutdown_manager
+from nba_mcp.data.fetch import fetch_endpoint, validate_parameters
+from nba_mcp.data.joins import filter_table, join_tables, join_with_stats
+
 # Import NLQ pipeline components
 from nba_mcp.nlq.pipeline import answer_nba_question as nlq_answer_question
-from nba_mcp.nlq.pipeline import (
-    get_pipeline_status,
-)
+from nba_mcp.nlq.pipeline import get_pipeline_status
 from nba_mcp.nlq.tool_registry import initialize_tool_registry
 
 # Import Week 4 observability (metrics + tracing)
@@ -1529,11 +1527,13 @@ async def fetch_player_games(
                           stat_filters='{"MIN": [">=", 10]}')
     """
     try:
-        from nba_mcp.api.data_groupings import fetch_grouping_multi_season
-        from nba_mcp.utils.season_utils import parse_season_input, format_season_display
-        from nba_mcp.utils.entity_utils import resolve_player_input, resolve_team_input
         import json
+
         import pandas as pd
+
+        from nba_mcp.api.data_groupings import fetch_grouping_multi_season
+        from nba_mcp.utils.entity_utils import resolve_player_input, resolve_team_input
+        from nba_mcp.utils.season_utils import format_season_display, parse_season_input
 
         # Parse season parameter - supports single, range, or JSON array
         # Examples: "2023-24", "2021-22:2023-24", '["2021-22", "2022-23"]'
@@ -1761,8 +1761,9 @@ async def play_by_play(
     # NEW: Add lineup tracking if requested
     if include_lineups:
         try:
-            from nba_mcp.api.tools.playbyplayv3_or_realtime import PastGamesPlaybyPlay
             from nba_api.stats.endpoints import PlayByPlayV3
+
+            from nba_mcp.api.tools.playbyplayv3_or_realtime import PastGamesPlaybyPlay
 
             # Get game_id from date/team
             pbp_instance = PastGamesPlaybyPlay.from_team_date(
@@ -4165,11 +4166,11 @@ async def save_nba_data(
 
         # Import helper functions
         from nba_mcp.data.dataset_manager import (
-            is_tabular_data,
             extract_dataframe,
+            is_tabular_data,
+            save_json_data,
             save_parquet,
             save_text,
-            save_json_data
         )
 
         # Auto-detect format if "auto"
@@ -4550,8 +4551,8 @@ async def fetch_chunked(
         → Returns multiple handles, one per game on that date
     """
     try:
-        from nba_mcp.data.pagination import get_paginator
         from nba_mcp.data.introspection import get_introspector
+        from nba_mcp.data.pagination import get_paginator
 
         paginator = get_paginator()
         manager = get_dataset_manager()
