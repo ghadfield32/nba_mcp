@@ -10,6 +10,9 @@ import traceback
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+
 import pandas as pd
 from fastmcp import Context
 from mcp.server.fastmcp import FastMCP
@@ -6568,6 +6571,9 @@ async def get_nba_awards(
 # ------------------------------------------------------------------
 def main():
     """Parse CLI args and start FastMCP server (with fallback)."""
+    # Load environment variables from .env file (centralized configuration)
+    load_dotenv()
+
     parser = argparse.ArgumentParser(prog="nba-mcp")
     parser.add_argument(
         "--mode",
@@ -6594,11 +6600,8 @@ def main():
     )
     args = parser.parse_args()
 
-    # pick port based on mode
-    if args.mode == "claude":
-        port = int(os.getenv("NBA_MCP_PORT", "8000"))
-    else:
-        port = int(os.getenv("NBA_MCP_PORT", "8001"))
+    # Read port from .env file (NBA_MCP_PORT), defaults to 8005
+    port = int(os.getenv("NBA_MCP_PORT", "8005"))
 
     transport = args.transport
     host = args.host

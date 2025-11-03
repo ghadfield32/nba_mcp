@@ -7,6 +7,16 @@
 
 ## Current Work (November 2025)
 
+### Port Configuration Centralization - Complete ✅
+- **Status**: ✅ COMPLETE (2025-11-03)
+- **Purpose**: Centralize port configuration in .env file for consistent environment management across dev/prod
+- **Changes**: Added NBA_MCP_PORT=8005 to .env with comprehensive documentation; integrated load_dotenv() in nba_server.py main(); simplified port logic to read directly from .env (removed mode-based conditional)
+- **Implementation**: Single line port read `port = int(os.getenv("NBA_MCP_PORT", "8005"))` - no mode conditionals, just pulls from .env with 8005 fallback
+- **Files Modified**: .env (+17L PORT CONFIGURATION section), nba_server.py (+3L: import load_dotenv, call in main(), simplified port read)
+- **Backward Compatibility**: 100% - CLI --port flag still overrides, NBA_MCP_PORT env var still works, fallback defaults preserved
+- **Testing**: ✅ Environment loading verified, simplified port logic validated, server import successful, integration tests passed
+- **Impact**: Single source of truth for port config; simplified logic (no mode conditionals); Docker-friendly (-e override); no breaking changes
+
 ### NLQ Pipeline Optimization for Open/Free Models - Phase 1 Complete ✅
 - **Status**: ✅ Phase 1 COMPLETE, Phase 2 Ready (2025-11-01)
 - **Purpose**: Harden NLQ pipeline for seamless usage with open/free models (Llama 3, Phi-4, Mixtral, Qwen, etc.)
