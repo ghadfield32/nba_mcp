@@ -987,30 +987,59 @@ async def get_all_time_leaders(
 @mcp_server.tool()
 async def get_live_scores(target_date: Optional[str] = None, **kwargs) -> str:
     """
-    Provides live or historical NBA scores for a specified date.
+    Get ALL NBA games and scores for a specific date (live or historical).
 
-    Supports natural language dates like "yesterday", "today", "tomorrow" and
-    relative offsets like "-1 day", "+2 days".
+    ✅ USE THIS TOOL FOR:
+    - Getting ALL games on a specific date
+    - Checking "yesterday's scores" across the league
+    - Finding out "today's games" for all teams
+    - Seeing final scores for multiple games at once
+    - Quick score overview without detailed box scores
+
+    ❌ DO NOT USE THIS TOOL FOR:
+    - Detailed box score for ONE specific game (use get_box_score instead)
+    - Player-by-player statistics (use get_box_score or get_player_game_stats instead)
+    - Quarter-by-quarter breakdown (use get_box_score instead)
+
+    💡 If you want detailed stats for ONE game, use: get_box_score(team="Lakers", game_date="2024-01-15")
 
     Parameters:
         target_date (Optional[str]): Date for scores. Supports multiple formats:
-            - Absolute: 'YYYY-MM-DD' (e.g., '2024-12-25')
             - Natural language: 'yesterday', 'today', 'tomorrow'
+            - Absolute date: 'YYYY-MM-DD' (e.g., '2024-12-25')
             - Relative: '-1 day', '+2 days', 'last week'
-            - If None or omitted, defaults to today's scores
+            - If None or omitted, defaults to today's games
 
     Parameter Aliases:
         - 'date' can be used instead of 'target_date'
         - 'game_date' can be used instead of 'target_date'
 
     Returns:
-        str: Formatted game summaries like 'Lakers vs Suns – 102-99 (Final)'.
+        Formatted string with game summaries: 'Lakers vs Suns – 102-99 (Final)'
 
     Examples:
-        get_live_scores()                    # Today's games
+        # Example 1: Get yesterday's scores for ALL teams
         get_live_scores(target_date="yesterday")
-        get_live_scores(date="2024-12-25")  # Parameter alias
-        get_live_scores(target_date="-1 day")
+
+        # Example 2: Get today's games (live or scheduled)
+        get_live_scores()  # or get_live_scores(target_date="today")
+
+        # Example 3: Get scores for specific historical date
+        get_live_scores(target_date="2024-12-25")  # Christmas Day games
+
+        # Example 4: Using parameter alias
+        get_live_scores(date="2024-01-15")
+
+    Common Queries This Tool Answers:
+        ✅ "What are yesterday's scores?"  → get_live_scores(target_date="yesterday")
+        ✅ "Show me today's games"  → get_live_scores()
+        ✅ "What games are on tonight?"  → get_live_scores(target_date="today")
+        ✅ "Give me scores from last week"  → get_live_scores(target_date="-7 days")
+
+    Output Format:
+        - Each game shows: Team1 vs Team2 – Score1-Score2 (Status)
+        - Status can be: Final, In Progress, Scheduled, etc.
+        - Multiple games are listed together
     """
     # Step 1: Normalize parameters (handle aliases and parse dates)
     params = {"target_date": target_date, **kwargs}
@@ -5141,495 +5170,166 @@ async def get_box_score(
     game_date: Optional[str] = None,
 ) -> str:
     """
-    Get full box score for a specific game with quarter-by-quarter breakdowns.
+    Get full box score for a SINGLE SPECIFIC GAME with quarter-by-quarter breakdowns.
 
-    This tool fills the critical gap identified in the weakness analysis:
-    providing detailed box scores with quarter-level granularity.
+    ⚠️ IMPORTANT: This tool is for ONE game only, not multiple games.
 
-    Common use cases:
-    - "Get box score for game ID 0022300500"
-    - "Show me Lakers box score from last night"
-    - "Box score for Warriors game on 2024-01-15"
+    ✅ USE THIS TOOL FOR:
+    - Getting detailed box score for a specific game you already know about
+    - Quarter-by-quarter scoring breakdown for one game
+    - Player-by-player statistics for one game
+    - Starters vs bench splits for one game
+
+    ❌ DO NOT USE THIS TOOL FOR:
+    - Getting ALL games on a specific date (use get_live_scores instead)
+    - Finding out "yesterday's scores" for all teams (use get_live_scores instead)
+    - Checking today's games across the league (use get_live_scores instead)
+
+    💡 If you want ALL games for a date, use: get_live_scores(target_date="2024-01-15")
 
     Args:
-        game_id: 10-digit NBA game ID (e.g., "0022300500"). If provided, this takes precedence.
-        team: Team name for date lookup (e.g., "Lakers", "LAL"). Used with game_date.
-        game_date: Game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format. Used with team.
+        game_id: 10-digit NBA game ID (e.g., "0022300500").
+            - If provided, this takes precedence and directly fetches the game.
+            - Example: game_id="0022300500"
+
+        team: Team name/abbreviation for date lookup (e.g., "Lakers", "LAL").
+            - Must be used WITH game_date (both required together)
+            - Cannot be used alone
+
+        game_date: Game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format.
+            - Must be used WITH team (both required together)
+            - Cannot be used alone
 
     Returns:
-        Formatted box score with:
-        - Quarter-by-quarter scores
-        - Player statistics for both teams
-        - Team totals
-        - Starters vs bench breakdowns
+        Formatted box score string with quarter scores, player stats, team totals.
 
     Examples:
-        # Get box score by game ID
+        # Example 1: Get box score by game ID (recommended)
         get_box_score(game_id="0022300500")
 
-        # Get box score by team and date
+        # Example 2: Get box score by team and date
         get_box_score(team="Lakers", game_date="2024-01-15")
 
+        # Example 3: Get box score for Lakers game last night
+        get_box_score(team="Lakers", game_date="yesterday")
+
+    Common Mistakes:
+        ❌ get_box_score(game_date="yesterday")  # Missing team parameter
+        ❌ get_box_score(team="Lakers")  # Missing game_date parameter
+        ✅ get_box_score(team="Lakers", game_date="yesterday")  # Correct!
+
+        ❌ get_box_score() to get all today's games  # Use get_live_scores() instead
+        ✅ get_live_scores(target_date="today")  # Correct for multiple games!
+
     Notes:
-        - Either game_id OR (team + game_date) must be provided
-        - Quarter breakdowns show Q1, Q2, Q3, Q4, and OT (if applicable)
-        - Player stats include MIN, PTS, REB, AST, FG%, 3P%, FT%, +/-
+        - You MUST provide either:
+          (A) game_id alone, OR
+          (B) BOTH team AND game_date together
+        - Player stats include: MIN, PTS, REB, AST, FG%, 3P%, FT%, +/-
+        - Quarter breakdowns show: Q1, Q2, Q3, Q4, and OT (if applicable)
     """
     logger.debug(f"get_box_score(game_id={game_id}, team={team}, game_date={game_date})")
 
     client = NBAApiClient()
 
     try:
-        # Validate input
+        # ENHANCEMENT: Parse natural language dates (e.g., "yesterday", "today", "tomorrow")
+        if game_date:
+            params = {"game_date": game_date}
+            normalized_params, debug_messages = parse_and_normalize_date_params(
+                params,
+                date_param_name="game_date",
+                date_param_aliases=["date", "day"]
+            )
+
+            # Log date parsing for debugging
+            if debug_messages:
+                for msg in debug_messages:
+                    logger.info(f"[get_box_score] {msg}")
+
+            # Update game_date with normalized value
+            parsed_date = normalized_params.get("game_date")
+
+            if parsed_date:
+                logger.info(f"[get_box_score] Parsed date: {game_date} → {parsed_date}")
+                game_date = parsed_date
+            else:
+                # Date parsing failed - return helpful error
+                season_ctx = get_season_context(include_date=True)
+                return f"""📅 {season_ctx}
+
+❌ Invalid date format: '{game_date}'
+
+💡 Supported date formats:
+   - Natural language: 'yesterday', 'today', 'tomorrow'
+   - ISO format: 'YYYY-MM-DD' (e.g., '2024-01-15')
+   - US format: 'MM/DD/YYYY' (e.g., '01/15/2024')
+   - Relative: '-1 day', '+2 days'
+
+Examples:
+  ✅ get_box_score(team='Lakers', game_date='yesterday')
+  ✅ get_box_score(team='Lakers', game_date='2024-01-15')
+"""
+
+
+        # Validate input with enhanced error messages
         if not game_id and not (team and game_date):
             season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\n❌ Error: Must provide either game_id OR (team + game_date)"
-
-        # If team and date provided, find game_id
-        if not game_id and team and game_date:
-            # Get games for that date
-            games_result = await client.get_games_by_date(game_date)
-
-            if isinstance(games_result, str):
-                season_ctx = get_season_context(include_date=True)
-                return f"📅 {season_ctx}\n\n❌ {games_result}"
-
-            # Resolve team name
-            try:
-                from nba_mcp.api.entity_resolver import resolve_entity
-                resolved = resolve_entity(team, entity_type="team")
-                if resolved["status"] == "success":
-                    team_id = resolved["data"]["id"]
-                else:
-                    team_id = get_team_id(team)
-            except:
-                team_id = get_team_id(team)
-
-            if not team_id:
-                season_ctx = get_season_context(include_date=True)
-                return f"📅 {season_ctx}\n\n❌ Team not found: {team}"
-
-            # Find game with this team
-            game_found = None
-            if isinstance(games_result, pd.DataFrame):
-                for _, game in games_result.iterrows():
-                    if game["home_team"]["id"] == team_id or game["visitor_team"]["id"] == team_id:
-                        game_id = game["game_id"]
-                        game_found = game
-                        break
-
-            if not game_id:
-                season_ctx = get_season_context(include_date=True)
-                return f"📅 {season_ctx}\n\nNo game found for {team} on {game_date}"
-
-        # Fetch box score
-        result = await client.get_box_score(game_id=game_id, as_dataframe=True)
-
-        # Check for errors
-        if isinstance(result, dict) and "error" in result:
-            season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\n❌ {result['error']}"
-
-        player_stats = result.get("player_stats")
-        team_stats = result.get("team_stats")
-        line_score = result.get("line_score")
-
-        if player_stats is None or player_stats.empty:
-            season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\nNo box score data found for game {game_id}"
-
-        # Format response
-        response_lines = [f"# Box Score - Game {game_id}"]
-        response_lines.append("")
-
-        # Quarter-by-quarter scores
-        if line_score is not None and not line_score.empty:
-            response_lines.append("## Quarter Scores")
-            response_lines.append("")
-
-            for _, row in line_score.iterrows():
-                team_abbrev = row.get("TEAM_ABBREVIATION", "")
-                q1 = row.get("PTS_QT1", 0)
-                q2 = row.get("PTS_QT2", 0)
-                q3 = row.get("PTS_QT3", 0)
-                q4 = row.get("PTS_QT4", 0)
-                pts = row.get("PTS", 0)
-
-                quarters_str = f"Q1: {q1} | Q2: {q2} | Q3: {q3} | Q4: {q4}"
-
-                # Check for overtime
-                for ot in range(1, 10):  # Check up to 9 OT periods
-                    ot_col = f"PTS_OT{ot}"
-                    if ot_col in row and pd.notna(row[ot_col]) and row[ot_col] > 0:
-                        quarters_str += f" | OT{ot}: {row[ot_col]}"
-
-                response_lines.append(f"**{team_abbrev}**: {quarters_str} | **TOTAL: {pts}**")
-
-            response_lines.append("")
-            response_lines.append("---")
-            response_lines.append("")
-
-        # Team stats
-        if team_stats is not None and not team_stats.empty:
-            response_lines.append("## Team Totals")
-            response_lines.append("")
-
-            for _, row in team_stats.iterrows():
-                team_abbrev = row.get("TEAM_ABBREVIATION", "")
-                pts = row.get("PTS", 0)
-                reb = row.get("REB", 0)
-                ast = row.get("AST", 0)
-                stl = row.get("STL", 0)
-                blk = row.get("BLK", 0)
-                tov = row.get("TOV", 0)
-                fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
-                fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
-
-                response_lines.append(f"### {team_abbrev}")
-                response_lines.append(f"**Totals**: {pts} PTS, {reb} REB, {ast} AST, {stl} STL, {blk} BLK, {tov} TOV")
-                response_lines.append(f"**Shooting**: {fg_pct:.1f}% FG, {fg3_pct:.1f}% 3PT")
-                response_lines.append("")
-
-            response_lines.append("---")
-            response_lines.append("")
-
-        # Player stats by team
-        response_lines.append("## Player Stats")
-        response_lines.append("")
-
-        teams = player_stats["TEAM_ABBREVIATION"].unique()
-
-        for team_abbrev in teams:
-            team_players = player_stats[player_stats["TEAM_ABBREVIATION"] == team_abbrev]
-
-            # Sort by minutes (starters first)
-            team_players = team_players.sort_values("MIN", ascending=False)
-
-            response_lines.append(f"### {team_abbrev}")
-            response_lines.append("")
-
-            # Starters (top 5 by minutes)
-            starters = team_players.head(5)
-            response_lines.append("**Starters:**")
-            response_lines.append("")
-
-            for _, player in starters.iterrows():
-                name = player.get("PLAYER_NAME", "")
-                min_played = player.get("MIN", 0)
-                pts = player.get("PTS", 0)
-                reb = player.get("REB", 0)
-                ast = player.get("AST", 0)
-                fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
-                fg3 = f"{player.get('FG3M', 0)}-{player.get('FG3A', 0)}"
-                plus_minus = player.get("PLUS_MINUS", 0)
-
-                response_lines.append(
-                    f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
-                    f"FG: {fg}, 3PT: {fg3} | +/-: {plus_minus:+d}"
-                )
-
-            response_lines.append("")
-
-            # Bench (remaining players)
-            bench = team_players.iloc[5:]
-            if not bench.empty:
-                response_lines.append("**Bench:**")
-                response_lines.append("")
-
-                for _, player in bench.iterrows():
-                    name = player.get("PLAYER_NAME", "")
-                    min_played = player.get("MIN", 0)
-
-                    # Skip DNPs (0 minutes)
-                    if min_played == 0 or pd.isna(min_played):
-                        continue
-
-                    pts = player.get("PTS", 0)
-                    reb = player.get("REB", 0)
-                    ast = player.get("AST", 0)
-                    fg = f"{player.get('FGM', 0)}-{player.get('FGA', 0)}"
-                    plus_minus = player.get("PLUS_MINUS", 0)
-
-                    response_lines.append(
-                        f"- **{name}**: {min_played} MIN | {pts} PTS, {reb} REB, {ast} AST | "
-                        f"FG: {fg} | +/-: {plus_minus:+d}"
-                    )
-
-                response_lines.append("")
-
-            response_lines.append("")
-
-        response = "\n".join(response_lines)
-
-        # Add season context
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n{response}"
-
-    except Exception as e:
-        logger.exception("Unexpected error in get_box_score")
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n❌ Error fetching box score: {str(e)}"
-
-
-@mcp_server.tool()
-async def get_clutch_stats(
-    entity_name: str,
-    entity_type: str = "player",
-    season: Optional[str] = None,
-    per_mode: str = "PerGame",
-) -> str:
-    """
-    Get clutch time statistics (final 5 minutes, score within 5 points).
-
-    This tool fills the critical gap identified in the weakness analysis:
-    providing clutch performance analytics.
-
-    Clutch time is defined as:
-    - Final 5 minutes of the 4th quarter or overtime
-    - Score differential of 5 points or less
-
-    Common use cases:
-    - "Show me LeBron's clutch stats"
-    - "How do the Lakers perform in clutch time?"
-    - "Get Curry's clutch shooting percentages"
-
-    Args:
-        entity_name: Player or team name (supports fuzzy matching)
-        entity_type: "player" or "team" (default: "player")
-        season: Season in 'YYYY-YY' format (defaults to current season)
-        per_mode: "PerGame" or "Totals" (default: "PerGame")
-
-    Returns:
-        Formatted clutch statistics with:
-        - Games played in clutch situations
-        - Clutch time win-loss record
-        - Points, assists, rebounds in clutch
-        - Shooting percentages in clutch
-        - Clutch time efficiency metrics
-
-    Examples:
-        # Get player clutch stats
-        get_clutch_stats("LeBron James")
-
-        # Get team clutch stats
-        get_clutch_stats("Lakers", entity_type="team")
-
-        # Get totals instead of per-game
-        get_clutch_stats("Stephen Curry", per_mode="Totals")
-
-        # Specific season
-        get_clutch_stats("Giannis", season="2022-23")
-    """
-    logger.debug(
-        f"get_clutch_stats(entity={entity_name}, type={entity_type}, "
-        f"season={season}, per_mode={per_mode})"
-    )
-
-    client = NBAApiClient()
-
-    try:
-        # Default to current season if not specified
-        if season is None:
-            season = get_current_season()
-
-        # Fetch clutch stats
-        result = await client.get_clutch_stats(
-            entity_name=entity_name,
-            entity_type=entity_type,
-            season=season,
-            per_mode=per_mode
-        )
-
-        # Check for errors
-        if isinstance(result, dict) and "error" in result:
-            season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\n❌ {result['error']}"
-
-        if not isinstance(result, pd.DataFrame) or result.empty:
-            season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\nNo clutch stats found for {entity_name} in {season}"
-
-        # Get the single row (filtered data)
-        row = result.iloc[0]
-
-        # Format response
-        if entity_type == "player":
-            player_name = row.get("PLAYER_NAME", entity_name)
-            team_abbrev = row.get("TEAM_ABBREVIATION", "")
-
-            response_lines = [
-                f"# {player_name} - Clutch Stats ({season})",
-                f"**Team**: {team_abbrev}" if team_abbrev else "",
-                f"**Definition**: Final 5 min, score within 5 points",
-                "",
-                "## Clutch Performance",
-                ""
-            ]
-
-            # Games and record
-            games = row.get("GP", 0)
-            wins = row.get("W", 0)
-            losses = row.get("L", 0)
-            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
-
-            response_lines.append(f"**Games**: {games} clutch situations")
-            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
-            response_lines.append("")
-
-            # Scoring
-            pts = row.get("PTS", 0)
-            fgm = row.get("FGM", 0)
-            fga = row.get("FGA", 0)
-            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
-            fg3m = row.get("FG3M", 0)
-            fg3a = row.get("FG3A", 0)
-            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
-            ftm = row.get("FTM", 0)
-            fta = row.get("FTA", 0)
-            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
-
-            response_lines.append("## Scoring")
-            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
-            response_lines.append(f"**Field Goals**: {fgm:.1f}/{fga:.1f} ({fg_pct:.1f}%)")
-            response_lines.append(f"**Three Pointers**: {fg3m:.1f}/{fg3a:.1f} ({fg3_pct:.1f}%)")
-            response_lines.append(f"**Free Throws**: {ftm:.1f}/{fta:.1f} ({ft_pct:.1f}%)")
-            response_lines.append("")
-
-            # Playmaking and rebounding
-            ast = row.get("AST", 0)
-            reb = row.get("REB", 0)
-            oreb = row.get("OREB", 0)
-            dreb = row.get("DREB", 0)
-            stl = row.get("STL", 0)
-            blk = row.get("BLK", 0)
-            tov = row.get("TOV", 0)
-
-            response_lines.append("## Playmaking & Defense")
-            response_lines.append(f"**Assists**: {ast:.1f}")
-            response_lines.append(f"**Rebounds**: {reb:.1f} ({oreb:.1f} OFF, {dreb:.1f} DEF)")
-            response_lines.append(f"**Steals**: {stl:.1f}")
-            response_lines.append(f"**Blocks**: {blk:.1f}")
-            response_lines.append(f"**Turnovers**: {tov:.1f}")
-            response_lines.append("")
-
-            # Advanced metrics (if available)
-            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
-                plus_minus = row["PLUS_MINUS"]
-                response_lines.append("## Impact")
-                response_lines.append(f"**Plus/Minus**: {plus_minus:+.1f}")
-                response_lines.append("")
-
-        else:  # team
-            team_name = row.get("TEAM_NAME", entity_name)
-
-            response_lines = [
-                f"# {team_name} - Clutch Stats ({season})",
-                f"**Definition**: Final 5 min, score within 5 points",
-                "",
-                "## Clutch Performance",
-                ""
-            ]
-
-            # Games and record
-            games = row.get("GP", 0)
-            wins = row.get("W", 0)
-            losses = row.get("L", 0)
-            win_pct = row.get("W_PCT", 0) * 100 if pd.notna(row.get("W_PCT")) else 0
-
-            response_lines.append(f"**Games**: {games} clutch situations")
-            response_lines.append(f"**Record**: {wins}W-{losses}L ({win_pct:.1f}%)")
-            response_lines.append("")
-
-            # Scoring
-            pts = row.get("PTS", 0)
-            fg_pct = row.get("FG_PCT", 0) * 100 if pd.notna(row.get("FG_PCT")) else 0
-            fg3_pct = row.get("FG3_PCT", 0) * 100 if pd.notna(row.get("FG3_PCT")) else 0
-            ft_pct = row.get("FT_PCT", 0) * 100 if pd.notna(row.get("FT_PCT")) else 0
-
-            response_lines.append("## Team Stats")
-            response_lines.append(f"**Points**: {pts:.1f} {per_mode.lower()}")
-            response_lines.append(f"**FG%**: {fg_pct:.1f}% | **3P%**: {fg3_pct:.1f}% | **FT%**: {ft_pct:.1f}%")
-
-            ast = row.get("AST", 0)
-            reb = row.get("REB", 0)
-            tov = row.get("TOV", 0)
-
-            response_lines.append(f"**Assists**: {ast:.1f} | **Rebounds**: {reb:.1f} | **Turnovers**: {tov:.1f}")
-            response_lines.append("")
-
-            # Net rating (if available)
-            if "PLUS_MINUS" in row and pd.notna(row["PLUS_MINUS"]):
-                plus_minus = row["PLUS_MINUS"]
-                response_lines.append(f"**Net Rating**: {plus_minus:+.1f}")
-                response_lines.append("")
-
-        response = "\n".join(response_lines)
-
-        # Add season context
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n{response}"
-
-    except EntityNotFoundError as e:
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n❌ {str(e)}"
-    except Exception as e:
-        logger.exception("Unexpected error in get_clutch_stats")
-        season_ctx = get_season_context(include_date=True)
-        return f"📅 {season_ctx}\n\n❌ Error fetching clutch stats: {str(e)}"
-
-
-
-
-@mcp_server.tool()
-async def get_box_score(
-    game_id: Optional[str] = None,
-    team: Optional[str] = None,
-    game_date: Optional[str] = None,
-) -> str:
-    """
-    Get full box score for a specific game with quarter-by-quarter breakdowns.
-
-    This tool fills the critical gap identified in the weakness analysis:
-    providing detailed box scores with quarter-level granularity.
-
-    Common use cases:
-    - "Get box score for game ID 0022300500"
-    - "Show me Lakers box score from last night"
-    - "Box score for Warriors game on 2024-01-15"
-
-    Args:
-        game_id: 10-digit NBA game ID (e.g., "0022300500"). If provided, this takes precedence.
-        team: Team name for date lookup (e.g., "Lakers", "LAL"). Used with game_date.
-        game_date: Game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format. Used with team.
-
-    Returns:
-        Formatted box score with:
-        - Quarter-by-quarter scores
-        - Player statistics for both teams
-        - Team totals
-        - Starters vs bench breakdowns
-
-    Examples:
-        # Get box score by game ID
-        get_box_score(game_id="0022300500")
-
-        # Get box score by team and date
-        get_box_score(team="Lakers", game_date="2024-01-15")
-
-    Notes:
-        - Either game_id OR (team + game_date) must be provided
-        - Quarter breakdowns show Q1, Q2, Q3, Q4, and OT (if applicable)
-        - Player stats include MIN, PTS, REB, AST, FG%, 3P%, FT%, +/-
-    """
-    logger.debug(f"get_box_score(game_id={game_id}, team={team}, game_date={game_date})")
-
-    client = NBAApiClient()
-
-    try:
-        # Validate input
-        if not game_id and not (team and game_date):
-            season_ctx = get_season_context(include_date=True)
-            return f"📅 {season_ctx}\n\n❌ Error: Must provide either game_id OR (team + game_date)"
+
+            # Detect likely intent and provide helpful error
+            if game_date and not team:
+                # User probably wants all games for this date
+                return f"""📅 {season_ctx}
+
+❌ Error: get_box_score is for a SINGLE game only
+
+You provided: game_date='{game_date}', but no team specified.
+
+📋 This tool requires BOTH team AND game_date together:
+   Example: get_box_score(team='Lakers', game_date='{game_date}')
+
+💡 Did you want ALL games for {game_date}?
+→ Use this instead: get_live_scores(target_date='{game_date}')
+
+Examples:
+  ✅ get_live_scores(target_date='yesterday')  ← All yesterday's scores
+  ✅ get_live_scores(target_date='{game_date}')  ← All games on this date
+  ✅ get_live_scores()  ← All today's games
+"""
+
+            elif team and not game_date:
+                # User provided team but no date
+                return f"""📅 {season_ctx}
+
+❌ Error: get_box_score requires BOTH team AND game_date together
+
+You provided: team='{team}', but no game_date specified.
+
+💡 Add a date to your call:
+   get_box_score(team='{team}', game_date='yesterday')
+   get_box_score(team='{team}', game_date='2024-01-15')
+"""
+
+            else:
+                # Both missing
+                return f"""📅 {season_ctx}
+
+❌ Error: get_box_score requires specific game identification
+
+📋 You MUST provide either:
+  Option 1: game_id alone
+    Example: get_box_score(game_id='0022300500')
+
+  Option 2: BOTH team AND game_date together
+    Example: get_box_score(team='Lakers', game_date='yesterday')
+
+⚠️ Common mistakes:
+  ❌ get_box_score(game_date='yesterday')  ← Missing team
+  ❌ get_box_score(team='Lakers')  ← Missing game_date
+  ✅ get_box_score(team='Lakers', game_date='yesterday')  ← Correct!
+
+💡 Need all games for a date? Use: get_live_scores(target_date='yesterday')
+"""
 
         # If team and date provided, find game_id
         if not game_id and team and game_date:

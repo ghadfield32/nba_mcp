@@ -7,6 +7,39 @@
 
 ## Current Work (November 2025)
 
+### Open-Source LLM Tool Selection Enhancement - Complete ✅
+- **Status**: ✅ COMPLETE Phase 1 (2025-11-04)
+- **Purpose**: Fix tool selection failures with open-source LLMs (qwen2.5, llama, etc.) by adding date parsing and improving error handling
+- **Root Cause**: qwen2.5 called `get_box_score(game_date="Yesterday")` 8 times in loop for "yesterday's scores" query; no natural language date parsing in get_box_score; duplicate function definitions causing confusion
+- **Analysis**: Created ANALYSIS_LLM_TOOL_SELECTION_ERROR.md - comprehensive root cause analysis with parameter validation trace, date parsing comparison, and LLM decision patterns
+- **Key Issues Identified**:
+  1. No Natural Language Date Parsing → get_box_score didn't parse "yesterday"/"today" despite examples suggesting it should; get_live_scores had parsing but get_box_score didn't
+  2. Duplicate Function Definitions → Two identical get_box_score functions (lines 5166-5689 and 5690+); second one overwrites first in MCP registration causing confusion
+  3. Tool Documentation Asymmetry → get_live_scores had excellent ✅/❌ sections; first get_box_score had minimal docs; second had good docs but no date parsing
+  4. Parameter Validation Order → Validation happened before date parsing, so "yesterday" rejected before it could be converted to valid format
+- **Implementation Details**:
+  * Removed duplicate get_box_score function: Deleted first definition (lines 5166-5689, 524 lines removed) - kept second function with better documentation
+  * Added natural language date parsing: Integrated parse_and_normalize_date_params into get_box_score (+39 lines) - now supports "yesterday", "today", "tomorrow", relative dates, all formats
+  * Date parsing placement: Inserted immediately after try: block, before validation - ensures dates parsed before validation logic runs
+  * Validation enhancement: Added date format error with supported formats guide when parsing fails
+  * Verified get_live_scores: Already had excellent documentation and date parsing - no changes needed
+- **Files Modified**:
+  * nba_server.py (-524L first get_box_score, +39L date parsing in second get_box_score)
+  * ANALYSIS_LLM_TOOL_SELECTION_ERROR.md (new file, detailed analysis)
+  * UPDATED_FUNCTIONS.md (new file, complete updated function code)
+  * fix_get_box_score.py (new file, Python script for automated fix)
+- **Technical Approach**: Created Python script to surgically remove duplicate and add parsing - handles large file editing precisely; integrated existing date_parser.py module consistently across tools
+- **Date Parsing Features**:
+  * Natural language: "yesterday", "today", "tomorrow"
+  * Relative: "-1 day", "+2 days", "last week"
+  * ISO format: "YYYY-MM-DD"
+  * US format: "MM/DD/YYYY"
+  * Logging: All conversions logged for debugging
+- **Error Messages**: Enhanced date validation failure to show supported formats and examples; maintains all existing smart error messages (date-only, team-only, both-missing scenarios)
+- **Testing**: Query "what are yesterday's scores in the nba?" should now route to get_live_scores(target_date="yesterday") correctly; get_box_score(team="Lakers", game_date="yesterday") now works
+- **Backward Compatibility**: 100% - No API changes, no parameter changes, only bug fixes (duplicate removal) and feature additions (date parsing)
+- **Impact**: Enables qwen2.5 and other open-source LLMs to use date parameters correctly; eliminates 8x retry loops; maintains consistency with get_live_scores date handling
+
 ### Port Configuration Centralization - Complete ✅
 - **Status**: ✅ COMPLETE (2025-11-03)
 - **Purpose**: Centralize port configuration in .env file for consistent environment management across dev/prod
