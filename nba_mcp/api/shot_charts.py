@@ -413,12 +413,18 @@ async def get_shot_chart(
     season_type: str = "Regular Season",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    game_date: Optional[str] = None,
     granularity: Literal["raw", "hexbin", "both", "summary"] = "both",
 ) -> Dict[str, Any]:
     """
     Get shot chart data with optional hexbin aggregation.
 
     This is the main entry point called by the MCP tool.
+
+    **PARAMETER FLEXIBILITY:**
+    - Use `game_date` for a single game (automatically converted to date_from=date_to=game_date)
+    - Use `date_from` and `date_to` for a date range
+    - If `game_date` is provided, it takes precedence
 
     Args:
         entity_name: Player or team name (fuzzy matching supported)
@@ -427,6 +433,7 @@ async def get_shot_chart(
         season_type: "Regular Season", "Playoffs", etc.
         date_from: Start date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
         date_to: End date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        game_date: Single game date (automatically sets date_from=date_to=game_date) (optional)
         granularity: Output format
             - "raw": Individual shot coordinates only
             - "hexbin": Aggregated hexbin data only
@@ -458,6 +465,12 @@ async def get_shot_chart(
         InvalidParameterError: If parameters invalid
         NBAApiError: If API call fails
     """
+    # PARAMETER PREPROCESSING: Handle game_date parameter
+    # Convert game_date to date_from/date_to if provided
+    if game_date is not None:
+        logger.info(f"[get_shot_chart] Converting game_date: {game_date} → date_from={game_date}, date_to={game_date}")
+        date_from = game_date
+        date_to = game_date
     # Normalize season format
     normalized_seasons = normalize_season(season)
 

@@ -524,6 +524,145 @@ class DataCatalog:
             )
         )
 
+        # Phase 2H-C: League-wide game logs
+        self._add_endpoint(
+            EndpointMetadata(
+                name="league_player_games",
+                display_name="League Player Games",
+                category=EndpointCategory.LEAGUE_DATA,
+                description="Game-by-game statistics for ALL players in a season (league-wide)",
+                parameters=[
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=True,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                    ParameterSchema(
+                        name="season_type",
+                        type="string",
+                        required=False,
+                        description="Regular Season or Playoffs",
+                        enum=["Regular Season", "Playoffs"],
+                        default="Regular Season",
+                    ),
+                    ParameterSchema(
+                        name="date_from",
+                        type="string",
+                        required=False,
+                        description="Start date for filtering",
+                        example="2024-01-01",
+                    ),
+                    ParameterSchema(
+                        name="date_to",
+                        type="string",
+                        required=False,
+                        description="End date for filtering",
+                        example="2024-01-31",
+                    ),
+                    ParameterSchema(
+                        name="outcome",
+                        type="string",
+                        required=False,
+                        description="Filter by win/loss",
+                        enum=["W", "L"],
+                    ),
+                    ParameterSchema(
+                        name="location",
+                        type="string",
+                        required=False,
+                        description="Filter by home/away games",
+                        enum=["Home", "Road"],
+                    ),
+                ],
+                primary_keys=["PLAYER_ID", "GAME_ID"],
+                output_columns=[
+                    "PLAYER_ID",
+                    "PLAYER_NAME",
+                    "GAME_ID",
+                    "GAME_DATE",
+                    "MATCHUP",
+                    "WL",
+                    "MIN",
+                    "PTS",
+                    "REB",
+                    "AST",
+                    "FG_PCT",
+                    "FG3_PCT",
+                    "FT_PCT",
+                ],
+                sample_params={"season": "2023-24", "date_from": "2024-01-01", "date_to": "2024-01-05"},
+                supports_date_range=True,
+                supports_season_filter=True,
+                typical_row_count=15000,
+                chunk_strategy="date",
+            )
+        )
+
+        self._add_endpoint(
+            EndpointMetadata(
+                name="league_team_games",
+                display_name="League Team Games",
+                category=EndpointCategory.LEAGUE_DATA,
+                description="Game-by-game results for ALL teams in a season (league-wide)",
+                parameters=[
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=True,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                    ParameterSchema(
+                        name="season_type",
+                        type="string",
+                        required=False,
+                        description="Regular Season or Playoffs",
+                        enum=["Regular Season", "Playoffs"],
+                        default="Regular Season",
+                    ),
+                    ParameterSchema(
+                        name="date_from",
+                        type="string",
+                        required=False,
+                        description="Start date for filtering",
+                        example="2024-01-01",
+                    ),
+                    ParameterSchema(
+                        name="date_to",
+                        type="string",
+                        required=False,
+                        description="End date for filtering",
+                        example="2024-01-31",
+                    ),
+                    ParameterSchema(
+                        name="outcome",
+                        type="string",
+                        required=False,
+                        description="Filter by win/loss",
+                        enum=["W", "L"],
+                    ),
+                ],
+                primary_keys=["TEAM_ID", "GAME_ID"],
+                output_columns=[
+                    "TEAM_ID",
+                    "TEAM_NAME",
+                    "GAME_ID",
+                    "GAME_DATE",
+                    "MATCHUP",
+                    "WL",
+                    "PTS",
+                    "PLUS_MINUS",
+                ],
+                sample_params={"season": "2023-24", "date_from": "2024-01-01", "date_to": "2024-01-05"},
+                supports_date_range=True,
+                supports_season_filter=True,
+                typical_row_count=2500,
+                chunk_strategy="date",
+            )
+        )
+
         self._add_endpoint(
             EndpointMetadata(
                 name="shot_chart",
@@ -580,6 +719,208 @@ class DataCatalog:
                     "season": "2023-24",
                     "granularity": "hexbin",
                 },
+            )
+        )
+
+        # Additional Player Endpoints
+        self._add_endpoint(
+            EndpointMetadata(
+                name="player_game_log",
+                display_name="Player Game Log",
+                category=EndpointCategory.PLAYER_STATS,
+                description="Game-by-game statistics for a specific player",
+                parameters=[
+                    ParameterSchema(
+                        name="player_name",
+                        type="string",
+                        required=True,
+                        description="Player name",
+                        example="LeBron James",
+                    ),
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=False,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                    ParameterSchema(
+                        name="season_type",
+                        type="string",
+                        required=False,
+                        description="Season type",
+                        enum=["Regular Season", "Playoffs"],
+                        default="Regular Season",
+                    ),
+                    ParameterSchema(
+                        name="last_n_games",
+                        type="integer",
+                        required=False,
+                        description="Limit to most recent N games",
+                        example=10,
+                    ),
+                ],
+                primary_keys=["PLAYER_ID", "GAME_ID"],
+                output_columns=[
+                    "PLAYER_ID", "PLAYER_NAME", "GAME_ID", "GAME_DATE",
+                    "MATCHUP", "WL", "MIN", "PTS", "REB", "AST",
+                    "FGM", "FGA", "FG_PCT", "FG3M", "FG3A", "FG3_PCT",
+                    "FTM", "FTA", "FT_PCT", "STL", "BLK", "TOV", "PF", "PLUS_MINUS"
+                ],
+                sample_params={"player_name": "LeBron James", "season": "2023-24", "last_n_games": 10},
+            )
+        )
+
+        self._add_endpoint(
+            EndpointMetadata(
+                name="box_score",
+                display_name="Box Score",
+                category=EndpointCategory.GAME_DATA,
+                description="Full box score with player stats and quarter-by-quarter breakdowns",
+                parameters=[
+                    ParameterSchema(
+                        name="game_id",
+                        type="string",
+                        required=True,
+                        description="10-digit game ID",
+                        example="0022300500",
+                    ),
+                ],
+                primary_keys=["GAME_ID", "PLAYER_ID"],
+                output_columns=[
+                    "GAME_ID", "TEAM_ID", "TEAM_ABBREVIATION", "PLAYER_ID", "PLAYER_NAME",
+                    "START_POSITION", "MIN", "PTS", "REB", "AST", "FGM", "FGA", "FG_PCT",
+                    "FG3M", "FG3A", "FG3_PCT", "FTM", "FTA", "FT_PCT", "OREB", "DREB",
+                    "STL", "BLK", "TOV", "PF", "PLUS_MINUS"
+                ],
+                sample_params={"game_id": "0022300500"},
+            )
+        )
+
+        self._add_endpoint(
+            EndpointMetadata(
+                name="clutch_stats",
+                display_name="Clutch Statistics",
+                category=EndpointCategory.ADVANCED_ANALYTICS,
+                description="Clutch time statistics (final 5 minutes, score within 5 points)",
+                parameters=[
+                    ParameterSchema(
+                        name="entity_name",
+                        type="string",
+                        required=True,
+                        description="Player or team name",
+                        example="LeBron James",
+                    ),
+                    ParameterSchema(
+                        name="entity_type",
+                        type="string",
+                        required=False,
+                        description="Entity type",
+                        enum=["player", "team"],
+                        default="player",
+                    ),
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=False,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                    ParameterSchema(
+                        name="per_mode",
+                        type="string",
+                        required=False,
+                        description="Per-game or totals",
+                        enum=["PerGame", "Totals"],
+                        default="PerGame",
+                    ),
+                ],
+                primary_keys=["PLAYER_ID", "SEASON"],
+                output_columns=[
+                    "PLAYER_ID", "PLAYER_NAME", "TEAM_ID", "GP", "MIN",
+                    "PTS", "REB", "AST", "FGM", "FGA", "FG_PCT",
+                    "FG3M", "FG3A", "FG3_PCT", "FTM", "FTA", "FT_PCT",
+                    "STL", "BLK", "TOV", "W", "L", "WIN_PCT"
+                ],
+                sample_params={"entity_name": "LeBron James", "entity_type": "player", "season": "2023-24"},
+            )
+        )
+
+        self._add_endpoint(
+            EndpointMetadata(
+                name="player_head_to_head",
+                display_name="Player Head-to-Head",
+                category=EndpointCategory.PLAYER_STATS,
+                description="Head-to-head matchup stats for two players",
+                parameters=[
+                    ParameterSchema(
+                        name="player1_name",
+                        type="string",
+                        required=True,
+                        description="First player name",
+                        example="LeBron James",
+                    ),
+                    ParameterSchema(
+                        name="player2_name",
+                        type="string",
+                        required=True,
+                        description="Second player name",
+                        example="Kevin Durant",
+                    ),
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=False,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                ],
+                primary_keys=["PLAYER_ID", "GAME_ID"],
+                output_columns=[
+                    "PLAYER_ID", "PLAYER_NAME", "GAME_ID", "GAME_DATE", "MATCHUP",
+                    "WL", "MIN", "PTS", "REB", "AST", "FGM", "FGA", "FG_PCT",
+                    "FG3M", "FG3A", "FG3_PCT", "FTM", "FTA", "FT_PCT",
+                    "STL", "BLK", "TOV", "PF", "PLUS_MINUS"
+                ],
+                sample_params={"player1_name": "LeBron James", "player2_name": "Kevin Durant", "season": "2023-24"},
+            )
+        )
+
+        self._add_endpoint(
+            EndpointMetadata(
+                name="player_performance_splits",
+                display_name="Player Performance Splits",
+                category=EndpointCategory.ADVANCED_ANALYTICS,
+                description="Performance splits with home/away, win/loss, and trend analysis",
+                parameters=[
+                    ParameterSchema(
+                        name="player_name",
+                        type="string",
+                        required=True,
+                        description="Player name",
+                        example="LeBron James",
+                    ),
+                    ParameterSchema(
+                        name="season",
+                        type="string",
+                        required=False,
+                        description="Season in YYYY-YY format",
+                        example="2023-24",
+                    ),
+                    ParameterSchema(
+                        name="last_n_games",
+                        type="integer",
+                        required=False,
+                        description="Analyze last N games",
+                        default=10,
+                    ),
+                ],
+                primary_keys=["SPLIT_TYPE"],
+                output_columns=[
+                    "split_type", "games", "ppg", "rpg", "apg", "spg", "bpg",
+                    "fg_pct", "fg3_pct", "ft_pct", "min_pg", "plus_minus"
+                ],
+                sample_params={"player_name": "LeBron James", "season": "2023-24", "last_n_games": 10},
             )
         )
 

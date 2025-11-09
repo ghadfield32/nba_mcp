@@ -9,7 +9,7 @@ from datetime import date, datetime
 from typing import Optional, Union
 
 import pandas as pd
-from nba_api.stats.endpoints import leaguegamelog
+from nba_api.stats.endpoints import leaguegamelog, leaguegamefinder
 
 from nba_mcp.api.tools.nba_api_utils import (
     get_team_id,
@@ -25,11 +25,15 @@ def fetch_league_game_log(
     season_type: str = "Regular Season",
     date_from: Optional[Union[str, date, datetime]] = None,
     date_to: Optional[Union[str, date, datetime]] = None,
+    outcome: Optional[str] = None,
     direction: str = "DESC",
     sorter: str = "DATE",
 ) -> pd.DataFrame:
     """
-    Fetch full-season or filtered game-log via LeagueGameLog.
+    Fetch full-season or filtered game-log via LeagueGameFinder.
+
+    This function now uses LeagueGameFinder instead of LeagueGameLog to support
+    advanced filtering including outcome (W/L) filtering at the API level.
 
     Args:
       season:      "YYYY-YY" season string.
@@ -37,11 +41,12 @@ def fetch_league_game_log(
       season_type: user-friendly season type ("regular", "playoff", "preseason", "allstar", etc.)
       date_from:   optional start date.
       date_to:     optional end date.
-      direction:   "ASC" or "DESC" sorting by the sorter field.
-      sorter:      one of the API sorter options (e.g. "PTS","DATE", etc.)
+      outcome:     optional win/loss filter ("W" for wins, "L" for losses).
+      direction:   "ASC" or "DESC" sorting by the sorter field (not used with LeagueGameFinder).
+      sorter:      one of the API sorter options (not used with LeagueGameFinder).
 
     Returns:
-      DataFrame of all games (filtered to team_name if given).
+      DataFrame of all games (filtered by parameters).
     """
     # 1) normalize the season itself (ensures "YYYY-YY"),
     # 2) normalize the season_type into exactly what the API expects
@@ -51,30 +56,34 @@ def fetch_league_game_log(
     df_from = normalize_date(date_from) if date_from else None
     df_to = normalize_date(date_to) if date_to else None
 
-    lg = leaguegamelog.LeagueGameLog(
-        counter=0,
-        direction=direction,
-        league_id="00",
-        player_or_team_abbreviation="T",
-        season=season,
-        season_type_all_star=season_type,
-        sorter=sorter,
+    # Get team_id if team_name provided
+    team_id = None
+    if team_name:
+        team_id = get_team_id(team_name)
+
+    # Use LeagueGameFinder (supports outcome filtering)
+    finder = leaguegamefinder.LeagueGameFinder(
+        player_or_team_abbreviation="T",  # Team games
+        season_nullable=season,
+        season_type_nullable=season_type,
         date_from_nullable=(df_from.strftime("%Y-%m-%d") if df_from else ""),
         date_to_nullable=(df_to.strftime("%Y-%m-%d") if df_to else ""),
+        outcome_nullable=(outcome if outcome else ""),  # W/L filtering
+        team_id_nullable=(str(team_id) if team_id else ""),  # Team filter
+        league_id_nullable="00",
     )
-    df = lg.get_data_frames()[0]
+    df = finder.get_data_frames()[0]
 
-    if team_name:
-        # use centralized get_team_id for lookup
-        tid = get_team_id(team_name)
-        if tid is not None:
-            df = df[df["TEAM_ID"] == tid]
-        else:
-            # fallback to matching in the API‑returned NAMEs
-            mask = df["TEAM_NAME"].str.contains(team_name, case=False, na=False) | df[
-                "MATCHUP"
-            ].str.contains(team_name, case=False, na=False)
-            df = df[mask]
+    # If no team_id was found but team_name was provided, fallback to name matching
+    if team_name and team_id is None and not df.empty:
+        mask = df["TEAM_NAME"].str.contains(team_name, case=False, na=False) | df[
+            "MATCHUP"
+        ].str.contains(team_name, case=False, na=False)
+        df = df[mask]
+
+    # Sort by date (descending by default)
+    if not df.empty and "GAME_DATE" in df.columns:
+        df = df.sort_values(by="GAME_DATE", ascending=(direction == "ASC"))
 
     return df.reset_index(drop=True)
 

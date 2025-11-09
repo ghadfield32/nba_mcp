@@ -532,6 +532,8 @@ class NBAApiClient:
         season: Optional[str] = None,
         season_type: str = "Regular Season",
         last_n_games: Optional[int] = None,
+        date_from: Optional[str] = None,  # Phase 2F: Filter pushdown support
+        date_to: Optional[str] = None,    # Phase 2F: Filter pushdown support
         as_dataframe: bool = True,
     ) -> Union[pd.DataFrame, Dict[str, Any]]:
         """
@@ -541,12 +543,15 @@ class NBAApiClient:
         - Full season game logs
         - Last N games filtering
         - Regular season and playoffs
+        - Date range filtering (Phase 2F)
 
         Args:
             player_name: Player name (supports fuzzy matching)
             season: Season in 'YYYY-YY' format (defaults to current season)
             season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
             last_n_games: Optional limit to most recent N games
+            date_from: Start date for filtering (YYYY-MM-DD format) - Phase 2F
+            date_to: End date for filtering (YYYY-MM-DD format) - Phase 2F
             as_dataframe: Return DataFrame if True, dict if False
 
         Returns:
@@ -559,6 +564,13 @@ class NBAApiClient:
 
             # Get full season stats
             df = await client.get_player_game_log("Stephen Curry", season="2023-24")
+
+            # Get games in date range (Phase 2F)
+            df = await client.get_player_game_log(
+                "LeBron James",
+                date_from="2024-01-01",
+                date_to="2024-01-31"
+            )
         """
         try:
             # Get player ID
@@ -578,11 +590,14 @@ class NBAApiClient:
             # Fetch game log from NBA API
             logger.debug(f"Fetching game log for player_id={player_id}, season={season}")
 
+            # Phase 2F: Pass date filters to NBA API if provided
             game_log = await asyncio.to_thread(
                 PlayerGameLog,
                 player_id=player_id,
                 season=season,
-                season_type_all_star=season_type
+                season_type_all_star=season_type,
+                date_from_nullable=date_from or "",  # Phase 2F: Filter pushdown
+                date_to_nullable=date_to or ""       # Phase 2F: Filter pushdown
             )
 
             # Get DataFrame
@@ -683,6 +698,10 @@ class NBAApiClient:
         entity_type: str = "player",
         season: Optional[str] = None,
         per_mode: str = "PerGame",
+        date_from: Optional[str] = None,  # Phase 2F: Filter pushdown support
+        date_to: Optional[str] = None,    # Phase 2F: Filter pushdown support
+        outcome: Optional[str] = None,    # Phase 2F: W/L filtering
+        location: Optional[str] = None,   # Phase 2F: Home/Away filtering
     ) -> Union[pd.DataFrame, Dict[str, Any]]:
         """
         Get clutch time statistics (final 5 minutes, score within 5 points).
@@ -692,12 +711,18 @@ class NBAApiClient:
         - Shooting percentages in clutch time
         - Win-loss record in clutch games
         - Clutch time efficiency ratings
+        - Date range filtering (Phase 2F)
+        - W/L and Home/Away filtering (Phase 2F)
 
         Args:
             entity_name: Player or team name
             entity_type: "player" or "team" (default: "player")
             season: Season in 'YYYY-YY' format (defaults to current season)
             per_mode: "PerGame" or "Totals" (default: "PerGame")
+            date_from: Start date for filtering (YYYY-MM-DD format) - Phase 2F
+            date_to: End date for filtering (YYYY-MM-DD format) - Phase 2F
+            outcome: W/L filtering ("W" or "L") - Phase 2F
+            location: Home/Away filtering ("Home" or "Road") - Phase 2F
 
         Returns:
             DataFrame with clutch statistics
@@ -709,6 +734,14 @@ class NBAApiClient:
 
             # Get Lakers' clutch stats
             df = await client.get_clutch_stats("Lakers", entity_type="team")
+
+            # Get clutch stats with filters (Phase 2F)
+            df = await client.get_clutch_stats(
+                "LeBron James",
+                date_from="2024-01-01",
+                date_to="2024-01-31",
+                outcome="W"
+            )
         """
         try:
             # Default to current season if not specified
@@ -723,12 +756,17 @@ class NBAApiClient:
 
             if entity_type == "player":
                 # For players, we get league-wide clutch stats and filter
+                # Phase 2F: Pass filter parameters to NBA API
                 clutch_data = await asyncio.to_thread(
                     LeagueDashPlayerClutch,
                     season=season,
                     per_mode_detailed=per_mode,
                     clutch_time="Last 5 Minutes",
-                    point_diff="5"
+                    point_diff="5",
+                    date_from_nullable=date_from or "",  # Phase 2F: Filter pushdown
+                    date_to_nullable=date_to or "",      # Phase 2F: Filter pushdown
+                    outcome_nullable=outcome or "",      # Phase 2F: W/L filter
+                    location_nullable=location or ""     # Phase 2F: Home/Away filter
                 )
 
                 df = clutch_data.get_data_frames()[0]
@@ -748,12 +786,17 @@ class NBAApiClient:
 
             elif entity_type == "team":
                 # For teams, get league-wide team clutch stats and filter
+                # Phase 2F: Pass filter parameters to NBA API
                 clutch_data = await asyncio.to_thread(
                     LeagueDashTeamClutch,
                     season=season,
                     per_mode_detailed=per_mode,
                     clutch_time="Last 5 Minutes",
-                    point_diff="5"
+                    point_diff="5",
+                    date_from_nullable=date_from or "",  # Phase 2F: Filter pushdown
+                    date_to_nullable=date_to or "",      # Phase 2F: Filter pushdown
+                    outcome_nullable=outcome or "",      # Phase 2F: W/L filter
+                    location_nullable=location or ""     # Phase 2F: Home/Away filter
                 )
 
                 df = clutch_data.get_data_frames()[0]
@@ -785,6 +828,8 @@ class NBAApiClient:
         player1_name: str,
         player2_name: str,
         season: Optional[str] = None,
+        date_from: Optional[str] = None,  # Phase 2F: Filter pushdown support
+        date_to: Optional[str] = None,    # Phase 2F: Filter pushdown support
     ) -> Dict[str, Any]:
         """
         Get head-to-head matchup stats for two players.
@@ -796,6 +841,8 @@ class NBAApiClient:
             player1_name: First player name
             player2_name: Second player name
             season: Season in 'YYYY-YY' format (defaults to current season)
+            date_from: Start date for filtering (YYYY-MM-DD format) - Phase 2F
+            date_to: End date for filtering (YYYY-MM-DD format) - Phase 2F
 
         Returns:
             Dict with keys:
@@ -809,6 +856,14 @@ class NBAApiClient:
         Example:
             # Get LeBron vs Durant head-to-head
             h2h = await client.get_player_head_to_head("LeBron James", "Kevin Durant")
+
+            # With date filtering (Phase 2F)
+            h2h = await client.get_player_head_to_head(
+                "LeBron James",
+                "Kevin Durant",
+                date_from="2024-01-01",
+                date_to="2024-01-31"
+            )
         """
         try:
             # Default to current season if not specified
@@ -832,15 +887,20 @@ class NBAApiClient:
             player2_full = next((p["full_name"] for p in all_players if p["id"] == player2_id), player2_name)
 
             # Fetch game logs for both players
+            # Phase 2F: Pass date filters to game log fetching
             player1_games = await self.get_player_game_log(
                 player_name=player1_name,
                 season=season,
+                date_from=date_from,  # Phase 2F: Filter pushdown
+                date_to=date_to,      # Phase 2F: Filter pushdown
                 as_dataframe=True
             )
 
             player2_games = await self.get_player_game_log(
                 player_name=player2_name,
                 season=season,
+                date_from=date_from,  # Phase 2F: Filter pushdown
+                date_to=date_to,      # Phase 2F: Filter pushdown
                 as_dataframe=True
             )
 
@@ -904,6 +964,8 @@ class NBAApiClient:
         player_name: str,
         season: Optional[str] = None,
         last_n_games: Optional[int] = None,
+        date_from: Optional[str] = None,  # Phase 2F: Filter pushdown support
+        date_to: Optional[str] = None,    # Phase 2F: Filter pushdown support
     ) -> Dict[str, Any]:
         """
         Get comprehensive performance splits and advanced analytics for a player.
@@ -914,11 +976,14 @@ class NBAApiClient:
         - Win vs Loss performance
         - Per-100 possessions normalization
         - Trend detection (hot/cold streaks)
+        - Date range filtering (Phase 2F)
 
         Args:
             player_name: Player name
             season: Season in 'YYYY-YY' format (defaults to current season)
             last_n_games: Analyze last N games (default: 10)
+            date_from: Start date for filtering (YYYY-MM-DD format) - Phase 2F
+            date_to: End date for filtering (YYYY-MM-DD format) - Phase 2F
 
         Returns:
             Dict with keys:
@@ -934,6 +999,13 @@ class NBAApiClient:
         Example:
             # Get LeBron's performance splits
             splits = await client.get_player_performance_splits("LeBron James", last_n_games=10)
+
+            # With date filtering (Phase 2F)
+            splits = await client.get_player_performance_splits(
+                "LeBron James",
+                date_from="2024-01-01",
+                date_to="2024-01-31"
+            )
         """
         try:
             # Default to current season if not specified
@@ -951,9 +1023,12 @@ class NBAApiClient:
             logger.debug(f"Fetching performance splits: {player_name}, season={season}, last_n={last_n_games}")
 
             # Fetch full season game log
+            # Phase 2F: Pass date filters to game log fetching
             game_log = await self.get_player_game_log(
                 player_name=player_name,
                 season=season,
+                date_from=date_from,  # Phase 2F: Filter pushdown
+                date_to=date_to,      # Phase 2F: Filter pushdown
                 as_dataframe=True
             )
 

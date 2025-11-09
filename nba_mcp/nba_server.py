@@ -3066,6 +3066,7 @@ async def get_shot_chart(
     season_type: Literal["Regular Season", "Playoffs"] = "Regular Season",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    game_date: Optional[str] = None,
     granularity: Literal["raw", "hexbin", "both", "summary"] = "both",
 ) -> str:
     """
@@ -3074,6 +3075,12 @@ async def get_shot_chart(
     Returns shooting data with coordinates and optional hexbin aggregation.
     Perfect for visualizing shooting patterns and hot zones.
 
+    **PARAMETER FLEXIBILITY FOR SMALLER MODELS:**
+    This tool accepts multiple date parameter formats to make it easier for LLMs:
+    - Use `game_date` for a single game (most common for smaller models)
+    - Use `date_from` and `date_to` for a date range
+    - If `game_date` is provided, it overrides `date_from` and `date_to`
+
     Args:
         entity_name: Player or team name (e.g., "Stephen Curry", "Warriors")
         entity_type: "player" or "team" (default: "player")
@@ -3081,6 +3088,9 @@ async def get_shot_chart(
         season_type: "Regular Season" or "Playoffs" (default: "Regular Season")
         date_from: Start date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
         date_to: End date for filtering shots in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+        game_date: Single game date in 'YYYY-MM-DD' or 'MM/DD/YYYY' format (optional)
+                   **Alias for date_from=game_date and date_to=game_date**
+                   Use this when you want shots from a specific game only.
         granularity: Output format:
             - "raw": Individual shot coordinates (X, Y, make/miss)
             - "hexbin": Aggregated data (50x50 grid with FG% per zone)
@@ -3091,9 +3101,22 @@ async def get_shot_chart(
         JSON string with ResponseEnvelope containing shot chart data
 
     Examples:
+        # Get shots from a specific game (recommended for smaller models)
+        get_shot_chart("Josh Giddey", game_date="2025-11-04", granularity="raw")
+
+        # Get shots for entire season
         get_shot_chart("Stephen Curry", season="2023-24", granularity="hexbin")
-        get_shot_chart("Lakers", entity_type="team", granularity="summary")
+
+        # Get shots for a date range
         get_shot_chart("Joel Embiid", date_from="2024-01-01", date_to="2024-01-31")
+
+        # Get team shot chart for specific game
+        get_shot_chart("Lakers", entity_type="team", game_date="2024-12-25")
+
+    Common LLM Queries Supported:
+        "Get shots from yesterday's game" → game_date="yesterday"
+        "Show me shots from November 4th" → game_date="2025-11-04"
+        "Shots taken in last 10 games" → use date_from/date_to with calculated dates
 
     Note:
         To save data, use the save_nba_data() tool after fetching.
@@ -3101,6 +3124,19 @@ async def get_shot_chart(
     start_time = time.time()
 
     try:
+        # PARAMETER PREPROCESSING: Handle game_date parameter
+        # This makes the tool more flexible for smaller models that might
+        # try to use game_date (like they do with get_player_game_stats)
+        logger.info(f"[get_shot_chart] Called with params: entity_name={entity_name}, game_date={game_date}, date_from={date_from}, date_to={date_to}")
+
+        # Convert game_date to date_from/date_to if provided
+        if game_date is not None:
+            logger.info(f"[get_shot_chart] Converting game_date parameter: {game_date} → date_from={game_date}, date_to={game_date}")
+            date_from = game_date
+            date_to = game_date
+
+        logger.info(f"[get_shot_chart] Final date parameters: date_from={date_from}, date_to={date_to}")
+
         client = NBAApiClient()
         data = await fetch_shot_chart(
             entity_name=entity_name,
@@ -4411,8 +4447,14 @@ async def inspect_endpoint(
     """
     Inspect an NBA API endpoint to discover its capabilities and metadata.
 
+    **ENHANCED FOR SMALLER MODELS:**
+    This tool now includes detailed parameter information, aliases, and examples
+    to help LLMs understand exactly how to use each endpoint correctly.
+
     Returns comprehensive information about an endpoint including:
     - Available columns and their data types
+    - **Parameter details (required, optional, aliases)**
+    - **Common usage examples for smaller models**
     - Estimated row count for the given parameters
     - Supported date ranges (if applicable)
     - Available seasons (if applicable)
@@ -4432,7 +4474,7 @@ async def inspect_endpoint(
     Examples:
         inspect_endpoint("shot_chart", {"entity_name": "Stephen Curry"})
         → Returns columns, estimated rows (~15,000), date range (1996-present),
-          and recommends date-based chunking
+          parameter details (including game_date alias), and usage examples
 
         inspect_endpoint("team_standings", {"season": "2023-24"})
         → Returns columns, estimated rows (30), no chunking needed
@@ -4442,20 +4484,102 @@ async def inspect_endpoint(
     """
     try:
         from nba_mcp.data.introspection import get_introspector
+        import inspect as py_inspect
 
         introspector = get_introspector()
         caps = await introspector.inspect_endpoint(endpoint, params or {})
+
+        # Get the actual MCP tool function to extract parameter information
+        tool_function = None
+        tool_name_mapping = {
+            "shot_chart": get_shot_chart,
+            "player_career_stats": get_player_career_information,
+            "team_standings": get_team_standings,
+            "league_leaders": get_league_leaders_info,
+            "player_game_stats": get_player_game_stats,
+            "box_score": get_box_score,
+            # Add more as needed
+        }
+        tool_function = tool_name_mapping.get(endpoint)
 
         # Format response
         lines = [
             f"# Endpoint Inspection: {endpoint}",
             "",
+        ]
+
+        # Add parameter information if we have the tool function
+        if tool_function:
+            sig = py_inspect.signature(tool_function)
+            lines.extend([
+                "## 📋 Parameter Information (for LLMs)",
+                "",
+                "### Required Parameters:",
+            ])
+
+            required_params = []
+            optional_params = []
+
+            for param_name, param in sig.parameters.items():
+                if param.default == py_inspect.Parameter.empty:
+                    required_params.append(param_name)
+                else:
+                    optional_params.append((param_name, param.default))
+
+            if required_params:
+                for param_name in required_params:
+                    lines.append(f"- `{param_name}` (required)")
+            else:
+                lines.append("- None (all parameters are optional)")
+
+            lines.extend([
+                "",
+                "### Optional Parameters:",
+            ])
+
+            if optional_params:
+                for param_name, default_val in optional_params:
+                    lines.append(f"- `{param_name}` (default: {default_val})")
+            else:
+                lines.append("- None")
+
+            # Add parameter aliases section
+            lines.extend([
+                "",
+                "### Parameter Aliases & Variations:",
+            ])
+
+            # Special handling for shot_chart endpoint
+            if endpoint == "shot_chart":
+                lines.extend([
+                    "- `game_date` → automatically converts to `date_from` + `date_to`",
+                    "  - Use this for single-game filtering",
+                    "  - Example: `game_date='2025-11-04'` filters to that specific date",
+                    "",
+                    "### Common Usage Examples:",
+                    "```python",
+                    "# Single game (recommended for smaller models)",
+                    f'get_shot_chart(entity_name="Josh Giddey", game_date="2025-11-04")',
+                    "",
+                    "# Season total",
+                    f'get_shot_chart(entity_name="Stephen Curry", season="2023-24")',
+                    "",
+                    "# Date range",
+                    f'get_shot_chart(entity_name="LeBron James", date_from="2024-01-01", date_to="2024-01-31")',
+                    "```",
+                ])
+            else:
+                lines.append("- No special aliases for this endpoint")
+
+            lines.append("")
+
+        lines.extend([
             "## Schema Information",
             f"- **Columns**: {len(caps.columns)}",
             f"- **Sample Shape**: {caps.sample_data_shape[0]} rows × {caps.sample_data_shape[1]} columns",
             "",
             "### Available Columns",
-        ]
+        ])
 
         # Show columns with types (max 20, then summarize)
         if len(caps.columns) <= 20:
